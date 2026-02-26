@@ -16,7 +16,11 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	application := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	application, err := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
+	if err != nil {
+		log.Error("failed to initialize application", "err", err)
+		os.Exit(1)
+	}
 	go application.GRPCSrv.MustRun()
 	log.Info("applications started")
 
@@ -29,6 +33,5 @@ func main() {
 	log.Info("stopping applications")
 	application.GRPCSrv.Stop()
 	log.Info("applications stopped")
-
 
 }
