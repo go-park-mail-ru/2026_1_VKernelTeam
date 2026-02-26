@@ -9,7 +9,7 @@ import (
 // тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "", nil)
+	request, err := http.NewRequest("GET", "/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 // првоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	// создаём POST запрос к эндпоинту
-	request, err := http.NewRequest("POST", "", nil)
+	request, err := http.NewRequest("POST", "/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	}()
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "", nil)
+	request, err := http.NewRequest("GET", "/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +104,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 // тестируем ошибку сервера
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("POST", "", nil)
+	request, err := http.NewRequest("POST", "/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

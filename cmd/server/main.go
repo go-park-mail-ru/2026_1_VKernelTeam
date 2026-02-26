@@ -14,7 +14,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик
-	http.HandleFunc("/", ads.GetAdsHandler)
+	http.HandleFunc("/ads", ads.GetAdsHandler)
 
 	server := &http.Server{
 		Addr: ":8080",
