@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// настройка раздачи статики
-	fs := http.FileServer(http.Dir("../static"))
+	fs := http.FileServer(http.Dir("static"))
 	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
