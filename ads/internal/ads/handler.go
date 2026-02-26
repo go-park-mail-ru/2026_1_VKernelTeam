@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// ручка для получения объявлений
+// ручка для получения списка объявлений
 func GetAdsHandler(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {

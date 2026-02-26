@@ -35,7 +35,7 @@ func main() {
 	// запускаем http-сервер на порту 8080
 	err := server.ListenAndServe()
 
-	// если порта занят, возникнет ошибка
+	// если порт занят, возникнет ошибка
 	if err != nil {
 		panic("Server failed to start: " + err.Error())
 	}

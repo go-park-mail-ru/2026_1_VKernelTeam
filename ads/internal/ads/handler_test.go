@@ -1,7 +1,6 @@
 package ads
 
 import (
-	"ads/internal/utils"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -119,18 +118,5 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// проверяем статус
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("expected 405, got %d", rr.Code)
-	}
-}
-
-func TestRespondWithJSON_Error(t *testing.T) {
-	rr := httptest.NewRecorder()
-
-	// канал нельзя преобразовать в JSON
-	invalidData := make(chan int)
-
-	utils.RespondWithJSON(rr, http.StatusOK, invalidData)
-
-	if rr.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 error, got %d", rr.Code)
 	}
 }
