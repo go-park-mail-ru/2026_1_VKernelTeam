@@ -8,13 +8,17 @@ import (
 )
 
 func main() {
+	// создаем зависимости и внедряем репозиторий в обработчик
+	repo := ads.NewAdsRepository()
+	adsHandler := ads.NewHandler(repo)
+
 	// настройка раздачи статики
 	fs := http.FileServer(http.Dir("static"))
 	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик
-	http.HandleFunc("/ads", ads.GetAdsHandler)
+	http.HandleFunc("/ads", adsHandler.GetAdsHandler)
 
 	server := &http.Server{
 		Addr: ":8080",
