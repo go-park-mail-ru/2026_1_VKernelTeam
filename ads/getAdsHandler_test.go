@@ -65,14 +65,16 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	//  сохраняем старые данные, чтобы восстановить их после теста
-	oldAds := ads
+	oldAds := repo.data
 
 	// очищаем список объявлений
-	ads = []Ad{}
+	repo.Lock()
+	repo.data = []Ad{}
+	repo.Unlock()
 
 	// перед завершением восстанавливаем список объявлений
 	defer func() {
-		ads = oldAds
+		repo.data = oldAds
 	}()
 
 	// создаём запрос к эндпоинту
@@ -107,7 +109,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// создаём RequestRecoder - заглушку дял ответа
+	// создаём RequestRecoder - заглушку для ответа
 	rr := httptest.NewRecorder()
 
 	// вызываем handler
@@ -116,5 +118,18 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// проверяем статус
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Errorf("expected 405, got %d", rr.Code)
+	}
+}
+
+func TestRespondWithJSON_Error(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	// канал нельзя преобразовать в JSON
+	invalidData := make(chan int)
+
+	respondWithJSON(rr, http.StatusOK, invalidData)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400 error, got %d", rr.Code)
 	}
 }
