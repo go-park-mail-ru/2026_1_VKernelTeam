@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ads/internal/ads"
 	"fmt"
 	"net/http"
 	"time"
@@ -13,7 +14,7 @@ func main() {
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик
-	http.HandleFunc("/", getAdsHandler)
+	http.HandleFunc("/", ads.GetAdsHandler)
 
 	server := &http.Server{
 		Addr: ":8080",

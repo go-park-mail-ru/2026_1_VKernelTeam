@@ -1,4 +1,6 @@
-package main
+//go:build !test
+
+package ads
 
 import (
 	"sync"
@@ -11,7 +13,7 @@ type AdsRepository struct {
 	data []Ad // список объявлений
 }
 
-var repo = &AdsRepository{
+var Repo = &AdsRepository{
 	data: []Ad{
 		{
 			ID:          1,

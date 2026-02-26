@@ -1,6 +1,7 @@
-package main
+package ads
 
 import (
+	"ads/internal/utils"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,14 +10,14 @@ import (
 // тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "/ads", nil)
+	request, err := http.NewRequest("GET", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// создаём RequestRecoder - заглушку дял ответа
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(getAdsHandler)
+	handler := http.HandlerFunc(GetAdsHandler)
 
 	// вызываем обработчик
 	handler.ServeHTTP(rr, request)
@@ -44,14 +45,14 @@ func TestGetAdsHandler_Success(t *testing.T) {
 // првоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	// создаём POST запрос к эндпоинту
-	request, err := http.NewRequest("POST", "/ads", nil)
+	request, err := http.NewRequest("POST", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// создаём RequestRecoder - заглушку дял ответа
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(getAdsHandler)
+	handler := http.HandlerFunc(GetAdsHandler)
 
 	// вызываем обработчик
 	handler.ServeHTTP(rr, request)
@@ -65,27 +66,27 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	//  сохраняем старые данные, чтобы восстановить их после теста
-	oldAds := repo.data
+	oldAds := Repo.data
 
 	// очищаем список объявлений
-	repo.Lock()
-	repo.data = []Ad{}
-	repo.Unlock()
+	Repo.Lock()
+	Repo.data = []Ad{}
+	Repo.Unlock()
 
 	// перед завершением восстанавливаем список объявлений
 	defer func() {
-		repo.data = oldAds
+		Repo.data = oldAds
 	}()
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "/ads", nil)
+	request, err := http.NewRequest("GET", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// создаём RequestRecoder - заглушку дял ответа
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(getAdsHandler)
+	handler := http.HandlerFunc(GetAdsHandler)
 
 	// вызываем обработчик
 	handler.ServeHTTP(rr, request)
@@ -104,7 +105,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 // тестируем ошибку сервера
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("POST", "/ads", nil)
+	request, err := http.NewRequest("POST", "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +114,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем handler
-	getAdsHandler(rr, request)
+	GetAdsHandler(rr, request)
 
 	// проверяем статус
 	if rr.Code != http.StatusMethodNotAllowed {
@@ -127,7 +128,7 @@ func TestRespondWithJSON_Error(t *testing.T) {
 	// канал нельзя преобразовать в JSON
 	invalidData := make(chan int)
 
-	respondWithJSON(rr, http.StatusOK, invalidData)
+	utils.RespondWithJSON(rr, http.StatusOK, invalidData)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 error, got %d", rr.Code)
