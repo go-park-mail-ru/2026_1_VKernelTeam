@@ -16,16 +16,16 @@ var repo = &AdsRepository{
 		{
 			ID:          1,
 			Title:       "Продам гараж",
-			Description: "Очень ухоженный, с ямой",
-			Price:       100000,
+			Description: "Очень ухоженный",
+			Price:       1_000_000,
 			Photos: []string{
 				"/static/img/garage_1.png",
 				"/static/img/garage_2.png",
 			},
 			Tags:      []string{"недвижимость", "гараж"},
-			SellerID:  42,
+			SellerID:  1,
 			CreatedAt: time.Now(),
-			Views:     120,
+			Views:     12,
 		},
 	},
 }
