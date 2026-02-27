@@ -1,45 +1,40 @@
+// Пакет app инициализирует компоненты приложения и связывает
+// их между собой. В частности, создаётся хранилище, сервис auth и HTTP
+// сервер.
 package app
 
 import (
-	"context"
-	"errors"
 	"log/slog"
 	"time"
 
-	grpcapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/grpc"
+	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 )
 
+// App содержит корневые объекты приложения, например HTTP-сервер.
 type App struct {
-	GRPCSrv *grpcapp.App
+	HTTPServer *httpapp.App
 }
 
-func New(log *slog.Logger, grpcPort int, storagePath string, tokenTTL time.Duration) (*App, error) {
-	// инициализируем общий слой хранилища; один и тот же объект реализует все
-	// интерфейсы, необходимые для auth.
-	store, err := storage.New(storagePath)
+// New собирает все зависимости и возвращает готовое приложение.
+func New(
+	log *slog.Logger,
+	httpPort int,
+	storagePath string,
+	tokenTTL time.Duration,
+) *App {
+	storage, err := storage.New(storagePath)
 	if err != nil {
-		return nil, err
+		log.Error("failed to initialize storage", "err", err)
+		panic(err)
 	}
 
-	// создаем приложение по умолчанию, если его еще нет. в случае, если хранилище
-	// уже содержит записи, вызов вернет ErrAppExists, который мы можем
-	// безопасно проигнорировать; это упрощает инициализацию и позволяет избежать
-	// раскрытия внутренних деталей пакета storage.
-	if id, err := store.CreateApp(context.Background(), "default", "secret"); err != nil {
-		if !errors.Is(err, storage.ErrAppExists) {
-			return nil, err
-		}
-	} else {
-		log.Info("seeded default application", "app_id", id)
-	}
+	authService := auth.New(log, storage, storage, storage, tokenTTL)
 
-	authService := auth.New(log, store, store, store, tokenTTL)
-
-	grpcApp := grpcapp.New(log, authService, grpcPort)
+	httpApp := httpapp.New(log, authService, httpPort)
 
 	return &App{
-		GRPCSrv: grpcApp,
-	}, nil
+		HTTPServer: httpApp,
+	}
 }
