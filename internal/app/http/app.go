@@ -212,7 +212,6 @@ func (a *App) MustRun() {
 	}
 }
 
-
 // Run запускает HTTP-сервер и возвращает ошибку при сбое.
 func (a *App) Run() error {
 	const op = "httpapp.Run"
