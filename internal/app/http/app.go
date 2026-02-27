@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
+
 )
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -98,111 +100,99 @@ func (a *App) setupRoutes() {
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		a.respondWithError(w, http.StatusBadRequest, "invalid request body")
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Email == "" {
-		a.respondWithError(w, http.StatusBadRequest, "email is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
 	if req.Password == "" {
-		a.respondWithError(w, http.StatusBadRequest, "password is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "password is required")
 		return
 	}
 
 	userID, err := a.auth.RegisterNewUser(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			a.respondWithError(w, http.StatusConflict, "user already exists")
+			utils.RespondWithError(w, http.StatusConflict, "user already exists")
 			return
 		}
 
 		a.log.Error("failed to register user", slog.String("error", err.Error()))
-		a.respondWithError(w, http.StatusInternalServerError, "failed to register user")
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to register user")
 		return
 	}
 
-	a.respondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
+	utils.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
 }
 
 // handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		a.respondWithError(w, http.StatusBadRequest, "invalid request body")
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.Email == "" {
-		a.respondWithError(w, http.StatusBadRequest, "email is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "email is required")
 		return
 	}
 
 	if req.Password == "" {
-		a.respondWithError(w, http.StatusBadRequest, "password is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "password is required")
 		return
 	}
 
 	if req.AppID == 0 {
-		a.respondWithError(w, http.StatusBadRequest, "app_id is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "app_id is required")
 		return
 	}
 
 	token, err := a.auth.Login(r.Context(), req.Email, req.Password, req.AppID)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			a.respondWithError(w, http.StatusUnauthorized, "invalid email or password")
+			utils.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")
 			return
 		}
 
 		a.log.Error("failed to login", slog.String("error", err.Error()))
-		a.respondWithError(w, http.StatusInternalServerError, "failed to login")
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to login")
 		return
 	}
 
-	a.respondWithJSON(w, http.StatusOK, LoginResponse{Token: token})
+	utils.RespondWithJSON(w, http.StatusOK, LoginResponse{Token: token})
 }
 
 // handleIsAdmin проверяет, является ли указанный пользователь администратором.
 func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	var req IsAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		a.respondWithError(w, http.StatusBadRequest, "invalid request body")
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.UserID == 0 {
-		a.respondWithError(w, http.StatusBadRequest, "user_id is required")
+		utils.RespondWithError(w, http.StatusBadRequest, "user_id is required")
 		return
 	}
 
 	isAdmin, err := a.auth.IsAdmin(r.Context(), req.UserID)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
-			a.respondWithError(w, http.StatusNotFound, "user not found")
+			utils.RespondWithError(w, http.StatusNotFound, "user not found")
 			return
 		}
 
 		a.log.Error("failed to check admin status", slog.String("error", err.Error()))
-		a.respondWithError(w, http.StatusInternalServerError, "failed to check admin status")
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to check admin status")
 		return
 	}
 
-	a.respondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
-}
-
-// respondWithJSON формирует HTTP-ответ c JSON-данными.
-func (a *App) respondWithJSON(w http.ResponseWriter, statusCode int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(data)
-}
-
-// respondWithError отправляет клиенту ошибку в JSON-формате.
-func (a *App) respondWithError(w http.ResponseWriter, statusCode int, message string) {
-	a.respondWithJSON(w, statusCode, ErrorResponse{Error: message})
+	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

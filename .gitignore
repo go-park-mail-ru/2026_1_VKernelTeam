@@ -2,10 +2,8 @@
 .vscode
 .idea
 
-local.yaml
 .env
 *.db
 coverage.out
 coverage.html
 bin/
-
