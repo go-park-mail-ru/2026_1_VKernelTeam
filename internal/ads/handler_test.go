@@ -1,8 +1,10 @@
 package ads
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -11,6 +13,9 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	// создаём чистые зависимости для теста
 	repo := NewAdsRepository()
 	handler := NewHandler(repo)
+
+	// получаем данные репозитория для сравнения
+	expectedData := repo.GetAll()
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", "/ads", nil)
@@ -41,6 +46,25 @@ func TestGetAdsHandler_Success(t *testing.T) {
 			contentType,
 			expectedType,
 		)
+	}
+
+	// получаем тело ответа
+	var actualData []Ad
+	if err := json.Unmarshal(rr.Body.Bytes(), &actualData); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	actualDataLen := len(actualData)
+	expectedDataLen := len(expectedData)
+
+	// проверяем размер списков
+	if actualDataLen != expectedDataLen {
+		t.Errorf("expected %d ads, got %d", expectedDataLen, actualDataLen)
+	}
+
+	// сравниваем содержимое
+	if !reflect.DeepEqual(actualData, expectedData) {
+		t.Errorf("expected ads %v, got %v", expectedData, actualData)
 	}
 }
 
@@ -90,9 +114,15 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 		t.Errorf("expected 200 even with empty data, got %v", status)
 	}
 
-	// првоеряем, что вернулся пустой массив, а не null
-	if rr.Body.String() == "null\n" {
-		t.Error("handler returned null instead of empty array []")
+	// получаем тело ответа
+	var actualData []Ad
+	if err := json.Unmarshal(rr.Body.Bytes(), &actualData); err != nil {
+		t.Fatalf("failed to decode JSON: %v", err)
+	}
+
+	// првоеряем, что вернулся пустой массив, а не nil
+	if len(actualData) != 0 {
+		t.Errorf("expected 0 ads, got %d", len(actualData))
 	}
 }
 

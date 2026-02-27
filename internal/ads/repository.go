@@ -26,7 +26,7 @@ func NewAdsRepository() *AdsRepository {
 				},
 				Tags:      []string{"недвижимость", "гараж"},
 				SellerID:  1,
-				CreatedAt: time.Now(),
+				CreatedAt: time.Now().Truncate(0),
 				Views:     12,
 			},
 		},
