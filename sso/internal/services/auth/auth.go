@@ -1,3 +1,7 @@
+// Пакет auth реализует бизнес-логику аутентификации и авторизации
+// пользователей. Он определяет сервис Auth с методами входа в систему,
+// регистрации и проверки прав администратора, а также соответствующие
+// интерфейсы для взаимодействия с хранилищем и провайдерами данных.
 package auth
 
 import (
@@ -23,23 +27,34 @@ type Auth struct {
 	appProvider  AppProvider
 	tokenTTL     time.Duration
 }
+// Auth представляет собой сервис аутентификации. Он использует логгер,
+// провайдеров пользователей и приложений, а также TTL для генерируемых
+// токенов.
 
 type UserSaver interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
 }
+// UserSaver описывает интерфейс для сохранения нового пользователя
+// в хранилище. Реализация должна возвращать идентификатор и ошибку.
 
 type UserProvider interface {
 	User(ctx context.Context, email string) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
+// UserProvider предоставляет методы получения данных о пользователе и
+// проверки его административных прав.
 
 type AppProvider interface {
 	App(ctx context.Context, appID int64) (models.App, error)
 }
+// AppProvider отвечает за получение информации о зарегистрированных
+// приложениях.
 
 var (
 	ErrInvalidCredentials = status.Error(codes.Unauthenticated, "invalid credentials")
 )
+// ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
+// сохранёнными данными.
 
 func New(
 	log *slog.Logger,
@@ -57,6 +72,7 @@ func New(
 	}
 
 }
+// New создаёт новый экземпляр Auth с переданными зависимостями.
 
 func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (string, error) {
 	const op = "auth.Login"
@@ -94,6 +110,9 @@ func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (
 	log.Info("user logged in")
 	return token, nil
 }
+// Login аутентифицирует пользователя по email и паролю, проверяет
+// принадлежность к приложению и возвращает JWT-токен. В случае
+// ошибок возвращается описанная ошибка.
 
 func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int64, error) {
 	const op = "auth.RegisterNewUser"
@@ -125,6 +144,9 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int
 
 
 }
+// RegisterNewUser создаёт нового пользователя с указанным email и паролем.
+// Пароль хэшируется, и данные сохраняются через UserSaver. Возвращает
+// идентификатор пользователя.
 
 func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	const op = "auth.IsAdmin"
@@ -146,3 +168,5 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	log.Info("user is admin", slog.Bool("is_admin", isAdmin))
 	return isAdmin, nil
 }
+// IsAdmin возвращает true, если пользователь с заданным ID обладает правами
+// администратора.

@@ -1,3 +1,5 @@
+// Входная точка приложения. Загружает конфигурацию, настраивает логгер,
+// инициализирует приложение и стартует HTTP-сервер.
 package main
 
 import (
@@ -16,12 +18,8 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	application, err := app.New(log, cfg.GRPC.Port, cfg.StoragePath, cfg.TokenTTL)
-	if err != nil {
-		log.Error("failed to initialize application", "err", err)
-		os.Exit(1)
-	}
-	go application.GRPCSrv.MustRun()
+	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL)
+	go application.HTTPServer.MustRun()
 	log.Info("applications started")
 
 	stop := make(chan os.Signal, 1)
@@ -31,7 +29,7 @@ func main() {
 	log.Info("received signal", "signal", sign)
 
 	log.Info("stopping applications")
-	application.GRPCSrv.Stop()
+	application.HTTPServer.Stop()
 	log.Info("applications stopped")
 
 }

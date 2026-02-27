@@ -14,12 +14,13 @@ Backend учебного проекта Юла
 
 Примеры:
 
+Конфиг
 ```yaml
-storage_path: "./storage/sso.json" # пустая строка отключает запись на диск
+env: "local" #dev prod
+storage_path: "./storage/sso.db"
+token_ttl: 24h
+grpc:
+  port: 44000
+  timeout: 10h
+
 ```
-
-При запуске сервера автоматически создаётся тестовое приложение
-`default`/`secret`.
-
-Для тестирования имеется набор unit‑тестов, проверяющих одновременно
-несколько горутин (`go test ./internal/storage`).
