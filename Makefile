@@ -12,6 +12,19 @@ help:
 	@echo "  run               - Run the application"
 	@echo "  build             - Build the application"
 
+
+# Run the application
+run-auth:
+	go run ./cmd/sso/main.go --config=./config/local.yaml
+
+# Run the application
+run-ads:
+	go run cmd/server/main.go
+
+run:
+	go run ./cmd/sso/main.go --config=./config/local.yaml
+	go run cmd/server/main.go
+
 # Run all tests
 test:
 	go test ./...
@@ -35,10 +48,6 @@ test-storage:
 # Build the application
 build:
 	go build -o bin/sso ./cmd/sso
-
-# Run the application
-run:
-	go run ./cmd/sso/main.go --config=./config/local.yaml
 
 # Clean up generated files
 clean:

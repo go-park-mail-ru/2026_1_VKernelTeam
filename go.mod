@@ -1,6 +1,6 @@
 module github.com/go-park-mail-ru/2026_1_VKernelTeam/sso
 
-go 1.25.0
+go 1.25.6
 
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
