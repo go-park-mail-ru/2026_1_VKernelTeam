@@ -60,14 +60,14 @@ func (m *mockAppProvider) App(ctx context.Context, appID int64) (models.App, err
 	return models.App{}, nil
 }
 
-// Helper function to create test logger
+// getTestLogger возвращает простой логгер для использования в тестах.
 func getTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
 }
-// getTestLogger возвращает простой логгер для использования в тестах.
 
 // Tests
 
+// TestRegisterNewUser_Success проверяет успешную регистрацию нового пользователя.
 func TestRegisterNewUser_Success(t *testing.T) {
 	log := getTestLogger()
 	userSaver := &mockUserSaver{
@@ -89,8 +89,9 @@ func TestRegisterNewUser_Success(t *testing.T) {
 		t.Errorf("expected uid 1, got %d", uid)
 	}
 }
-// TestRegisterNewUser_Success проверяет успешную регистрацию нового пользователя.
 
+// TestRegisterNewUser_UserExists проверяет, что при попытке зарегистрировать
+// существующий email возвращается соответствующая ошибка.
 func TestRegisterNewUser_UserExists(t *testing.T) {
 	log := getTestLogger()
 	userSaver := &mockUserSaver{
@@ -112,9 +113,8 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		t.Errorf("expected ErrUserExists, got %v", err)
 	}
 }
-// TestRegisterNewUser_UserExists проверяет, что при попытке зарегистрировать
-// существующий email возвращается соответствующая ошибка.
 
+// TestLogin_Success проверяет успешную аутентификацию и получение токена.
 func TestLogin_Success(t *testing.T) {
 	log := getTestLogger()
 	password := "password123"
@@ -151,8 +151,8 @@ func TestLogin_Success(t *testing.T) {
 		t.Fatalf("expected token, got empty string")
 	}
 }
-// TestLogin_Success проверяет успешную аутентификацию и получение токена.
 
+// TestLogin_InvalidCredentials убеждается, что неверный пароль приводит к ошибке.
 func TestLogin_InvalidCredentials(t *testing.T) {
 	log := getTestLogger()
 	password := "password123"
@@ -177,8 +177,9 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		t.Fatalf("expected error for invalid credentials")
 	}
 }
-// TestLogin_InvalidCredentials убеждается, что неверный пароль приводит к ошибке.
 
+// TestLogin_UserNotFound проверяет, что запрос для несуществующего пользователя
+// возвращает ошибку.
 func TestLogin_UserNotFound(t *testing.T) {
 	log := getTestLogger()
 
@@ -197,9 +198,8 @@ func TestLogin_UserNotFound(t *testing.T) {
 		t.Fatalf("expected error for non-existent user")
 	}
 }
-// TestLogin_UserNotFound проверяет, что запрос для несуществующего пользователя
-// возвращает ошибку.
 
+// TestIsAdmin_True проверяет, что IsAdmin возвращает true для администратора.
 func TestIsAdmin_True(t *testing.T) {
 	log := getTestLogger()
 
@@ -222,8 +222,9 @@ func TestIsAdmin_True(t *testing.T) {
 		t.Errorf("expected admin to be true")
 	}
 }
-// TestIsAdmin_True проверяет, что IsAdmin возвращает true для администратора.
 
+// TestIsAdmin_False проверяет, что IsAdmin возвращает false для обычного
+// пользователя.
 func TestIsAdmin_False(t *testing.T) {
 	log := getTestLogger()
 
@@ -246,9 +247,8 @@ func TestIsAdmin_False(t *testing.T) {
 		t.Errorf("expected admin to be false")
 	}
 }
-// TestIsAdmin_False проверяет, что IsAdmin возвращает false для обычного
-// пользователя.
 
+// TestIsAdmin_Error проверяет поведение при ошибке провайдера.
 func TestIsAdmin_Error(t *testing.T) {
 	log := getTestLogger()
 
@@ -267,10 +267,10 @@ func TestIsAdmin_Error(t *testing.T) {
 		t.Fatalf("expected error")
 	}
 }
-// TestIsAdmin_Error проверяет поведение при ошибке провайдера.
 
 // Additional tests for branching paths
 
+// TestRegisterNewUser_SaveError имитирует сбой при сохранении пользователя.
 func TestRegisterNewUser_SaveError(t *testing.T) {
 	log := getTestLogger()
 	userSaver := &mockUserSaver{
@@ -288,8 +288,9 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 		t.Fatalf("expected error when saving user fails")
 	}
 }
-// TestRegisterNewUser_SaveError имитирует сбой при сохранении пользователя.
 
+// TestLogin_UserProviderError проверяет реакцию на ошибку при получении данных
+// пользователя.
 func TestLogin_UserProviderError(t *testing.T) {
 	log := getTestLogger()
 
@@ -308,9 +309,8 @@ func TestLogin_UserProviderError(t *testing.T) {
 		t.Fatalf("expected error when user provider fails")
 	}
 }
-// TestLogin_UserProviderError проверяет реакцию на ошибку при получении данных
-// пользователя.
 
+// TestLogin_AppProviderError проверяет поведение при сбое провайдера приложения.
 func TestLogin_AppProviderError(t *testing.T) {
 	log := getTestLogger()
 
@@ -336,8 +336,8 @@ func TestLogin_AppProviderError(t *testing.T) {
 		t.Fatalf("expected error when app provider fails")
 	}
 }
-// TestLogin_AppProviderError проверяет поведение при сбое провайдера приложения.
 
+// TestIsAdmin_GenericError проверяет, что общая ошибка передаётся дальше.
 func TestIsAdmin_GenericError(t *testing.T) {
 	log := getTestLogger()
 
@@ -356,4 +356,3 @@ func TestIsAdmin_GenericError(t *testing.T) {
 		t.Fatalf("expected generic error from IsAdmin")
 	}
 }
-// TestIsAdmin_GenericError проверяет, что общая ошибка передаётся дальше.

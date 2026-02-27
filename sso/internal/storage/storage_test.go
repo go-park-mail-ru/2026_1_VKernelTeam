@@ -10,6 +10,8 @@ import (
 	"testing"
 )
 
+// TestSaveAndLoad проверяет сохранение пользователя, затем перезагрузку
+// хранилища с диска и корректное восстановление данных.
 func TestSaveAndLoad(t *testing.T) {
 	path := "test_dump.json"
 	defer os.Remove(path)
@@ -42,9 +44,9 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatalf("id mismatch: got %d want %d", u.ID, uid)
 	}
 }
-// TestSaveAndLoad проверяет сохранение пользователя, затем перезагрузку
-// хранилища с диска и корректное восстановление данных.
 
+// TestConcurrency проверяет потокобезопасность SaveUser при параллельных
+// вызовах и то, что все пользователи были успешно сохранены.
 func TestConcurrency(t *testing.T) {
 	st, err := New("")
 	if err != nil {
@@ -74,5 +76,3 @@ func TestConcurrency(t *testing.T) {
 		}
 	}
 }
-// TestConcurrency проверяет потокобезопасность SaveUser при параллельных
-// вызовах и то, что все пользователи были успешно сохранены.

@@ -15,6 +15,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 )
 
+// App представляет HTTP-приложение с маршрутизатором, логгером и
+// ссылкой на сервис аутентификации.
 type App struct {
 	log    *slog.Logger
 	router *http.ServeMux
@@ -23,17 +25,13 @@ type App struct {
 	auth   Auth
 }
 
-// App представляет HTTP-приложение с маршрутизатором, логгером и
-// ссылкой на сервис аутентификации.
-
+// Auth описывает минимальный набор методов сервиса аутентификации, который
+// использует HTTP-приложение.
 type Auth interface {
 	Login(ctx context.Context, email string, password string, appID int64) (token string, err error)
 	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
-
-// Auth описывает минимальный набор методов сервиса аутентификации, который
-// использует HTTP-приложение.
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
@@ -66,6 +64,7 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
 	authService Auth,
@@ -88,16 +87,14 @@ func New(
 	return app
 }
 
-// New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
-
+// setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /register", a.handleRegister)
 	a.router.HandleFunc("POST /login", a.handleLogin)
 	a.router.HandleFunc("POST /is-admin", a.handleIsAdmin)
 }
 
-// setupRoutes регистрирует HTTP-обработчики.
-
+// handleRegister обрабатывает запросы на регистрацию новых пользователей.
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -130,8 +127,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	a.respondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
 }
 
-// handleRegister обрабатывает запросы на регистрацию новых пользователей.
-
+// handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -169,8 +165,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	a.respondWithJSON(w, http.StatusOK, LoginResponse{Token: token})
 }
 
-// handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
-
+// handleIsAdmin проверяет, является ли указанный пользователь администратором.
 func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	var req IsAdminRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -198,30 +193,27 @@ func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	a.respondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
 }
 
-// handleIsAdmin проверяет, является ли указанный пользователь администратором.
-
+// respondWithJSON формирует HTTP-ответ c JSON-данными.
 func (a *App) respondWithJSON(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)
 }
 
-// respondWithJSON формирует HTTP-ответ c JSON-данными.
-
+// respondWithError отправляет клиенту ошибку в JSON-формате.
 func (a *App) respondWithError(w http.ResponseWriter, statusCode int, message string) {
 	a.respondWithJSON(w, statusCode, ErrorResponse{Error: message})
 }
 
-// respondWithError отправляет клиенту ошибку в JSON-формате.
-
+// MustRun запускает сервер и паникует при любой ошибке.
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
 		panic(err)
 	}
 }
 
-// MustRun запускает сервер и паникует при любой ошибке.
 
+// Run запускает HTTP-сервер и возвращает ошибку при сбое.
 func (a *App) Run() error {
 	const op = "httpapp.Run"
 
@@ -234,8 +226,7 @@ func (a *App) Run() error {
 	return nil
 }
 
-// Run запускает HTTP-сервер и возвращает ошибку при сбое.
-
+// Stop корректно останавливает сервер.
 func (a *App) Stop() {
 	const op = "httpapp.Stop"
 
@@ -244,5 +235,3 @@ func (a *App) Stop() {
 
 	a.srv.Close()
 }
-
-// Stop корректно останавливает сервер.

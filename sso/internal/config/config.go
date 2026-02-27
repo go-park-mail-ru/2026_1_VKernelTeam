@@ -10,6 +10,8 @@ import (
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
+// Config содержит параметры работы сервиса: окружение, путь к хранилищу,
+// время жизни токена и настройки HTTP-сервера.
 type Config struct {
 	Env         string        `yaml:"env" env-required:"true"`
 	StoragePath string        `yaml:"storage_path" env-required:"true"`
@@ -17,13 +19,12 @@ type Config struct {
 	HTTP        HTTPConfig    `yaml:"http"`
 }
 
-// Config содержит параметры работы сервиса: окружение, путь к хранилищу,
-// время жизни токена и настройки HTTP-сервера.
-
 type HTTPConfig struct {
 	Port int `yaml:"port"`
 }
 
+// MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
+// Это удобный хелпер для вызова из main.
 func MustLoadConfig() *Config {
 	path := fetchConfigPath()
 	if path == "" {
@@ -42,9 +43,8 @@ func MustLoadConfig() *Config {
 	return &cfg
 }
 
-// MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
-// Это удобный хелпер для вызова из main.
-
+// fetchConfigPath определяет путь к файлу конфигурации из флага
+// командной строки или переменной окружения.
 func fetchConfigPath() string {
 	var res string
 
@@ -57,6 +57,3 @@ func fetchConfigPath() string {
 
 	return res
 }
-
-// fetchConfigPath определяет путь к файлу конфигурации из флага
-// командной строки или переменной окружения.
