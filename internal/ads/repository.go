@@ -37,5 +37,9 @@ func NewAdsRepository() *AdsRepository {
 func (r *AdsRepository) GetAll() []Ad {
 	r.RLock()
 	defer r.RUnlock()
-	return r.data
+
+	// создаем новый слайс и копируем туда данные
+	result := make([]Ad, len(r.data))
+	copy(result, r.data)
+	return result
 }
