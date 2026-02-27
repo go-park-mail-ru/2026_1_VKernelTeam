@@ -1,3 +1,5 @@
+// Тесты для пакета storage проверяют поведение простого
+// in-memory хранилища и его сериализации в файл.
 package storage
 
 import (
@@ -40,6 +42,8 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatalf("id mismatch: got %d want %d", u.ID, uid)
 	}
 }
+// TestSaveAndLoad проверяет сохранение пользователя, затем перезагрузку
+// хранилища с диска и корректное восстановление данных.
 
 func TestConcurrency(t *testing.T) {
 	st, err := New("")
@@ -70,3 +74,5 @@ func TestConcurrency(t *testing.T) {
 		}
 	}
 }
+// TestConcurrency проверяет потокобезопасность SaveUser при параллельных
+// вызовах и то, что все пользователи были успешно сохранены.
