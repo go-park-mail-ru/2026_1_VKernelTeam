@@ -15,14 +15,14 @@ help:
 
 # Run the application
 run-auth:
-	go run ./cmd/sso/main.go --config=./config/local.yaml
+	go run ./cmd/sso/main.go --config=./config/local.json
 
 # Run the application
 run-ads:
 	go run cmd/server/main.go
 
 run:
-	go run ./cmd/sso/main.go --config=./config/local.yaml
+	go run ./cmd/sso/main.go --config=./config/local.json
 	go run cmd/server/main.go
 
 # Run all tests

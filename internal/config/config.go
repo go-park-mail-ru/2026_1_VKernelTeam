@@ -6,8 +6,7 @@ import (
 	"flag"
 	"os"
 	"time"
-
-	"github.com/ilyakaznacheev/cleanenv"
+	"encoding/json"
 )
 
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
@@ -37,8 +36,15 @@ func MustLoadConfig() *Config {
 	}
 
 	var cfg Config
-	if err := cleanenv.ReadConfig(path, &cfg); err != nil {
-		panic("failed to read config: " + err.Error())
+
+	file, err := os.Open(path)
+	if err != nil {
+		panic("failed to open config file: " + err.Error())
+	}
+	defer file.Close()
+
+	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
+		panic("failed to decode config: " + err.Error())
 	}
 
 	return &cfg
