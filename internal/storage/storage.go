@@ -1,4 +1,4 @@
-// Пакет storage предоставляет простое хранилище данных в памяти с
+// Package storage предоставляет простое хранилище данных в памяти с
 // периодическим дампом в JSON-файл. Он реализует интерфейсы, используемые
 // сервисом аутентификации, такие как UserSaver, UserProvider и AppProvider.
 package storage
@@ -15,6 +15,10 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 )
 
+// ErrUserExists возвращается, когда пытаются создать пользователя с email, который уже существует в хранилище.
+// ErrAppExists возвращается, когда пытаются создать приложение с именем, которое уже существует в хранилище.
+// ErrUserNotFound возвращается, когда запрашиваемый пользователь не найден в хранилище.
+// ErrAppNotFound возвращается, когда запрашиваемое приложение не найдено в хранилище.
 var (
 	ErrUserExists   = errors.New("user already exists")
 	ErrAppExists    = errors.New("app already exists")
@@ -27,7 +31,6 @@ var (
 // снимок в файл, указанный вызывающей стороной. Доступ защищен
 // мьютексом чтения-записи (RWMutex), поэтому параллельные читатели могут работать одновременно, в то время как
 // писатели получают эксклюзивный доступ.
-
 type Storage struct {
 	mu sync.RWMutex // защищает поля ниже
 
@@ -56,7 +59,6 @@ type dump struct {
 // предварительно заполняет его содержимым файла. Если файл отсутствует,
 // хранилище создается пустым. Путь может быть пустым; в этом случае сохранение
 // пропускается, и хранилище остается только в памяти.
-
 func New(path string) (*Storage, error) {
 	s := &Storage{
 		usersByEmail: make(map[string]models.User),
@@ -139,7 +141,6 @@ func (s *Storage) persist() error {
 
 // SaveUser удовлетворяет интерфейсу auth.UserSaver. Он возвращает ErrUserExists, если пользователь с
 // таким же email уже существует.
-
 func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -161,7 +162,6 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 }
 
 // User реализует интерфейс auth.UserProvider.User.
-
 func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -175,7 +175,6 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 
 // IsAdmin реализует интерфейс auth.UserProvider.IsAdmin. Мы ищем пользователя по ID во
 // второй мапе для доступа за константное время.
-
 func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -189,7 +188,6 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 
 // CreateApp добавляет новое приложение и возвращает его автоматически сгенерированный ID. Если
 // приложение с таким же именем уже существует, возвращается ErrAppExists.
-
 func (s *Storage) CreateApp(ctx context.Context, name, secret string) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -213,7 +211,6 @@ func (s *Storage) CreateApp(ctx context.Context, name, secret string) (int64, er
 }
 
 // App реализует интерфейс auth.AppProvider.App.
-
 func (s *Storage) App(ctx context.Context, appID int64) (models.App, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

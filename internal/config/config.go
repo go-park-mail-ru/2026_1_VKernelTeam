@@ -1,4 +1,4 @@
-// Пакет config отвечает за загрузку и парсинг конфигурации из YAML-файла
+// Package config отвечает за загрузку и парсинг конфигурации из YAML-файла
 // либо переменных окружения.
 package config
 
@@ -19,6 +19,7 @@ type Config struct {
 	HTTP        HTTPConfig    `yaml:"http"`
 }
 
+// HTTPConfig содержит настройки HTTP-сервера.
 type HTTPConfig struct {
 	Port int `yaml:"port"`
 }

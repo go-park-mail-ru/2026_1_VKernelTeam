@@ -1,4 +1,4 @@
-// Пакет httpapp реализует HTTP-интерфейс поверх сервиса auth. Он
+// Package httpapp реализует HTTP-интерфейс поверх сервиса auth. Он
 // предоставляет обработчики для маршрутов регистрации, входа и проверки
 // прав администратора, а также простую структуру сервера.
 package httpapp
@@ -35,33 +35,40 @@ type Auth interface {
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
+// RegisterRequest представляет собой структуру для запроса на регистрацию пользователя.
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// RegisterResponse представляет собой структуру для ответа на запрос регистрации пользователя.
 type RegisterResponse struct {
 	UserID int64 `json:"user_id"`
 }
 
+// LoginRequest представляет собой структуру для запроса на вход в систему, содержащую email, пароль и идентификатор приложения.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	AppID    int64  `json:"app_id"`
 }
 
+// LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
 type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+// IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
 type IsAdminRequest struct {
 	UserID int64 `json:"user_id"`
 }
 
+// IsAdminResponse представляет собой структуру для ответа на запрос проверки прав администратора.
 type IsAdminResponse struct {
 	IsAdmin bool `json:"is_admin"`
 }
 
+// ErrorResponse представляет собой структуру для отправки ошибок в формате JSON.
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

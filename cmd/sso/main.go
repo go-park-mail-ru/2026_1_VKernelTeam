@@ -31,5 +31,4 @@ func main() {
 	log.Info("stopping applications")
 	application.HTTPServer.Stop()
 	log.Info("applications stopped")
-
 }

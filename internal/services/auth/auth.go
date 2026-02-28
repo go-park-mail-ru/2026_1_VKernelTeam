@@ -1,4 +1,4 @@
-// Пакет auth реализует бизнес-логику аутентификации и авторизации
+// Package auth реализует бизнес-логику аутентификации и авторизации
 // пользователей. Он определяет сервис Auth с методами входа в систему,
 // регистрации и проверки прав администратора, а также соответствующие
 // интерфейсы для взаимодействия с хранилищем и провайдерами данных.
@@ -58,6 +58,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 )
 
+// New создаёт новый экземпляр Auth с переданными зависимостями.
 func New(
 	log *slog.Logger,
 	userSaver UserSaver,
@@ -72,11 +73,9 @@ func New(
 		appProvider:  appProvider,
 		tokenTTL:     tokenTTL,
 	}
-
 }
 
 // New создаёт новый экземпляр Auth с переданными зависимостями.
-
 func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (string, error) {
 	const op = "auth.Login"
 
@@ -117,7 +116,6 @@ func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (
 // Login аутентифицирует пользователя по email и паролю, проверяет
 // принадлежность к приложению и возвращает JWT-токен. В случае
 // ошибок возвращается описанная ошибка.
-
 func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int64, error) {
 	const op = "auth.RegisterNewUser"
 
@@ -144,13 +142,11 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int
 	}
 	log.Info("user registered")
 	return id, nil
-
 }
 
 // RegisterNewUser создаёт нового пользователя с указанным email и паролем.
 // Пароль хэшируется, и данные сохраняются через UserSaver. Возвращает
 // идентификатор пользователя.
-
 func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	const op = "auth.IsAdmin"
 

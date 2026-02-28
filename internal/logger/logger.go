@@ -15,7 +15,6 @@ const (
 
 // envLocal, envDev и envProd обозначают возможные значения переменной
 // окружения для выбора конфигурации логгера.
-
 func SetupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 

@@ -57,7 +57,7 @@ clean:
 
 # Run linter (requires: golangci-lint)
 lint:
-	golangci-lint run ./...
+	golangci-lint run --fix ./...
 
 # Format code
 fmt:
