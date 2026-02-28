@@ -8,12 +8,12 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 )
 
-// NewToken формирует новый JWT-токен для указанного пользователя и
-// приложения с заданным временем жизни. В качестве payload может быть
-// использована информация о user и app. Возвращает строковое представление
+// NewToken формирует новый JWT-токен для указанного пользователя
+// с заданным временем жизни. В качестве payload может быть
+// использована информация о user. Возвращает строковое представление
 // токена или ошибку.
 // TODO: реализовать создание токена с помощью библиотеки github.com/golang-jwt/jwt.
-func NewToken(user models.User, app models.App, duration time.Duration) (string, error) {
+func NewToken(user models.User, duration time.Duration) (string, error) {
 	//TODO: implement JWT token generation using a library like github.com/golang-jwt/jwt
 	return "2345egfvdf", nil
 }

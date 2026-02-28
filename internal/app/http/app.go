@@ -14,7 +14,6 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
-
 )
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -30,7 +29,7 @@ type App struct {
 // Auth описывает минимальный набор методов сервиса аутентификации, который
 // использует HTTP-приложение.
 type Auth interface {
-	Login(ctx context.Context, email string, password string, appID int64) (token string, err error)
+	Login(ctx context.Context, email string, password string) (token string, err error)
 	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
@@ -46,11 +45,10 @@ type RegisterResponse struct {
 	UserID int64 `json:"user_id"`
 }
 
-// LoginRequest представляет собой структуру для запроса на вход в систему, содержащую email, пароль и идентификатор приложения.
+// LoginRequest представляет собой структуру для запроса на вход в систему, содержащую email и пароль.
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-	AppID    int64  `json:"app_id"`
 }
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
@@ -98,9 +96,9 @@ func New(
 
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST /register", a.handleRegister)
-	a.router.HandleFunc("POST /login", a.handleLogin)
-	a.router.HandleFunc("POST /is-admin", a.handleIsAdmin)
+	a.router.HandleFunc("POST /auth/register", a.handleRegister)
+	a.router.HandleFunc("POST /auth/login", a.handleLogin)
+	a.router.HandleFunc("POST /auth/is-admin", a.handleIsAdmin)
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
@@ -154,12 +152,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.AppID == 0 {
-		utils.RespondWithError(w, http.StatusBadRequest, "app_id is required")
-		return
-	}
-
-	token, err := a.auth.Login(r.Context(), req.Email, req.Password, req.AppID)
+	token, err := a.auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			utils.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")

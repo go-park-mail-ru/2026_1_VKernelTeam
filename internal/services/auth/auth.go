@@ -29,7 +29,6 @@ type Auth struct {
 	log          *slog.Logger
 	userSaver    UserSaver
 	userProvider UserProvider
-	appProvider  AppProvider
 	tokenTTL     time.Duration
 }
 
@@ -46,12 +45,6 @@ type UserProvider interface {
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
-// AppProvider отвечает за получение информации о зарегистрированных
-// приложениях.
-type AppProvider interface {
-	App(ctx context.Context, appID int64) (models.App, error)
-}
-
 // ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
 // сохранёнными данными.
 var (
@@ -63,20 +56,19 @@ func New(
 	log *slog.Logger,
 	userSaver UserSaver,
 	userProvider UserProvider,
-	appProvider AppProvider,
 	tokenTTL time.Duration,
 ) *Auth {
 	return &Auth{
 		log:          log,
 		userSaver:    userSaver,
 		userProvider: userProvider,
-		appProvider:  appProvider,
 		tokenTTL:     tokenTTL,
 	}
 }
 
-// New создаёт новый экземпляр Auth с переданными зависимостями.
-func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (string, error) {
+// Login аутентифицирует пользователя по email и паролю и возвращает JWT-токен. В случае
+// ошибок возвращается описанная ошибка.
+func (a *Auth) Login(ctx context.Context, email, password string) (string, error) {
 	const op = "auth.Login"
 
 	log := a.log.With(
@@ -100,11 +92,7 @@ func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	app, err := a.appProvider.App(ctx, appId)
-	if err != nil {
-		return "", fmt.Errorf("%s: %w", op, err)
-	}
-	token, err := jwt.NewToken(user, app, a.tokenTTL)
+	token, err := jwt.NewToken(user, a.tokenTTL)
 	if err != nil {
 		log.Error("failed to generate token")
 		return "", fmt.Errorf("%s: %w", op, err)
@@ -113,9 +101,9 @@ func (a *Auth) Login(ctx context.Context, email, password string, appId int64) (
 	return token, nil
 }
 
-// Login аутентифицирует пользователя по email и паролю, проверяет
-// принадлежность к приложению и возвращает JWT-токен. В случае
-// ошибок возвращается описанная ошибка.
+// RegisterNewUser создаёт нового пользователя с указанным email и паролем.
+// Пароль хэшируется, и данные сохраняются через UserSaver. Возвращает
+// идентификатор пользователя.
 func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int64, error) {
 	const op = "auth.RegisterNewUser"
 
@@ -144,9 +132,8 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int
 	return id, nil
 }
 
-// RegisterNewUser создаёт нового пользователя с указанным email и паролем.
-// Пароль хэшируется, и данные сохраняются через UserSaver. Возвращает
-// идентификатор пользователя.
+// IsAdmin возвращает true, если пользователь с заданным ID обладает правами
+// администратора.
 func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	const op = "auth.IsAdmin"
 
@@ -158,7 +145,7 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 
 	isAdmin, err := a.userProvider.IsAdmin(ctx, userID)
 	if err != nil {
-		if errors.Is(err, storage.ErrAppNotFound) {
+		if errors.Is(err, storage.ErrUserNotFound) {
 			return false, fmt.Errorf("%s: %w", op, err)
 		}
 		log.Error("failed to check if user is admin")
@@ -167,6 +154,3 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	log.Info("user is admin", slog.Bool("is_admin", isAdmin))
 	return isAdmin, nil
 }
-
-// IsAdmin возвращает true, если пользователь с заданным ID обладает правами
-// администратора.

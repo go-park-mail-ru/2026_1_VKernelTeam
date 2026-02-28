@@ -30,7 +30,7 @@ func New(
 		panic(err)
 	}
 
-	authService := auth.New(log, storage, storage, storage, tokenTTL)
+	authService := auth.New(log, storage, storage, tokenTTL)
 
 	httpApp := httpapp.New(log, authService, httpPort)
 

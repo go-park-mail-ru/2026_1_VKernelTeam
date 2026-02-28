@@ -16,14 +16,10 @@ import (
 )
 
 // ErrUserExists возвращается, когда пытаются создать пользователя с email, который уже существует в хранилище.
-// ErrAppExists возвращается, когда пытаются создать приложение с именем, которое уже существует в хранилище.
 // ErrUserNotFound возвращается, когда запрашиваемый пользователь не найден в хранилище.
-// ErrAppNotFound возвращается, когда запрашиваемое приложение не найдено в хранилище.
 var (
 	ErrUserExists   = errors.New("user already exists")
-	ErrAppExists    = errors.New("app already exists")
 	ErrUserNotFound = errors.New("user not found")
-	ErrAppNotFound  = errors.New("app not found")
 )
 
 // Storage реализует все интерфейсы, необходимые сервису auth.
@@ -36,10 +32,8 @@ type Storage struct {
 
 	usersByEmail map[string]models.User
 	usersByID    map[int64]models.User
-	apps         map[int64]models.App
 
 	nextUserID int64
-	nextAppID  int64
 
 	path string // путь к файлу дампа JSON
 }
@@ -50,9 +44,7 @@ type Storage struct {
 type dump struct {
 	Users      map[string]models.User `json:"users"`
 	UsersByID  map[int64]models.User  `json:"users_by_id"`
-	Apps       map[int64]models.App   `json:"apps"`
 	NextUserID int64                  `json:"next_user_id"`
-	NextAppID  int64                  `json:"next_app_id"`
 }
 
 // New создает экземпляр Storage и, если файл уже существует,
@@ -63,7 +55,6 @@ func New(path string) (*Storage, error) {
 	s := &Storage{
 		usersByEmail: make(map[string]models.User),
 		usersByID:    make(map[int64]models.User),
-		apps:         make(map[int64]models.App),
 		path:         path,
 	}
 
@@ -108,9 +99,7 @@ func (s *Storage) load() error {
 
 	s.usersByEmail = d.Users
 	s.usersByID = d.UsersByID
-	s.apps = d.Apps
 	s.nextUserID = d.NextUserID
-	s.nextAppID = d.NextAppID
 
 	return nil
 }
@@ -123,9 +112,7 @@ func (s *Storage) persist() error {
 	d := dump{
 		Users:      s.usersByEmail,
 		UsersByID:  s.usersByID,
-		Apps:       s.apps,
 		NextUserID: s.nextUserID,
-		NextAppID:  s.nextAppID,
 	}
 
 	f, err := os.Create(s.path)
@@ -184,40 +171,4 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 		return false, ErrUserNotFound
 	}
 	return u.IsAdmin, nil
-}
-
-// CreateApp добавляет новое приложение и возвращает его автоматически сгенерированный ID. Если
-// приложение с таким же именем уже существует, возвращается ErrAppExists.
-func (s *Storage) CreateApp(ctx context.Context, name, secret string) (int64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// убеждаемся, что имя уникально
-	for _, a := range s.apps {
-		if a.Name == name {
-			return 0, ErrAppExists
-		}
-	}
-
-	s.nextAppID++
-	a := models.App{ID: s.nextAppID, Name: name, Secret: secret}
-	s.apps[a.ID] = a
-
-	if err := s.persist(); err != nil {
-		return 0, err
-	}
-
-	return a.ID, nil
-}
-
-// App реализует интерфейс auth.AppProvider.App.
-func (s *Storage) App(ctx context.Context, appID int64) (models.App, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	a, ok := s.apps[appID]
-	if !ok {
-		return models.App{}, ErrAppNotFound
-	}
-	return a, nil
 }

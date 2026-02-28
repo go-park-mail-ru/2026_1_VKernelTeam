@@ -49,17 +49,6 @@ func (m *mockUserProvider) IsAdmin(ctx context.Context, userID int64) (bool, err
 	return false, nil
 }
 
-type mockAppProvider struct {
-	AppFunc func(ctx context.Context, appID int64) (models.App, error)
-}
-
-func (m *mockAppProvider) App(ctx context.Context, appID int64) (models.App, error) {
-	if m.AppFunc != nil {
-		return m.AppFunc(ctx, appID)
-	}
-	return models.App{}, nil
-}
-
 // getTestLogger возвращает простой логгер для использования в тестах.
 func getTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -76,9 +65,8 @@ func TestRegisterNewUser_Success(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err != nil {
@@ -100,9 +88,8 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123")
 	if err == nil {
@@ -130,19 +117,10 @@ func TestLogin_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	appProvider := &mockAppProvider{
-		AppFunc: func(ctx context.Context, appID int64) (models.App, error) {
-			return models.App{
-				ID:     appID,
-				Name:   "test-app",
-				Secret: "secret",
-			}, nil
-		},
-	}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
-	token, err := auth.Login(context.Background(), "test@example.com", password, 1)
+	token, err := auth.Login(context.Background(), "test@example.com", password)
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
@@ -168,11 +146,10 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 			}, nil
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
-	_, err := auth.Login(context.Background(), "test@example.com", "wrongpassword", 1)
+	_, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
 	if err == nil {
 		t.Fatalf("expected error for invalid credentials")
 	}
@@ -189,11 +166,10 @@ func TestLogin_UserNotFound(t *testing.T) {
 			return models.User{}, storage.ErrUserNotFound
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
-	_, err := auth.Login(context.Background(), "nonexistent@example.com", "password123", 1)
+	_, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
 	if err == nil {
 		t.Fatalf("expected error for non-existent user")
 	}
@@ -209,9 +185,8 @@ func TestIsAdmin_True(t *testing.T) {
 			return true, nil
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -234,9 +209,8 @@ func TestIsAdmin_False(t *testing.T) {
 			return false, nil
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -255,12 +229,11 @@ func TestIsAdmin_Error(t *testing.T) {
 	userSaver := &mockUserSaver{}
 	userProvider := &mockUserProvider{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
-			return false, storage.ErrAppNotFound
+			return false, storage.ErrUserNotFound
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	_, err := auth.IsAdmin(context.Background(), 1)
 	if err == nil {
@@ -279,9 +252,8 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err == nil {
@@ -300,40 +272,12 @@ func TestLogin_UserProviderError(t *testing.T) {
 			return models.User{}, errors.New("something went wrong")
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
-	_, err := auth.Login(context.Background(), "user@example.com", "pwd", 1)
+	_, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
 		t.Fatalf("expected error when user provider fails")
-	}
-}
-
-// TestLogin_AppProviderError проверяет поведение при сбое провайдера приложения.
-func TestLogin_AppProviderError(t *testing.T) {
-	log := getTestLogger()
-
-	password := "password123"
-	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
-		UserFunc: func(ctx context.Context, email string) (models.User, error) {
-			return models.User{ID: 1, Email: email, PassHash: passHash}, nil
-		},
-	}
-	appProvider := &mockAppProvider{
-		AppFunc: func(ctx context.Context, appID int64) (models.App, error) {
-			return models.App{}, errors.New("app lookup failure")
-		},
-	}
-
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
-
-	_, err := auth.Login(context.Background(), "test@example.com", password, 42)
-	if err == nil {
-		t.Fatalf("expected error when app provider fails")
 	}
 }
 
@@ -347,9 +291,8 @@ func TestIsAdmin_GenericError(t *testing.T) {
 			return false, errors.New("whoops")
 		},
 	}
-	appProvider := &mockAppProvider{}
 
-	auth := New(log, userSaver, userProvider, appProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, time.Hour)
 
 	_, err := auth.IsAdmin(context.Background(), 123)
 	if err == nil {
