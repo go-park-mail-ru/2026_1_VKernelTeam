@@ -10,20 +10,27 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
-	log    *slog.Logger
-	router *http.ServeMux
-	port   int
-	srv    *http.Server
-	auth   Auth
+	log       *slog.Logger
+	router    *http.ServeMux
+	port      int
+	srv       *http.Server
+	auth      Auth
+	blacklist *blacklist.InMemory
+	secret    string
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации, который
@@ -32,6 +39,7 @@ type Auth interface {
 	Login(ctx context.Context, email string, password string) (token string, err error)
 	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	Logout(ctx context.Context, jti string, exp time.Time) error
 }
 
 // RegisterRequest представляет собой структуру для запроса на регистрацию пользователя.
@@ -75,13 +83,17 @@ type ErrorResponse struct {
 func New(
 	log *slog.Logger,
 	authService Auth,
+	bl *blacklist.InMemory,
 	port int,
+	secret string,
 ) *App {
 	app := &App{
-		log:    log,
-		router: http.NewServeMux(),
-		port:   port,
-		auth:   authService,
+		log:       log,
+		router:    http.NewServeMux(),
+		port:      port,
+		auth:      authService,
+		blacklist: bl,
+		secret:    secret,
 	}
 
 	app.setupRoutes()
@@ -98,7 +110,11 @@ func New(
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /auth/register", a.handleRegister)
 	a.router.HandleFunc("POST /auth/login", a.handleLogin)
-	a.router.HandleFunc("POST /auth/is-admin", a.handleIsAdmin)
+
+	// Защищенные ручки (оборачиваем в Middleware)
+	authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
+	a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
+	a.router.Handle("POST /auth/logout", authMW(http.HandlerFunc(a.handleLogout)))
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
@@ -193,6 +209,31 @@ func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
+}
+
+func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
+	// извлекаем токен
+	authHeader := r.Header.Get("Authorization")
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+	if err != nil {
+		a.log.Error("failed to get token", slog.String("error", err.Error()))
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to get token")
+		return
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+
+	jti := claims["jti"].(string)
+	exp := time.Unix(int64(claims["exp"].(float64)), 0)
+
+	if err := a.auth.Logout(r.Context(), jti, exp); err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

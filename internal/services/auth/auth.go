@@ -29,7 +29,14 @@ type Auth struct {
 	log          *slog.Logger
 	userSaver    UserSaver
 	userProvider UserProvider
+	tokenRevoker TokenRevoker
 	tokenTTL     time.Duration
+	secret       string
+}
+
+// TokenRevoker описывает интерфейс для отзыва токенов.
+type TokenRevoker interface {
+	Add(jti string, exp time.Time)
 }
 
 // UserSaver описывает интерфейс для сохранения нового пользователя
@@ -56,13 +63,17 @@ func New(
 	log *slog.Logger,
 	userSaver UserSaver,
 	userProvider UserProvider,
+	tokenRevoker TokenRevoker,
 	tokenTTL time.Duration,
+	secret string,
 ) *Auth {
 	return &Auth{
 		log:          log,
 		userSaver:    userSaver,
 		userProvider: userProvider,
+		tokenRevoker: tokenRevoker,
 		tokenTTL:     tokenTTL,
+		secret:       secret,
 	}
 }
 
@@ -92,13 +103,30 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, error
 		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 	}
 
-	token, err := jwt.NewToken(user, a.tokenTTL)
+	token, err := jwt.NewToken(user, a.tokenTTL, a.secret)
 	if err != nil {
 		log.Error("failed to generate token")
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
 	log.Info("user logged in")
 	return token, nil
+}
+
+// Logout отзывает токен пользователя, добавляя в чёрный список его jti
+func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time) error {
+	const op = "auth.Logout"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("jti", jti),
+	)
+	log.Info("logging out user, revoking token")
+
+	// добавляем токен в хранилище отозванных
+	a.tokenRevoker.Add(jti, exp)
+
+	log.Info("token successfully revoked")
+	return nil
 }
 
 // RegisterNewUser создаёт нового пользователя с указанным email и паролем.

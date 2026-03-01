@@ -18,7 +18,7 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL)
+	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL, cfg.TokenSecret)
 	go application.HTTPServer.MustRun()
 	log.Info("applications started")
 

@@ -10,6 +10,7 @@ import (
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 )
 
 // App содержит корневые объекты приложения, например HTTP-сервер.
@@ -23,6 +24,7 @@ func New(
 	httpPort int,
 	storagePath string,
 	tokenTTL time.Duration,
+	secret string,
 ) *App {
 	storage, err := storage.New(storagePath)
 	if err != nil {
@@ -30,9 +32,14 @@ func New(
 		panic(err)
 	}
 
-	authService := auth.New(log, storage, storage, tokenTTL)
+	// инициализируем чёрный список
+	tokenBlacklist := blacklist.New()
 
-	httpApp := httpapp.New(log, authService, httpPort)
+	// создаём сервис Auth
+	authService := auth.New(log, storage, storage, tokenBlacklist, tokenTTL, secret)
+
+	// создаём HTTP-приложение
+	httpApp := httpapp.New(log, authService, tokenBlacklist, httpPort, secret)
 
 	return &App{
 		HTTPServer: httpApp,

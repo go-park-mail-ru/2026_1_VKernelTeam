@@ -49,6 +49,20 @@ func (m *mockUserProvider) IsAdmin(ctx context.Context, userID int64) (bool, err
 	return false, nil
 }
 
+// Mock для TokenRevoker
+type mockTokenRevoker struct {
+	AddFunc func(jti string, exp time.Time)
+}
+
+func (m *mockTokenRevoker) Add(jti string, exp time.Time) {
+	if m.AddFunc != nil {
+		m.AddFunc(jti, exp)
+	}
+}
+
+// Константа для тестов
+const testSecret = "test-secret-key"
+
 // getTestLogger возвращает простой логгер для использования в тестах.
 func getTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -65,8 +79,9 @@ func TestRegisterNewUser_Success(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
+	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err != nil {
@@ -88,8 +103,9 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
+	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123")
 	if err == nil {
@@ -118,7 +134,9 @@ func TestLogin_Success(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	token, err := auth.Login(context.Background(), "test@example.com", password)
 	if err != nil {
@@ -147,7 +165,9 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
 	if err == nil {
@@ -167,7 +187,9 @@ func TestLogin_UserNotFound(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
 	if err == nil {
@@ -186,7 +208,9 @@ func TestIsAdmin_True(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -210,7 +234,9 @@ func TestIsAdmin_False(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -233,7 +259,9 @@ func TestIsAdmin_Error(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 1)
 	if err == nil {
@@ -252,8 +280,9 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 		},
 	}
 	userProvider := &mockUserProvider{}
+	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err == nil {
@@ -273,7 +302,9 @@ func TestLogin_UserProviderError(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
@@ -292,7 +323,9 @@ func TestIsAdmin_GenericError(t *testing.T) {
 		},
 	}
 
-	auth := New(log, userSaver, userProvider, time.Hour)
+	tokenRevoker := &mockTokenRevoker{}
+
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 123)
 	if err == nil {

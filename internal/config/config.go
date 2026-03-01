@@ -3,10 +3,10 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"os"
 	"time"
-	"encoding/json"
 )
 
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
@@ -16,6 +16,7 @@ type Config struct {
 	StoragePath string        `yaml:"storage_path" env-required:"true"`
 	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
 	HTTP        HTTPConfig    `yaml:"http"`
+	TokenSecret string        `yaml:"token_secret" env-required:"true"`
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.

@@ -2,6 +2,7 @@
   "env": "local",
   "storage_path": "./storage/sso.db",
   "token_ttl": "24h",
+  "token_secret": "mysecret123",
   "http": {
     "port": 8000
   }

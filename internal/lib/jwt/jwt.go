@@ -1,19 +1,25 @@
-// Package jwt содержит утилиты для генерации и проверки JWT-токенов.
-// В текущей реализации генерация ещё не реализована.
+// Package jwt создан для генерации и проверки JWT-токенов.
 package jwt
 
 import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 // NewToken формирует новый JWT-токен для указанного пользователя
 // с заданным временем жизни. В качестве payload может быть
 // использована информация о user. Возвращает строковое представление
 // токена или ошибку.
-// TODO: реализовать создание токена с помощью библиотеки github.com/golang-jwt/jwt.
-func NewToken(user models.User, duration time.Duration) (string, error) {
-	//TODO: implement JWT token generation using a library like github.com/golang-jwt/jwt
-	return "2345egfvdf", nil
+func NewToken(user models.User, duration time.Duration, secret string) (string, error) {
+	claims := jwt.MapClaims{
+		"uid": user.ID,
+		"exp": time.Now().Add(duration).Unix(), // срок годности
+		"jti": uuid.New().String(),             // уникальный id
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret)) // подписываем токен секретным ключом
 }
