@@ -7,6 +7,8 @@ import (
 	"flag"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
@@ -16,7 +18,7 @@ type Config struct {
 	StoragePath string        `yaml:"storage_path" env-required:"true"`
 	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
 	HTTP        HTTPConfig    `yaml:"http"`
-	TokenSecret string        `yaml:"token_secret" env-required:"true"`
+	TokenSecret string        `yaml:"token_secret" env:"TOKEN_SECRET" env-required:"true"`
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.
@@ -27,6 +29,8 @@ type HTTPConfig struct {
 // MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
 // Это удобный хелпер для вызова из main.
 func MustLoadConfig() *Config {
+	_ = godotenv.Load()
+
 	path := fetchConfigPath()
 	if path == "" {
 		panic("config path is empty")
