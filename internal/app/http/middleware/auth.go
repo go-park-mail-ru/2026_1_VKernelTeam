@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
@@ -14,19 +13,13 @@ import (
 func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				utils.RespondWithError(w, http.StatusUnauthorized, "missing authorization header")
+			cookie, err := r.Cookie("token")
+			if err != nil {
+				utils.RespondWithError(w, http.StatusUnauthorized, "missing token cookie")
 				return
 			}
 
-			headerParts := strings.Split(authHeader, " ")
-			if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-				utils.RespondWithError(w, http.StatusUnauthorized, "invalid auth header format")
-				return
-			}
-
-			tokenString := headerParts[1]
+			tokenString := cookie.Value
 
 			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (any, error) {
 				return []byte(secret), nil

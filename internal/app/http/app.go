@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
@@ -110,11 +109,11 @@ func New(
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /auth/register", a.handleRegister)
 	a.router.HandleFunc("POST /auth/login", a.handleLogin)
+	a.router.HandleFunc("POST /auth/logout", http.HandlerFunc(a.handleLogout))
 
-	// Защищенные ручки (оборачиваем в Middleware)
+	// Защищенная ручка (оборачиваем в Middleware)
 	authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
 	a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
-	a.router.Handle("POST /auth/logout", authMW(http.HandlerFunc(a.handleLogout)))
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
@@ -180,7 +179,17 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, LoginResponse{Token: token})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		HttpOnly: true,                     // JS не увидит куку
+		Secure:   true,                     // передача только по HTTPS
+		Path:     "/",                      // доступна везде
+		SameSite: http.SameSiteLaxMode,     // защита от CSRF атак
+		MaxAge:   int(time.Hour.Seconds()), // время жизни - час
+	})
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // handleIsAdmin проверяет, является ли указанный пользователь администратором.
@@ -212,9 +221,13 @@ func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
-	// извлекаем токен
-	authHeader := r.Header.Get("Authorization")
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	// извлекаем токен из куки
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "no token to logout")
+		return
+	}
+	tokenString := cookie.Value
 
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
 	if err != nil {
@@ -229,9 +242,19 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	exp := time.Unix(int64(claims["exp"].(float64)), 0)
 
 	if err := a.auth.Logout(r.Context(), jti, exp); err != nil {
+		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,              // удаляем куку
+		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
+	})
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
