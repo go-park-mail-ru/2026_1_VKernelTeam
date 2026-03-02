@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
+	// "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
@@ -37,7 +37,7 @@ type App struct {
 type Auth interface {
 	Login(ctx context.Context, email string, password string) (token string, err error)
 	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
-	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	// IsAdmin(ctx context.Context, userID int64) (bool, error)
 	Logout(ctx context.Context, jti string, exp time.Time) error
 }
 
@@ -112,8 +112,8 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /auth/logout", http.HandlerFunc(a.handleLogout))
 
 	// Защищенная ручка (оборачиваем в Middleware)
-	authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
-	a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
+	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
+	// a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
@@ -193,32 +193,33 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleIsAdmin проверяет, является ли указанный пользователь администратором.
-func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
-	var req IsAdminRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
+// TODO: доставать токен из куки или бурать ручку совсем
+// func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
+// 	var req IsAdminRequest
+// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+// 		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
+// 		return
+// 	}
 
-	if req.UserID == 0 {
-		utils.RespondWithError(w, http.StatusBadRequest, "user_id is required")
-		return
-	}
+// 	if req.UserID == 0 {
+// 		utils.RespondWithError(w, http.StatusBadRequest, "user_id is required")
+// 		return
+// 	}
 
-	isAdmin, err := a.auth.IsAdmin(r.Context(), req.UserID)
-	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
-			utils.RespondWithError(w, http.StatusNotFound, "user not found")
-			return
-		}
+// 	isAdmin, err := a.auth.IsAdmin(r.Context(), req.UserID)
+// 	if err != nil {
+// 		if errors.Is(err, storage.ErrUserNotFound) {
+// 			utils.RespondWithError(w, http.StatusNotFound, "user not found")
+// 			return
+// 		}
 
-		a.log.Error("failed to check admin status", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "failed to check admin status")
-		return
-	}
+// 		a.log.Error("failed to check admin status", slog.String("error", err.Error()))
+// 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to check admin status")
+// 		return
+// 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
-}
+// 	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
+// }
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	// извлекаем токен из куки
