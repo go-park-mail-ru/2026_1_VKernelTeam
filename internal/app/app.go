@@ -24,6 +24,7 @@ func New(
 	httpPort int,
 	storagePath string,
 	tokenTTL time.Duration,
+	cleanupInterval time.Duration,
 	secret string,
 ) *App {
 	storage, err := storage.New(storagePath)
@@ -33,7 +34,7 @@ func New(
 	}
 
 	// инициализируем чёрный список
-	tokenBlacklist := blacklist.New()
+	tokenBlacklist := blacklist.New(cleanupInterval)
 
 	// создаём сервис Auth
 	authService := auth.New(log, storage, storage, tokenBlacklist, tokenTTL, secret)

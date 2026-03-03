@@ -14,11 +14,12 @@ import (
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
 // время жизни токена и настройки HTTP-сервера.
 type Config struct {
-	Env         string        `json:"env"`
-	StoragePath string        `json:"storage_path"`
-	TokenTTL    time.Duration `json:"token_ttl"`
-	HTTP        HTTPConfig    `json:"http"`
-	TokenSecret string        `json:"token_secret"`
+	Env             string        `json:"env"`
+	StoragePath     string        `json:"storage_path"`
+	TokenTTL        time.Duration `json:"token_ttl"`
+	HTTP            HTTPConfig    `json:"http"`
+	CleanupInterval time.Duration `json:"cleanup_interval"`
+	TokenSecret     string        `json:"token_secret"`
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.

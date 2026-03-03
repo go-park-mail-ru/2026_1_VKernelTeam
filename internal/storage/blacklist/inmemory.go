@@ -11,13 +11,12 @@ type InMemory struct {
 	tokens map[string]time.Time // key: jti, value: expiration time
 }
 
-func New() *InMemory {
+func New(cleanupInterval time.Duration) *InMemory {
 	blacklist := &InMemory{
 		tokens: make(map[string]time.Time),
 	}
-
-	// запускаем очистку старых токенов раз в 5 минут
-	go blacklist.startSweeper(5 * time.Minute)
+	// Запускаем горутину для очистки чёрного списка
+	go blacklist.startSweeper(cleanupInterval)
 
 	return blacklist
 }

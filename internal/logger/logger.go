@@ -7,14 +7,17 @@ import (
 	"os"
 )
 
+// envLocal, envDev и envProd обозначают возможные значения переменной
+// окружения для выбора конфигурации логгера.
 const (
 	envLocal = "local"
 	envDev   = "dev"
 	envProd  = "prod"
 )
 
-// envLocal, envDev и envProd обозначают возможные значения переменной
-// окружения для выбора конфигурации логгера.
+// SetupLogger возвращает *slog.Logger, сконфигурированный под указанное
+// окружение. В локальном режиме выводится человекочитаемый текст, в других
+// — формируется JSON.
 func SetupLogger(env string) *slog.Logger {
 	var log *slog.Logger
 
@@ -30,7 +33,3 @@ func SetupLogger(env string) *slog.Logger {
 	}
 	return log
 }
-
-// SetupLogger возвращает *slog.Logger, сконфигурированный под указанное
-// окружение. В локальном режиме выводится человекочитаемый текст, в других
-// — формируется JSON.

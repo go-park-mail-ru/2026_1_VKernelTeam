@@ -7,4 +7,6 @@
 coverage.out
 coverage.html
 bin/
-local.json
+config/local.json
+config/production.json
+config/development.json
