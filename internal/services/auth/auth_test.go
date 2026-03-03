@@ -332,3 +332,18 @@ func TestIsAdmin_GenericError(t *testing.T) {
 		t.Fatalf("expected generic error from IsAdmin")
 	}
 }
+
+func TestLogout_Success(t *testing.T) {
+	log := getTestLogger()
+	userSaver := &mockUserSaver{}
+	userProvider := &mockUserProvider{}
+	tokenRevoker := &mockTokenRevoker{
+		AddFunc: func(jti string, exp time.Time) {},
+	}
+	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+
+	err := auth.Logout(context.Background(), "my-jti", time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatalf("expected nil error on logout")
+	}
+}

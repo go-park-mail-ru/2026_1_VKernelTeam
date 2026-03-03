@@ -43,8 +43,12 @@ func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) ht
 				return
 			}
 
-			uid := claims["uid"].(float64)
-			ctx := context.WithValue(r.Context(), "userID", int64(uid))
+			uidRaw, ok := claims["uid"].(float64)
+			if !ok {
+				utils.RespondWithError(w, http.StatusUnauthorized, "invalid uid claim")
+				return
+			}
+			ctx := context.WithValue(r.Context(), "userID", int64(uidRaw))
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

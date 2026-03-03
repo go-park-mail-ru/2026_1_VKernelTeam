@@ -8,6 +8,8 @@ import (
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 )
 
 // TestSaveAndLoad проверяет сохранение пользователя, затем перезагрузку
@@ -74,5 +76,56 @@ func TestConcurrency(t *testing.T) {
 		if _, err := st.User(context.Background(), email); err != nil {
 			t.Errorf("missing user %s: %v", email, err)
 		}
+	}
+}
+
+func TestIsAdmin(t *testing.T) {
+	st, _ := New("")
+	st.usersByID[1] = models.User{ID: 1, IsAdmin: true}
+	st.usersByID[2] = models.User{ID: 2, IsAdmin: false}
+
+	admin, _ := st.IsAdmin(context.Background(), 1)
+	if !admin {
+		t.Errorf("expected user 1 to be admin")
+	}
+
+	admin, _ = st.IsAdmin(context.Background(), 2)
+	if admin {
+		t.Errorf("expected user 2 not to be admin")
+	}
+
+	_, err := st.IsAdmin(context.Background(), 3)
+	if err != ErrUserNotFound {
+		t.Errorf("expected ErrUserNotFound")
+	}
+}
+
+func TestNew_EmptyFile(t *testing.T) {
+	path := "test_empty_dump.json"
+	os.WriteFile(path, []byte(""), 0644)
+	defer os.Remove(path)
+
+	_, err := New(path)
+	if err != nil {
+		t.Errorf("empty file should be handled as new storage")
+	}
+}
+
+func TestNew_DirCreation(t *testing.T) {
+	path := "testdir_new/dump.json"
+	defer os.RemoveAll("testdir_new")
+
+	_, err := New(path)
+	if err != nil {
+		t.Errorf("dir creation failed: %v", err)
+	}
+}
+
+func TestSaveUser_PersistError(t *testing.T) {
+	st, _ := New("")
+	st.path = "/invalid_dir/invalid_1234/storage.json"
+	_, err := st.SaveUser(context.Background(), "test@test.com", []byte("hash"))
+	if err == nil {
+		t.Errorf("expected err due to invalid persist path")
 	}
 }

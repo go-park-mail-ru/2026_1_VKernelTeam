@@ -97,8 +97,12 @@ func (s *Storage) load() error {
 		return err
 	}
 
-	s.usersByEmail = d.Users
-	s.usersByID = d.UsersByID
+	if d.Users != nil {
+		s.usersByEmail = d.Users
+	}
+	if d.UsersByID != nil {
+		s.usersByID = d.UsersByID
+	}
 	s.nextUserID = d.NextUserID
 
 	return nil
@@ -132,16 +136,16 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, ok := s.usersByEmail[email]; ok {
-		return 0, ErrUserExists
-	}
-
 	s.nextUserID++
 	u := models.User{ID: s.nextUserID, Email: email, PassHash: passHash}
 	s.usersByEmail[email] = u
 	s.usersByID[u.ID] = u
 
 	if err := s.persist(); err != nil {
+		// rollback in-memory changes
+		delete(s.usersByEmail, email)
+		delete(s.usersByID, u.ID)
+		s.nextUserID--
 		return 0, err
 	}
 
