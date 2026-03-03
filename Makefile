@@ -22,7 +22,7 @@ run-ads:
 	go run cmd/server/main.go
 
 run:
-	go run ./cmd/sso/main.go --config=./config/local.json
+	go run ./cmd/sso/main.go --config=./config/local.json & \
 	go run cmd/server/main.go
 
 # Run all tests
