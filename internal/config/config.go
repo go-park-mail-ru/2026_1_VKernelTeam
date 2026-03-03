@@ -13,13 +13,45 @@ import (
 
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
 // время жизни токена и настройки HTTP-сервера.
+type Duration time.Duration
+
+// UnmarshalJSON поддерживает два формата для полей типа Duration: числовой (миллисекунды) и строковый (например, "1h").
+func (d *Duration) UnmarshalJSON(b []byte) error {
+	// try numeric value
+	var n float64
+	if err := json.Unmarshal(b, &n); err == nil {
+		*d = Duration(time.Duration(n))
+		return nil
+	}
+
+	// try string value
+	var s string
+	if err := json.Unmarshal(b, &s); err == nil {
+		dur, err := time.ParseDuration(s)
+		if err != nil {
+			return err
+		}
+		*d = Duration(dur)
+		return nil
+	}
+
+	return json.Unmarshal(b, (*interface{})(nil))
+}
+
+// ToDuration конвертирует Duration обратно в time.Duration для удобства использования в коде.
+func (d Duration) ToDuration() time.Duration {
+	return time.Duration(d)
+}
+
+// Config содержит параметры работы сервиса: окружение, путь к хранилищу,
+// время жизни токена и настройки HTTP-сервера.
 type Config struct {
-	Env             string        `json:"env"`
-	StoragePath     string        `json:"storage_path"`
-	TokenTTL        time.Duration `json:"token_ttl"`
-	HTTP            HTTPConfig    `json:"http"`
-	CleanupInterval time.Duration `json:"cleanup_interval"`
-	TokenSecret     string        `json:"token_secret"`
+	Env             string     `json:"env"`
+	StoragePath     string     `json:"storage_path"`
+	TokenTTL        Duration   `json:"token_ttl"`
+	HTTP            HTTPConfig `json:"http"`
+	CleanupInterval Duration   `json:"cleanup_interval"`
+	TokenSecret     string     `json:"token_secret"`
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.

@@ -18,7 +18,8 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL, cfg.CleanupInterval, cfg.TokenSecret)
+	// convert custom Duration type back to time.Duration
+	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL.ToDuration(), cfg.CleanupInterval.ToDuration(), cfg.TokenSecret)
 	go application.HTTPServer.MustRun()
 	log.Info("applications started")
 
