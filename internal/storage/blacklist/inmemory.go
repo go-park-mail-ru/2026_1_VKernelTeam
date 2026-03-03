@@ -31,8 +31,8 @@ func (s *InMemory) Add(jti string, exp time.Time) {
 
 // Check проверяет наличие токена в чёрном списке
 func (s *InMemory) Check(jti string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	_, exists := s.tokens[jti]
 	return exists
@@ -41,6 +41,7 @@ func (s *InMemory) Check(jti string) bool {
 // startSweeper подчищает мапу, предотвращая утечку памяти
 func (s *InMemory) startSweeper(interval time.Duration) {
 	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
 
 	for range ticker.C {
 		s.mu.Lock()
