@@ -39,7 +39,7 @@ func New(
 	authService := auth.New(log, storage, storage, tokenBlacklist, tokenTTL, secret)
 
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, authService, tokenBlacklist, httpPort, secret)
+	httpApp := httpapp.New(log, authService, tokenBlacklist, httpPort, tokenTTL, secret)
 
 	return &App{
 		HTTPServer: httpApp,

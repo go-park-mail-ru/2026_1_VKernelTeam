@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// AuthMiddleware првоеряет каждый запрос.
+// AuthMiddleware проверяет каждый запрос.
 func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

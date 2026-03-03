@@ -29,6 +29,7 @@ type App struct {
 	srv       *http.Server
 	auth      Auth
 	blacklist *blacklist.InMemory
+	tokenTTL  time.Duration
 	secret    string
 }
 
@@ -84,6 +85,7 @@ func New(
 	authService Auth,
 	bl *blacklist.InMemory,
 	port int,
+	tokenTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
@@ -91,6 +93,7 @@ func New(
 		router:    http.NewServeMux(),
 		port:      port,
 		auth:      authService,
+		tokenTTL:  tokenTTL,
 		blacklist: bl,
 		secret:    secret,
 	}
@@ -98,8 +101,11 @@ func New(
 	app.setupRoutes()
 
 	app.srv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
-		Handler: app.router,
+		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
+		Handler:      app.router,               // используем наш маршрутизатор
+		ReadTimeout:  15 * time.Second,         // ограничиваем время чтения запроса
+		WriteTimeout: 15 * time.Second,         // ограничиваем время записи ответа
+		IdleTimeout:  60 * time.Second,         // время жизни соединения
 	}
 
 	return app
@@ -182,11 +188,11 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		HttpOnly: true,                     // JS не увидит куку
-		Secure:   true,                     // передача только по HTTPS
-		Path:     "/",                      // доступна везде
-		SameSite: http.SameSiteLaxMode,     // защита от CSRF атак
-		MaxAge:   int(time.Hour.Seconds()), // время жизни - час
+		HttpOnly: true,                      // JS не увидит куку
+		Secure:   true,                      // передача только по HTTPS
+		Path:     "/",                       // доступна везде
+		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
+		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
 	})
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -230,17 +236,41 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenString := cookie.Value
 
-	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
-	if err != nil {
-		a.log.Error("failed to get token", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "failed to get token")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok { // проверяем, что алгоритм подписи ожидаемый
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"]) // защита от атак с подменой алгоритма
+		}
+		return []byte(a.secret), nil
+	})
+	if err != nil { // если токен не распарсился, считаем его недействительным
+		a.log.Error("failed to parse token", slog.String("error", err.Error()))
+		utils.RespondWithError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
-	claims := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok { // если клеймы не в виде словаря, считаем токен недействительным
+		a.log.Error("invalid token claims", slog.Any("claims", token.Claims))
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid token claims")
+		return
+	}
 
-	jti := claims["jti"].(string)
-	exp := time.Unix(int64(claims["exp"].(float64)), 0)
+	jtiRaw, ok := claims["jti"].(string)
+	if !ok { // если jti нет или он не строка, считаем токен недействительным
+		a.log.Error("invalid or missing jti claim", slog.Any("claims", claims))
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid or missing jti claim")
+		return
+	}
+
+	expRaw, ok := claims["exp"].(float64)
+	if !ok { // если exp нет или он не число, считаем токен недействительным
+		a.log.Error("invalid or missing exp claim", slog.Any("claims", claims))
+		utils.RespondWithError(w, http.StatusBadRequest, "invalid or missing exp claim")
+		return
+	}
+
+	jti := jtiRaw
+	exp := time.Unix(int64(expRaw), 0)
 
 	if err := a.auth.Logout(r.Context(), jti, exp); err != nil {
 		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
