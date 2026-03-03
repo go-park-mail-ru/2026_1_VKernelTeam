@@ -96,7 +96,7 @@ linters-settings:
       # - name: empty-block
       #   disabled: true
       # - name: flag-parameter
-      # disabled: true
+      #   disabled: true
 
       # Rule tuning
       - name: unhandled-error

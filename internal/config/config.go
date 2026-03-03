@@ -14,16 +14,16 @@ import (
 // Config содержит параметры работы сервиса: окружение, путь к хранилищу,
 // время жизни токена и настройки HTTP-сервера.
 type Config struct {
-	Env         string        `yaml:"env" env-required:"true"`
-	StoragePath string        `yaml:"storage_path" env-required:"true"`
-	TokenTTL    time.Duration `yaml:"token_ttl" env-required:"true"`
-	HTTP        HTTPConfig    `yaml:"http"`
-	TokenSecret string        `yaml:"token_secret" env:"TOKEN_SECRET" env-required:"true"`
+	Env         string        `json:"env"`
+	StoragePath string        `json:"storage_path"`
+	TokenTTL    time.Duration `json:"token_ttl"`
+	HTTP        HTTPConfig    `json:"http"`
+	TokenSecret string        `json:"token_secret"`
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.
 type HTTPConfig struct {
-	Port int `yaml:"port"`
+	Port int `json:"port"`
 }
 
 // MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
