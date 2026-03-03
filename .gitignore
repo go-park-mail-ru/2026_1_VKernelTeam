@@ -1,0 +1,12 @@
+.DS_Store
+.vscode
+.idea
+
+.env
+*.db
+coverage.out
+coverage.html
+bin/
+config/local.json
+config/production.json
+config/development.json
