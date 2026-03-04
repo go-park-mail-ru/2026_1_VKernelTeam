@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/lib/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 
@@ -23,28 +22,11 @@ import (
 // токенов.
 type Auth struct {
 	log          *slog.Logger
-	userSaver    UserSaver
-	userProvider UserProvider
-	tokenRevoker TokenRevoker
+	userSaver    storage.UserSaver
+	userProvider storage.UserProvider
+	tokenRevoker storage.TokenRevoker
 	tokenTTL     time.Duration
 	secret       string
-}
-
-// TokenRevoker описывает интерфейс для отзыва токенов.
-type TokenRevoker interface {
-	Add(jti string, exp time.Time)
-}
-
-// UserSaver предоставляет метод сохранения пользователя в хранилище.
-type UserSaver interface {
-	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
-}
-
-// UserProvider предоставляет методы получения данных о пользователе и
-// проверки его административных прав.
-type UserProvider interface {
-	User(ctx context.Context, email string) (models.User, error)
-	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
 // ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
@@ -56,9 +38,9 @@ var (
 // New создаёт новый экземпляр Auth с переданными зависимостями.
 func New(
 	log *slog.Logger,
-	userSaver UserSaver,
-	userProvider UserProvider,
-	tokenRevoker TokenRevoker,
+	userSaver storage.UserSaver,
+	userProvider storage.UserProvider,
+	tokenRevoker storage.TokenRevoker,
 	tokenTTL time.Duration,
 	secret string,
 ) *Auth {

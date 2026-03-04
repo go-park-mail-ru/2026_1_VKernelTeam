@@ -7,11 +7,11 @@ import (
 	"log/slog"
 
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
 )
 
 // App содержит корневые объекты приложения, например HTTP-сервер.

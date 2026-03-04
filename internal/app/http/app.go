@@ -16,7 +16,6 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -29,7 +28,7 @@ type App struct {
 	port      int
 	srv       *http.Server
 	services  Services
-	blacklist *blacklist.InMemory
+	blacklist storage.TokenRevoker
 	tokenTTL  time.Duration
 	secret    string
 }
@@ -94,7 +93,7 @@ type ErrorResponse struct {
 func New(
 	log *slog.Logger,
 	services Services,
-	bl *blacklist.InMemory,
+	bl storage.TokenRevoker,
 	port int,
 	tokenTTL time.Duration,
 	secret string,
