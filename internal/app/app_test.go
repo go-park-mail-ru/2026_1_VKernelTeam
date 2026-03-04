@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,14 +18,17 @@ func TestAppNew(t *testing.T) {
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "storage.db")
 
-	app := New(
-		logger,
-		8080,
-		storagePath,
-		time.Hour,
-		time.Minute,
-		"test_secret",
-	)
+	cfg := &config.Config{
+		StoragePath:     storagePath,
+		TokenTTL:        time.Hour,
+		CleanupInterval: time.Minute,
+		TokenSecret:     "test_secret",
+		HTTP: config.HTTPConfig{
+			Port: 8080,
+		},
+	}
+
+	app := New(logger, cfg)
 
 	require.NotNil(t, app)
 	require.NotNil(t, app.HTTPServer)
@@ -39,11 +43,15 @@ func TestAppNew_StorageError(t *testing.T) {
 	assert.Panics(t, func() {
 		New(
 			logger,
-			8080,
-			storagePath,
-			time.Hour,
-			time.Minute,
-			"test_secret",
+			&config.Config{
+				StoragePath:     storagePath,
+				TokenTTL:        time.Hour,
+				CleanupInterval: time.Minute,
+				TokenSecret:     "test_secret",
+				HTTP: config.HTTPConfig{
+					Port: 8080,
+				},
+			},
 		)
 	})
 }

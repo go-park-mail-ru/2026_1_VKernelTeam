@@ -20,7 +20,7 @@ func main() {
 	log.Info("starting applications")
 	// convert string to time.Duration
 
-	application := app.New(log, cfg.HTTP.Port, cfg.StoragePath, cfg.TokenTTL, cfg.CleanupInterval, cfg.TokenSecret)
+	application := app.New(log, cfg)
 	go application.HTTPServer.MustRun()
 	log.Info("applications started")
 
