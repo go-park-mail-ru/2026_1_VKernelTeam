@@ -121,11 +121,13 @@ func New(
 	return app
 }
 
+const apiPrefix = "/api/v1"
+
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST /auth/register", a.handleRegister)
-	a.router.HandleFunc("POST /auth/login", a.handleLogin)
-	a.router.HandleFunc("POST /auth/logout", a.handleLogout)
+	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.handleRegister)
+	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.handleLogin)
+	a.router.HandleFunc("POST "+apiPrefix+"/auth/logout", a.handleLogout)
 
 	// Защищенная ручка (оборачиваем в Middleware)
 	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
@@ -139,7 +141,7 @@ func (a *App) setupRoutes() {
 	// регистрируем обработчик объявлений
 	if repo, ok := a.services.Ads.(*ads.AdsRepository); ok {
 		adsHandler := NewHandler(repo)
-		a.router.HandleFunc("/ads", adsHandler.GetAdsHandler)
+		a.router.HandleFunc("GET "+apiPrefix+"/ads", adsHandler.GetAdsHandler)
 	} else {
 		a.log.Error("failed to register ads handler: invalid Ads repository type")
 	}

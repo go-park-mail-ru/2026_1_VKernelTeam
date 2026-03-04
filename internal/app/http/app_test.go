@@ -73,7 +73,7 @@ func TestHandleRegister(t *testing.T) {
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "test@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "pass").Return(int64(1), nil).Once()
@@ -89,7 +89,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("InvalidBody", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer([]byte("{invalid}")))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer([]byte("{invalid}")))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -100,7 +100,7 @@ func TestHandleRegister(t *testing.T) {
 	t.Run("EmptyEmail", func(t *testing.T) {
 		reqBody := RegisterRequest{Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -111,7 +111,7 @@ func TestHandleRegister(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "test@test.com"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -122,7 +122,7 @@ func TestHandleRegister(t *testing.T) {
 	t.Run("UserExists", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "exist@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "pass").Return(int64(0), storage.ErrUserExists).Once()
@@ -136,7 +136,7 @@ func TestHandleRegister(t *testing.T) {
 	t.Run("InternalError", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "err@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("RegisterNewUser", mock.Anything, "err@test.com", "pass").Return(int64(0), errors.New("internal")).Once()
@@ -154,7 +154,7 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "test@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("Login", mock.Anything, "test@test.com", "pass").Return("fake-token", nil).Once()
@@ -167,7 +167,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("InvalidBody", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer([]byte("{invalid}")))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer([]byte("{invalid}")))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -178,7 +178,7 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("EmptyEmail", func(t *testing.T) {
 		reqBody := LoginRequest{Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -189,7 +189,7 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("EmptyPassword", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "test@test.com"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -200,7 +200,7 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("InvalidCredentials", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "wrong@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("Login", mock.Anything, "wrong@test.com", "pass").Return("", auth.ErrInvalidCredentials).Once()
@@ -214,7 +214,7 @@ func TestHandleLogin(t *testing.T) {
 	t.Run("InternalError", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "err@test.com", Password: "pass"}
 		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
 		mockAuth.On("Login", mock.Anything, "err@test.com", "pass").Return("", errors.New("internal")).Once()
@@ -233,7 +233,7 @@ func TestHandleLogout(t *testing.T) {
 	validToken, _ := ssntjwt.NewToken(user, time.Hour, "secret")
 
 	t.Run("ValidRequest", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/logout", nil)
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
@@ -247,7 +247,7 @@ func TestHandleLogout(t *testing.T) {
 	})
 
 	t.Run("NoCookie", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/logout", nil)
 		rr := httptest.NewRecorder()
 
 		app.router.ServeHTTP(rr, req)
@@ -256,7 +256,7 @@ func TestHandleLogout(t *testing.T) {
 	})
 
 	t.Run("InvalidTokenSignature", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/logout", nil)
 		invalidToken, _ := ssntjwt.NewToken(user, time.Hour, "wrong-secret")
 		req.AddCookie(&http.Cookie{Name: "token", Value: invalidToken})
 		rr := httptest.NewRecorder()
@@ -267,7 +267,7 @@ func TestHandleLogout(t *testing.T) {
 	})
 
 	t.Run("AuthLogoutError", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/logout", nil)
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
@@ -311,7 +311,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	expectedData := repo.GetAll()
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "/ads", nil)
+	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -368,7 +368,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	handler := NewHandler(repo)
 
 	// создаём POST запрос к эндпоинту
-	request, err := http.NewRequest("POST", "/ads", nil)
+	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -391,7 +391,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	handler := NewHandler(repo)
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", "/ads", nil)
+	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -426,7 +426,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	handler := NewHandler(repo)
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("POST", "/ads", nil)
+	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
