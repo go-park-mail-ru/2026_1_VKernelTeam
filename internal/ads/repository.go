@@ -3,18 +3,20 @@ package ads
 import (
 	"sync"
 	"time"
+
+	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 )
 
 // AdsRepository отвечает за доступ к данным
 type AdsRepository struct {
 	sync.RWMutex
-	data []Ad // список объявлений
+	data []models.Ad // список объявлений
 }
 
 // конструктор
 func NewAdsRepository() *AdsRepository {
 	return &AdsRepository{
-		data: []Ad{
+		data: []models.Ad{
 			{
 				ID:          1,
 				Title:       "Продам гараж",
@@ -34,12 +36,12 @@ func NewAdsRepository() *AdsRepository {
 }
 
 // метод для получения данных (чтобы не обращаться к полю data напрямую)
-func (r *AdsRepository) GetAll() []Ad {
+func (r *AdsRepository) GetAll() []models.Ad {
 	r.RLock()
 	defer r.RUnlock()
 
 	// создаем новый слайс и копируем туда данные
-	result := make([]Ad, len(r.data))
+	result := make([]models.Ad, len(r.data))
 	copy(result, r.data)
 	return result
 }

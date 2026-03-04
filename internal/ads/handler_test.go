@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 )
 
 // тест успешного выполнения
@@ -49,7 +51,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	}
 
 	// получаем тело ответа
-	var actualData []Ad
+	var actualData []models.Ad
 	if err := json.Unmarshal(rr.Body.Bytes(), &actualData); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
@@ -94,7 +96,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
-	repo := &AdsRepository{data: []Ad{}}
+	repo := &AdsRepository{data: []models.Ad{}}
 	handler := NewHandler(repo)
 
 	// создаём запрос к эндпоинту
@@ -115,7 +117,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	}
 
 	// получаем тело ответа
-	var actualData []Ad
+	var actualData []models.Ad
 	if err := json.Unmarshal(rr.Body.Bytes(), &actualData); err != nil {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
