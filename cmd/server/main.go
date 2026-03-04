@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/ads"
+	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http"
 	ads_repo "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 )
 
