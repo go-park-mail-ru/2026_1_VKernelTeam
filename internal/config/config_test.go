@@ -34,8 +34,12 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		os.Setenv("CONFIG_PATH", tmpFile.Name())
 		defer os.Unsetenv("CONFIG_PATH")
 
+		t.Setenv("CONFIG_PATH", tmpFile.Name())
+		t.Setenv("TOKEN_SECRET", "test-secret-key")
+
 		cfg := MustLoadConfig()
 		assert.NotNil(t, cfg)
+		assert.Equal(t, "test-secret-key", cfg.TokenSecret)
 		assert.Equal(t, "local", cfg.Env)
 		assert.Equal(t, "./data/storage.db", cfg.StoragePath)
 		assert.Equal(t, 8080, cfg.HTTP.Port)
@@ -47,7 +51,8 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 func TestMustLoadConfig_EmptyPath(t *testing.T) {
 	os.Args = []string{"cmd"}
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	os.Setenv("CONFIG_PATH", "")
+	t.Setenv("CONFIG_PATH", "")
+	t.Setenv("TOKEN_SECRET", "dummy")
 	assert.PanicsWithValue(t, "config path is empty", func() {
 		MustLoadConfig()
 	})

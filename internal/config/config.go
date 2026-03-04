@@ -55,11 +55,15 @@ func MustLoadConfig() *Config {
 		TokenTTL        string     `json:"token_ttl"`
 		HTTP            HTTPConfig `json:"http"`
 		CleanupInterval string     `json:"cleanup_interval"`
-		TokenSecret     string     `json:"token_secret"`
 	}
 
 	if err := json.NewDecoder(file).Decode(&rawConfig); err != nil {
 		panic("failed to decode config: " + err.Error())
+	}
+
+	secret := os.Getenv("TOKEN_SECRET")
+	if secret == "" {
+		panic("TOKEN_SECRET is not set in environment or .env file")
 	}
 
 	// Перекладываем данные в "чистую" бизнес-модель,
@@ -70,7 +74,7 @@ func MustLoadConfig() *Config {
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),
-		TokenSecret:     rawConfig.TokenSecret,
+		TokenSecret:     secret,
 	}
 }
 
@@ -89,7 +93,9 @@ func fetchConfigPath() string {
 	var res string
 
 	flag.StringVar(&res, "config", "", "Path to config file")
-	flag.Parse()
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 
 	if res == "" {
 		res = os.Getenv("CONFIG_PATH")
