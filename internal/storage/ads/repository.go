@@ -10,13 +10,13 @@ import (
 // AdsRepository отвечает за доступ к данным
 type AdsRepository struct {
 	sync.RWMutex
-	data []models.Ad // список объявлений
+	Data []models.Ad // список объявлений
 }
 
 // конструктор
 func NewAdsRepository() *AdsRepository {
 	return &AdsRepository{
-		data: []models.Ad{
+		Data: []models.Ad{
 			{
 				ID:          1,
 				Title:       "Продам гараж",
@@ -41,7 +41,7 @@ func (r *AdsRepository) GetAll() []models.Ad {
 	defer r.RUnlock()
 
 	// создаем новый слайс и копируем туда данные
-	result := make([]models.Ad, len(r.data))
-	copy(result, r.data)
+	result := make([]models.Ad, len(r.Data))
+	copy(result, r.Data)
 	return result
 }

@@ -8,12 +8,13 @@ import (
 	"testing"
 
 	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 )
 
 // тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
 	// создаём чистые зависимости для теста
-	repo := NewAdsRepository()
+	repo := ads.NewAdsRepository()
 	handler := NewHandler(repo)
 
 	// получаем данные репозитория для сравнения
@@ -73,7 +74,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 // првоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	// создаём чистые зависимости для теста
-	repo := NewAdsRepository()
+	repo := ads.NewAdsRepository()
 	handler := NewHandler(repo)
 
 	// создаём POST запрос к эндпоинту
@@ -96,7 +97,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
-	repo := &AdsRepository{data: []models.Ad{}}
+	repo := &ads.AdsRepository{Data: []models.Ad{}}
 	handler := NewHandler(repo)
 
 	// создаём запрос к эндпоинту
@@ -131,7 +132,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 // тестируем ошибку сервера
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// создаём чистые зависимости для теста
-	repo := NewAdsRepository()
+	repo := ads.NewAdsRepository()
 	handler := NewHandler(repo)
 
 	// создаём запрос к эндпоинту

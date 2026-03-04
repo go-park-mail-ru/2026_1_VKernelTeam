@@ -3,16 +3,17 @@ package ads
 import (
 	"net/http"
 
+	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
 )
 
 // Handler хранит зависимости для API
 type Handler struct {
-	repo *AdsRepository
+	repo *ads.AdsRepository
 }
 
 // конструктор для обработчика
-func NewHandler(r *AdsRepository) *Handler {
+func NewHandler(r *ads.AdsRepository) *Handler {
 	return &Handler{repo: r}
 }
 
