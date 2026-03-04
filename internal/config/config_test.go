@@ -41,8 +41,8 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		assert.Equal(t, "./data/storage.db", cfg.StoragePath)
 		assert.Equal(t, 8080, cfg.HTTP.Port)
 		assert.Equal(t, "my-secret", cfg.TokenSecret)
-		assert.Equal(t, time.Hour, cfg.TokenTTL.ToDuration())
-		assert.Equal(t, time.Minute, cfg.CleanupInterval.ToDuration())
+		assert.Equal(t, time.Hour, cfg.TokenTTL)
+		assert.Equal(t, time.Minute, cfg.CleanupInterval)
 	})
 
 	// this subtest verifies string duration parsing (preferred format)
@@ -75,8 +75,8 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		assert.Equal(t, "./data/storage.db", cfg.StoragePath)
 		assert.Equal(t, 8080, cfg.HTTP.Port)
 		assert.Equal(t, "my-secret", cfg.TokenSecret)
-		assert.Equal(t, time.Hour, cfg.TokenTTL.ToDuration())
-		assert.Equal(t, time.Minute, cfg.CleanupInterval.ToDuration())
+		assert.Equal(t, time.Hour, cfg.TokenTTL)
+		assert.Equal(t, time.Minute, cfg.CleanupInterval)
 	})
 }
 

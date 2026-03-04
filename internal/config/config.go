@@ -1,4 +1,4 @@
-// Package config отвечает за загрузку и парсинг конфигурации из YAML-файла
+// Package config отвечает за загрузку и парсинг конфигурации из JSON-файла
 // либо переменных окружения.
 package config
 
@@ -11,47 +11,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config содержит параметры работы сервиса: окружение, путь к хранилищу,
-// время жизни токена и настройки HTTP-сервера.
-type Duration time.Duration
-
-// UnmarshalJSON поддерживает два формата для полей типа Duration: числовой (миллисекунды) и строковый (например, "1h").
-func (d *Duration) UnmarshalJSON(b []byte) error {
-	// try numeric value
-	var n float64
-	if err := json.Unmarshal(b, &n); err == nil {
-		*d = Duration(time.Duration(n))
-		return nil
-	}
-
-	// try string value
-	var s string
-	if err := json.Unmarshal(b, &s); err == nil {
-		dur, err := time.ParseDuration(s)
-		if err != nil {
-			return err
-		}
-		*d = Duration(dur)
-		return nil
-	}
-
-	return json.Unmarshal(b, (*interface{})(nil))
-}
-
-// ToDuration конвертирует Duration обратно в time.Duration для удобства использования в коде.
-func (d Duration) ToDuration() time.Duration {
-	return time.Duration(d)
-}
-
-// Config содержит параметры работы сервиса: окружение, путь к хранилищу,
-// время жизни токена и настройки HTTP-сервера.
+// Config содержит параметры работы сервиса.
+// Обратите внимание: теги JSON здесь больше не нужны, так как мы
+// не десериализуем в эту структуру напрямую. Поля уже имеют нужный тип.
 type Config struct {
-	Env             string     `json:"env"`
-	StoragePath     string     `json:"storage_path"`
-	TokenTTL        Duration   `json:"token_ttl"`
-	HTTP            HTTPConfig `json:"http"`
-	CleanupInterval Duration   `json:"cleanup_interval"`
-	TokenSecret     string     `json:"token_secret"`
+	Env             string
+	StoragePath     string
+	TokenTTL        time.Duration
+	HTTP            HTTPConfig
+	CleanupInterval time.Duration
+	TokenSecret     string
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.
@@ -73,19 +42,45 @@ func MustLoadConfig() *Config {
 		panic("config file does not exist: " + path)
 	}
 
-	var cfg Config
-
 	file, err := os.Open(path)
 	if err != nil {
 		panic("failed to open config file: " + err.Error())
 	}
 	defer file.Close()
 
-	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
+	// Анонимная прокси-структура, которая в точности JSON.
+	var rawConfig struct {
+		Env             string     `json:"env"`
+		StoragePath     string     `json:"storage_path"`
+		TokenTTL        string     `json:"token_ttl"`
+		HTTP            HTTPConfig `json:"http"`
+		CleanupInterval string     `json:"cleanup_interval"`
+		TokenSecret     string     `json:"token_secret"`
+	}
+
+	if err := json.NewDecoder(file).Decode(&rawConfig); err != nil {
 		panic("failed to decode config: " + err.Error())
 	}
 
-	return &cfg
+	// Перекладываем данные в "чистую" бизнес-модель,
+	// попутно преобразуя типы с помощью хелпера.
+	return &Config{
+		Env:             rawConfig.Env,
+		StoragePath:     rawConfig.StoragePath,
+		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
+		HTTP:            rawConfig.HTTP,
+		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),
+		TokenSecret:     rawConfig.TokenSecret,
+	}
+}
+
+// parseDuration — универсальная функция для парсинга времени из строк в конфиге.
+func parseDuration(val string, fieldName string) time.Duration {
+	duration, err := time.ParseDuration(val)
+	if err != nil {
+		panic("invalid " + fieldName + " format: " + err.Error())
+	}
+	return duration
 }
 
 // fetchConfigPath определяет путь к файлу конфигурации из флага
