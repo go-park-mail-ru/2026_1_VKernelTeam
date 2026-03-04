@@ -136,13 +136,17 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Если такой email уже есть, возвращаем ошибку
+	if _, exists := s.usersByEmail[email]; exists {
+		return 0, ErrUserExists
+	}
+
 	s.nextUserID++
 	u := models.User{ID: s.nextUserID, Email: email, PassHash: passHash}
 	s.usersByEmail[email] = u
 	s.usersByID[u.ID] = u
 
 	if err := s.persist(); err != nil {
-		// rollback in-memory changes
 		delete(s.usersByEmail, email)
 		delete(s.usersByID, u.ID)
 		s.nextUserID--
