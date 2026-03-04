@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/ads"
+	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/ads"
+	ads_repo "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 )
 
 func main() {
 	// создаем зависимости и внедряем репозиторий в обработчик
-	repo := ads.NewAdsRepository()
+	repo := ads_repo.NewAdsRepository()
 	adsHandler := ads.NewHandler(repo)
 
 	// настройка раздачи статики

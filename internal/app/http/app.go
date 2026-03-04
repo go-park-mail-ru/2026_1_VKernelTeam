@@ -115,7 +115,7 @@ func New(
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /auth/register", a.handleRegister)
 	a.router.HandleFunc("POST /auth/login", a.handleLogin)
-	a.router.HandleFunc("POST /auth/logout", http.HandlerFunc(a.handleLogout))
+	a.router.HandleFunc("POST /auth/logout", a.handleLogout)
 
 	// Защищенная ручка (оборачиваем в Middleware)
 	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
