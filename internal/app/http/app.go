@@ -123,6 +123,18 @@ func New(
 
 const apiPrefix = "/api/v1"
 
+func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		HttpOnly: true,                      // JS не увидит куку
+		Secure:   true,                      // передача только по HTTPS
+		Path:     "/",                       // доступна везде
+		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
+		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
+	})
+}
+
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.handleRegister)
@@ -177,6 +189,16 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// сразу логиним
+	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
+	if err != nil {
+		a.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
+		utils.RespondWithError(w, http.StatusInternalServerError, "registered, but failed to login")
+		return
+	}
+
+	a.setAuthCookie(w, token)
+
 	utils.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
 }
 
@@ -210,15 +232,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		HttpOnly: true,                      // JS не увидит куку
-		Secure:   true,                      // передача только по HTTPS
-		Path:     "/",                       // доступна везде
-		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
-		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
-	})
+	a.setAuthCookie(w, token)
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

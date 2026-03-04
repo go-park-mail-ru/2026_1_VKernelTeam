@@ -78,9 +78,13 @@ func TestHandleRegister(t *testing.T) {
 
 		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "pass").Return(int64(1), nil).Once()
 
+		mockAuth.On("Login", mock.Anything, "test@test.com", "pass").Return("fake-token-after-reg", nil).Once()
+
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusCreated, rr.Code)
+		assert.Contains(t, rr.Header().Get("Set-Cookie"), "token=fake-token-after-reg")
+
 		var resp RegisterResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
