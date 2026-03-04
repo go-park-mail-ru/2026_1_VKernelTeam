@@ -1,8 +1,10 @@
+// Package models содержит структуры данных, используемые в домене
+// приложения.
 package models
 
 import "time"
 
-// структура объявления
+// Ad содержит поля объявления.
 type Ad struct {
 	ID          int       `json:"id"`
 	Title       string    `json:"title"`
