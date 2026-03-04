@@ -131,6 +131,19 @@ func (a *App) setupRoutes() {
 	// Защищенная ручка (оборачиваем в Middleware)
 	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
 	// a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
+
+	// настройка раздачи статики
+	fs := http.FileServer(http.Dir("static"))
+	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
+	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// регистрируем обработчик объявлений
+	if repo, ok := a.services.Ads.(*ads.AdsRepository); ok {
+		adsHandler := NewHandler(repo)
+		a.router.HandleFunc("/ads", adsHandler.GetAdsHandler)
+	} else {
+		a.log.Error("failed to register ads handler: invalid Ads repository type")
+	}
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
