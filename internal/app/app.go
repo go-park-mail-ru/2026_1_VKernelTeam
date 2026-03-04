@@ -10,6 +10,7 @@ import (
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 )
 
@@ -39,8 +40,16 @@ func New(
 	// создаём сервис Auth
 	authService := auth.New(log, storage, storage, tokenBlacklist, tokenTTL, secret)
 
+	// создеём сервис Ads
+	adsService := ads.NewAdsRepository()
+
+	services := httpapp.Services{
+		Ads:  adsService,
+		Auth: authService,
+	}
+
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, authService, tokenBlacklist, httpPort, tokenTTL, secret)
+	httpApp := httpapp.New(log, services, tokenBlacklist, httpPort, tokenTTL, secret)
 
 	return &App{
 		HTTPServer: httpApp,

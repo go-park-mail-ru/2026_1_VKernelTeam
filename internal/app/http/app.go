@@ -27,10 +27,14 @@ type App struct {
 	router    *http.ServeMux
 	port      int
 	srv       *http.Server
-	auth      Auth
+	services  Services
 	blacklist *blacklist.InMemory
 	tokenTTL  time.Duration
 	secret    string
+}
+
+// Ads описывает методы сервиса объявлений.
+type Ads interface {
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации, который
@@ -40,6 +44,12 @@ type Auth interface {
 	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
 	// IsAdmin(ctx context.Context, userID int64) (bool, error)
 	Logout(ctx context.Context, jti string, exp time.Time) error
+}
+
+// Services объединяет все бизнес-сервисы приложения.
+type Services struct {
+	Ads  Ads
+	Auth Auth
 }
 
 // RegisterRequest представляет собой структуру для запроса на регистрацию пользователя.
@@ -82,7 +92,7 @@ type ErrorResponse struct {
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
-	authService Auth,
+	services Services,
 	bl *blacklist.InMemory,
 	port int,
 	tokenTTL time.Duration,
@@ -92,7 +102,7 @@ func New(
 		log:       log,
 		router:    http.NewServeMux(),
 		port:      port,
-		auth:      authService,
+		services:  services,
 		tokenTTL:  tokenTTL,
 		blacklist: bl,
 		secret:    secret,
@@ -115,7 +125,7 @@ func New(
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST /auth/register", a.handleRegister)
 	a.router.HandleFunc("POST /auth/login", a.handleLogin)
-	a.router.HandleFunc("POST /auth/logout", a.handleLogout)
+	a.router.HandleFunc("POST /auth/logout", http.HandlerFunc(a.handleLogout))
 
 	// Защищенная ручка (оборачиваем в Middleware)
 	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
@@ -140,7 +150,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := a.auth.RegisterNewUser(r.Context(), req.Email, req.Password)
+	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			utils.RespondWithError(w, http.StatusConflict, "user already exists")
@@ -173,7 +183,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.auth.Login(r.Context(), req.Email, req.Password)
+	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			utils.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")
@@ -272,7 +282,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	jti := jtiRaw
 	exp := time.Unix(int64(expRaw), 0)
 
-	if err := a.auth.Logout(r.Context(), jti, exp); err != nil {
+	if err := a.services.Auth.Logout(r.Context(), jti, exp); err != nil {
 		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
 		return

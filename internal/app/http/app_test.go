@@ -21,6 +21,10 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+type MockAds struct {
+	mock.Mock
+}
+
 type MockAuth struct {
 	mock.Mock
 }
@@ -40,16 +44,29 @@ func (m *MockAuth) Logout(ctx context.Context, jti string, exp time.Time) error 
 	return args.Error(0)
 }
 
-func setupTestApp() (*App, *MockAuth, *blacklist.InMemory) {
+func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	// Создаем моки для обоих сервисов
 	mockAuth := new(MockAuth)
+	mockAds := new(MockAds)
+
 	bl := blacklist.New(time.Minute)
-	app := New(logger, mockAuth, bl, 8080, time.Hour, "secret")
-	return app, mockAuth, bl
+
+	// Собираем структуру Services, которую ожидает httpapp.New
+	services := Services{
+		Auth: mockAuth,
+		Ads:  mockAds,
+	}
+
+	// Передаем структуру services вместо одного mockAuth
+	app := New(logger, services, bl, 8080, time.Hour, "secret")
+
+	return app, mockAuth, mockAds, bl
 }
 
 func TestHandleRegister(t *testing.T) {
-	app, mockAuth, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp()
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "test@test.com", Password: "pass"}
@@ -130,7 +147,7 @@ func TestHandleRegister(t *testing.T) {
 }
 
 func TestHandleLogin(t *testing.T) {
-	app, mockAuth, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp()
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "test@test.com", Password: "pass"}
@@ -208,7 +225,7 @@ func TestHandleLogin(t *testing.T) {
 }
 
 func TestHandleLogout(t *testing.T) {
-	app, mockAuth, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp()
 
 	user := models.User{ID: 1, Email: "test@test.com"}
 	validToken, _ := ssntjwt.NewToken(user, time.Hour, "secret")
@@ -262,7 +279,7 @@ func TestHandleLogout(t *testing.T) {
 }
 
 func TestAppServerEndpoints(t *testing.T) {
-	app, _, _ := setupTestApp()
+	app, _, _, _ := setupTestApp()
 
 	// Ensure Stop and MustRun logic are partially covered
 	go func() {
@@ -273,7 +290,7 @@ func TestAppServerEndpoints(t *testing.T) {
 	err := app.Run()
 	assert.NoError(t, err) // Run should return nil on normal Stop
 
-	app2, _, _ := setupTestApp()
+	app2, _, _, _ := setupTestApp()
 	assert.Panics(t, func() {
 		app2.srv.Addr = "invalid:port"
 		app2.MustRun()
