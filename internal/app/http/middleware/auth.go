@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	utils "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
 

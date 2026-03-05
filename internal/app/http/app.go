@@ -13,10 +13,11 @@ import (
 	"time"
 
 	// "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/validator"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -163,29 +164,29 @@ func (a *App) setupRoutes() {
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if req.Email == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "email is required")
+	if err := validator.ValidateEmail(req.Email); err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if req.Password == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "password is required")
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			utils.RespondWithError(w, http.StatusConflict, "user already exists")
+			responser.RespondWithError(w, http.StatusConflict, "user already exists")
 			return
 		}
 
 		a.log.Error("failed to register user", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "failed to register user")
+		responser.RespondWithError(w, http.StatusInternalServerError, "failed to register user")
 		return
 	}
 
@@ -193,48 +194,48 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		a.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "registered, but failed to login")
+		responser.RespondWithError(w, http.StatusInternalServerError, "registered, but failed to login")
 		return
 	}
 
 	a.setAuthCookie(w, token)
 
-	utils.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
+	responser.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
 }
 
 // handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if req.Email == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "email is required")
+	if err := validator.ValidateEmail(req.Email); err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if req.Password == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "password is required")
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			utils.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")
+			responser.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")
 			return
 		}
 
 		a.log.Error("failed to login", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "failed to login")
+		responser.RespondWithError(w, http.StatusInternalServerError, "failed to login")
 		return
 	}
 
 	a.setAuthCookie(w, token)
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // handleIsAdmin проверяет, является ли указанный пользователь администратором.
@@ -270,7 +271,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	// извлекаем токен из куки
 	cookie, err := r.Cookie("token")
 	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "no token to logout")
+		responser.RespondWithError(w, http.StatusBadRequest, "no token to logout")
 		return
 	}
 	tokenString := cookie.Value
@@ -283,28 +284,28 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil { // если токен не распарсился, считаем его недействительным
 		a.log.Error("failed to parse token", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusUnauthorized, "invalid token")
+		responser.RespondWithError(w, http.StatusUnauthorized, "invalid token")
 		return
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok { // если клеймы не в виде словаря, считаем токен недействительным
 		a.log.Error("invalid token claims", slog.Any("claims", token.Claims))
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid token claims")
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid token claims")
 		return
 	}
 
 	jtiRaw, ok := claims["jti"].(string)
 	if !ok { // если jti нет или он не строка, считаем токен недействительным
 		a.log.Error("invalid or missing jti claim", slog.Any("claims", claims))
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid or missing jti claim")
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid or missing jti claim")
 		return
 	}
 
 	expRaw, ok := claims["exp"].(float64)
 	if !ok { // если exp нет или он не число, считаем токен недействительным
 		a.log.Error("invalid or missing exp claim", slog.Any("claims", claims))
-		utils.RespondWithError(w, http.StatusBadRequest, "invalid or missing exp claim")
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid or missing exp claim")
 		return
 	}
 
@@ -313,7 +314,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 	if err := a.services.Auth.Logout(r.Context(), jti, exp); err != nil {
 		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
-		utils.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
+		responser.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
 		return
 	}
 
@@ -326,7 +327,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
 	})
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.
@@ -374,7 +375,7 @@ func (h *Handler) GetAdsHandler(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {
 		// формируем и отправляем ошибку 405
-		utils.RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		responser.RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
@@ -382,5 +383,5 @@ func (h *Handler) GetAdsHandler(w http.ResponseWriter, r *http.Request) {
 	ads := h.repo.GetAll()
 
 	// формируем и отправляем ответ
-	utils.RespondWithJSON(w, http.StatusOK, ads)
+	responser.RespondWithJSON(w, http.StatusOK, ads)
 }
