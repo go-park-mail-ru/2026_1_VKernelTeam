@@ -397,7 +397,10 @@ func TestAppServerEndpoints(t *testing.T) {
 func TestGetAdsHandler_Success(t *testing.T) {
 	// создаём чистые зависимости для теста
 	repo := ads.NewAdsRepository()
-	handler := NewHandler(repo)
+	app := &App{
+		services: Services{Ads: repo},
+		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+	}
 
 	// получаем данные репозитория для сравнения
 	expectedData := repo.GetAll()
@@ -412,7 +415,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем обработчик
-	handler.GetAdsHandler(rr, request)
+	app.handleGetAds(rr, request)
 
 	// проверяем статус-код
 	if status := rr.Code; status != http.StatusOK {
@@ -457,7 +460,10 @@ func TestGetAdsHandler_Success(t *testing.T) {
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	// создаём чистые зависимости для теста
 	repo := ads.NewAdsRepository()
-	handler := NewHandler(repo)
+	app := &App{
+		services: Services{Ads: repo},
+		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+	}
 
 	// создаём POST запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
@@ -469,7 +475,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем обработчик
-	handler.GetAdsHandler(rr, request)
+	app.handleGetAds(rr, request)
 
 	// ожидаем код 405 - method not allowed
 	if rr.Code != http.StatusMethodNotAllowed {
@@ -480,7 +486,10 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	repo := &ads.AdsRepository{Data: []models.Ad{}}
-	handler := NewHandler(repo)
+	app := &App{
+		services: Services{Ads: repo},
+		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+	}
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
@@ -492,7 +501,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем обработчик
-	handler.GetAdsHandler(rr, request)
+	app.handleGetAds(rr, request)
 
 	// проверяем статус-код
 	if status := rr.Code; status != http.StatusOK {
@@ -515,7 +524,10 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// создаём чистые зависимости для теста
 	repo := ads.NewAdsRepository()
-	handler := NewHandler(repo)
+	app := &App{
+		services: Services{Ads: repo},
+		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+	}
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
@@ -527,7 +539,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем handler
-	handler.GetAdsHandler(rr, request)
+	app.handleGetAds(rr, request)
 
 	// проверяем статус
 	if rr.Code != http.StatusMethodNotAllowed {

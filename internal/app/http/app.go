@@ -152,12 +152,7 @@ func (a *App) setupRoutes() {
 	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик объявлений
-	if repo, ok := a.services.Ads.(*ads.AdsRepository); ok {
-		adsHandler := NewHandler(repo)
-		a.router.HandleFunc("GET "+apiPrefix+"/ads", adsHandler.GetAdsHandler)
-	} else {
-		a.log.Error("failed to register ads handler: invalid Ads repository type")
-	}
+	a.router.HandleFunc("GET "+apiPrefix+"/ads", a.handleGetAds)
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
@@ -330,6 +325,29 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// handleGetAds обрабатывает запросы на получение списка объявлений.
+func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
+	// обрабатываем только GET запросы
+	if r.Method != http.MethodGet {
+		// формируем и отправляем ошибку 405
+		responser.RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	repo, ok := a.services.Ads.(*ads.AdsRepository)
+	if !ok {
+		a.log.Error("failed to get ads: invalid Ads repository type")
+		responser.RespondWithError(w, http.StatusInternalServerError, "internal server error")
+		return
+	}
+
+	// копируем список объявлений без гонки данных
+	adsList := repo.GetAll()
+
+	// формируем и отправляем ответ
+	responser.RespondWithJSON(w, http.StatusOK, adsList)
+}
+
 // MustRun запускает сервер и паникует при любой ошибке.
 func (a *App) MustRun() {
 	if err := a.Run(); err != nil {
@@ -358,30 +376,4 @@ func (a *App) Stop() {
 		Info("stopping http server", slog.Int("port", a.port))
 
 	a.srv.Close()
-}
-
-// Handler хранит зависимости для API
-type Handler struct {
-	repo *ads.AdsRepository
-}
-
-// конструктор для обработчика
-func NewHandler(r *ads.AdsRepository) *Handler {
-	return &Handler{repo: r}
-}
-
-// ручка для получения списка объявлений
-func (h *Handler) GetAdsHandler(w http.ResponseWriter, r *http.Request) {
-	// обрабатываем только GET запросы
-	if r.Method != http.MethodGet {
-		// формируем и отправляем ошибку 405
-		responser.RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
-	// копируем список объявлений без гонки данных
-	ads := h.repo.GetAll()
-
-	// формируем и отправляем ответ
-	responser.RespondWithJSON(w, http.StatusOK, ads)
 }
