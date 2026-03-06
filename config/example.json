@@ -1,9 +1,0 @@
-{
-  "env": "[local, dev, prod]",
-  "storage_path": "./storage/sso.db",
-  "token_ttl": "1h",
-  "http": {
-    "port": 8000
-  },
-  "cleanup_interval": "5m"
-}

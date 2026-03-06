@@ -22,6 +22,7 @@ WORKDIR /app
 
 COPY --from=builder /app/clover .
 COPY config ./config
+COPY static ./static
 COPY .env .env
 
 # Слушаем 8000 порт
