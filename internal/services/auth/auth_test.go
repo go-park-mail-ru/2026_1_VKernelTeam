@@ -19,30 +19,27 @@ import (
 
 // Mock implementations for testing
 
-type mockUserSaver struct {
+type mockUserStorage struct {
 	SaveUserFunc func(ctx context.Context, email string, passHash []byte) (int64, error)
+	UserFunc     func(ctx context.Context, email string) (models.User, error)
+	IsAdminFunc  func(ctx context.Context, userID int64) (bool, error)
 }
 
-func (m *mockUserSaver) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+func (m *mockUserStorage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
 	if m.SaveUserFunc != nil {
 		return m.SaveUserFunc(ctx, email, passHash)
 	}
 	return 0, nil
 }
 
-type mockUserProvider struct {
-	UserFunc    func(ctx context.Context, email string) (models.User, error)
-	IsAdminFunc func(ctx context.Context, userID int64) (bool, error)
-}
-
-func (m *mockUserProvider) User(ctx context.Context, email string) (models.User, error) {
+func (m *mockUserStorage) User(ctx context.Context, email string) (models.User, error) {
 	if m.UserFunc != nil {
 		return m.UserFunc(ctx, email)
 	}
 	return models.User{}, nil
 }
 
-func (m *mockUserProvider) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+func (m *mockUserStorage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	if m.IsAdminFunc != nil {
 		return m.IsAdminFunc(ctx, userID)
 	}
@@ -73,15 +70,16 @@ func getTestLogger() *slog.Logger {
 // TestRegisterNewUser_Success проверяет успешную регистрацию нового пользователя.
 func TestRegisterNewUser_Success(t *testing.T) {
 	log := getTestLogger()
-	userSaver := &mockUserSaver{
+
+	storageMock := &mockUserStorage{
 		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
 			return 1, nil
 		},
 	}
-	userProvider := &mockUserProvider{}
+
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err != nil {
@@ -97,15 +95,16 @@ func TestRegisterNewUser_Success(t *testing.T) {
 // существующий email возвращается соответствующая ошибка.
 func TestRegisterNewUser_UserExists(t *testing.T) {
 	log := getTestLogger()
-	userSaver := &mockUserSaver{
+
+	storageMock := &mockUserStorage{
 		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
 			return 0, storage.ErrUserExists
 		},
 	}
-	userProvider := &mockUserProvider{}
+
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123")
 	if err == nil {
@@ -123,8 +122,7 @@ func TestLogin_Success(t *testing.T) {
 	password := "password123"
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{
 				ID:       1,
@@ -136,7 +134,7 @@ func TestLogin_Success(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	token, err := auth.Login(context.Background(), "test@example.com", password)
 	if err != nil {
@@ -154,8 +152,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	password := "password123"
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{
 				ID:       1,
@@ -167,7 +164,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
 	if err == nil {
@@ -180,8 +177,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 func TestLogin_UserNotFound(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{}, storage.ErrUserNotFound
 		},
@@ -189,7 +185,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
 	if err == nil {
@@ -201,8 +197,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 func TestIsAdmin_True(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
 			return true, nil
 		},
@@ -210,7 +205,7 @@ func TestIsAdmin_True(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -227,8 +222,7 @@ func TestIsAdmin_True(t *testing.T) {
 func TestIsAdmin_False(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
 			return false, nil
 		},
@@ -236,7 +230,7 @@ func TestIsAdmin_False(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -252,8 +246,7 @@ func TestIsAdmin_False(t *testing.T) {
 func TestIsAdmin_Error(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
 			return false, storage.ErrUserNotFound
 		},
@@ -261,7 +254,7 @@ func TestIsAdmin_Error(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 1)
 	if err == nil {
@@ -274,15 +267,16 @@ func TestIsAdmin_Error(t *testing.T) {
 // TestRegisterNewUser_SaveError имитирует сбой при сохранении пользователя.
 func TestRegisterNewUser_SaveError(t *testing.T) {
 	log := getTestLogger()
-	userSaver := &mockUserSaver{
+
+	storageMock := &mockUserStorage{
 		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
 			return 0, errors.New("db failure")
 		},
 	}
-	userProvider := &mockUserProvider{}
+
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
 	if err == nil {
@@ -295,8 +289,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 func TestLogin_UserProviderError(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{}, errors.New("something went wrong")
 		},
@@ -304,7 +297,7 @@ func TestLogin_UserProviderError(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
@@ -316,8 +309,7 @@ func TestLogin_UserProviderError(t *testing.T) {
 func TestIsAdmin_GenericError(t *testing.T) {
 	log := getTestLogger()
 
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{
+	storageMock := &mockUserStorage{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
 			return false, errors.New("whoops")
 		},
@@ -325,7 +317,7 @@ func TestIsAdmin_GenericError(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 123)
 	if err == nil {
@@ -335,12 +327,14 @@ func TestIsAdmin_GenericError(t *testing.T) {
 
 func TestLogout_Success(t *testing.T) {
 	log := getTestLogger()
-	userSaver := &mockUserSaver{}
-	userProvider := &mockUserProvider{}
+
+	storageMock := &mockUserStorage{}
+
 	tokenRevoker := &mockTokenRevoker{
 		AddFunc: func(jti string, exp time.Time) {},
 	}
-	auth := New(log, userSaver, userProvider, tokenRevoker, time.Hour, testSecret)
+
+	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
 	err := auth.Logout(context.Background(), "my-jti", time.Now().Add(time.Hour))
 	if err != nil {

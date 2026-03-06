@@ -34,7 +34,7 @@ func New(
 	tokenBlacklist := blacklist.New(cfg.CleanupInterval)
 
 	// создаём сервис Auth
-	authService := auth.New(log, storage, storage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
+	authService := auth.New(log, storage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
 
 	// создеём сервис Ads
 	adsService := ads.NewAdsRepository()

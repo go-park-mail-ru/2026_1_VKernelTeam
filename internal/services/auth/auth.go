@@ -11,19 +11,32 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/lib/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
+// TokenRevoker описывает интерфейс для отзыва токенов
+type TokenRevoker interface {
+	Add(jti string, exp time.Time)
+}
+
+// UserProviderSaver предоставляет методы сохранения пользователя в хранилище
+// получения данных о пользователе и проверки его административных прав.
+type UserProviderSaver interface {
+	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
+	User(ctx context.Context, email string) (models.User, error)
+	IsAdmin(ctx context.Context, userID int64) (bool, error)
+}
+
 // Auth представляет собой сервис аутентификации. Он использует логгер,
 // провайдеров пользователей и приложений, а также TTL для генерируемых
 // токенов.
 type Auth struct {
 	log          *slog.Logger
-	userSaver    storage.UserSaver
-	userProvider storage.UserProvider
+	userStorage  UserProviderSaver
 	tokenRevoker storage.TokenRevoker
 	tokenTTL     time.Duration
 	secret       string
@@ -38,16 +51,14 @@ var (
 // New создаёт новый экземпляр Auth с переданными зависимостями.
 func New(
 	log *slog.Logger,
-	userSaver storage.UserSaver,
-	userProvider storage.UserProvider,
+	userStorage UserProviderSaver,
 	tokenRevoker storage.TokenRevoker,
 	tokenTTL time.Duration,
 	secret string,
 ) *Auth {
 	return &Auth{
 		log:          log,
-		userSaver:    userSaver,
-		userProvider: userProvider,
+		userStorage:  userStorage,
 		tokenRevoker: tokenRevoker,
 		tokenTTL:     tokenTTL,
 		secret:       secret,
@@ -65,7 +76,7 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, error
 	)
 	log.Info("logging in user")
 
-	user, err := a.userProvider.User(ctx, email)
+	user, err := a.userStorage.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Error("user not found")
@@ -124,7 +135,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	id, err := a.userSaver.SaveUser(ctx, email, passHash)
+	id, err := a.userStorage.SaveUser(ctx, email, passHash)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			log.Error("user already exists")
@@ -148,7 +159,7 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	)
 	log.Info("checking if user is admin")
 
-	isAdmin, err := a.userProvider.IsAdmin(ctx, userID)
+	isAdmin, err := a.userStorage.IsAdmin(ctx, userID)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			return false, fmt.Errorf("%s: %w", op, err)
