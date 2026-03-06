@@ -1,0 +1,16 @@
+version: "2"
+linters-settings:
+  gocognit:
+    min-complexity: 60
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - gosimple
+    - bodyclose
+    - noctx
+    - errcheck
+    - gocognit
+    - goconst
+    - gofmt

@@ -1,11 +1,11 @@
-package utils
+package responser
 
 import (
 	"encoding/json"
 	"net/http"
 )
 
-// respondWithJSON отправляет готовый объект
+// RespondWithJSON отправляет готовый объект
 func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 	// преобразуем полученные данные в json
 	response, err := json.Marshal(payload)
@@ -24,7 +24,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 	w.Write(response)
 }
 
-// respondWithError отправляет структурированную ошибку
+// RespondWithError отправляет структурированную ошибку
 func RespondWithError(w http.ResponseWriter, code int, message string) {
 	RespondWithJSON(w, code, map[string]string{"error": message})
 }

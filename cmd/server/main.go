@@ -1,46 +1,36 @@
+// Входная точка приложения. Загружает конфигурацию, настраивает логгер,
+// инициализирует приложение и стартует HTTP-сервер.
 package main
 
 import (
-	"ads/internal/ads"
-	"fmt"
-	"net/http"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/logger"
 )
 
 func main() {
-	// создаем зависимости и внедряем репозиторий в обработчик
-	repo := ads.NewAdsRepository()
-	adsHandler := ads.NewHandler(repo)
+	cfg := config.MustLoadConfig()
 
-	// настройка раздачи статики
-	fs := http.FileServer(http.Dir("static"))
-	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	log := logger.SetupLogger(cfg.Env)
 
-	// регистрируем обработчик
-	http.HandleFunc("/ads", adsHandler.GetAdsHandler)
+	log.Info("starting applications")
+	// convert string to time.Duration
 
-	server := &http.Server{
-		Addr: ":8080",
+	application := app.New(log, cfg)
+	go application.HTTPServer.MustRun()
+	log.Info("applications started")
 
-		// используем http.DefaultServeMux
-		Handler: nil,
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 
-		// ставим таймауты на чтение и запись, чтоыб соединение не висело вечно
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
+	sign := <-stop
+	log.Info("received signal", "signal", sign)
 
-		// 2^20 байт = 1024^2 байт = 1 Мб - защита от больших заголовков
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	fmt.Println("Server started at :8080")
-
-	// запускаем http-сервер на порту 8080
-	err := server.ListenAndServe()
-
-	// если порт занят, возникнет ошибка
-	if err != nil {
-		panic("Server failed to start: " + err.Error())
-	}
+	log.Info("stopping applications")
+	application.HTTPServer.Stop()
+	log.Info("applications stopped")
 }
