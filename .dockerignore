@@ -1,0 +1,12 @@
+.git/
+.gitignore
+.dockerignore
+
+.DS_Store
+.idea/
+.vscode/
+
+example.json
+
+*.pem
+

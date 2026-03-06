@@ -1,0 +1,9 @@
+services:
+  clover:
+    container_name: clover
+    build:
+      context: .
+      dockerfile: ./build/Dockerfile
+    env_file:
+      - .env
+    restart: always
