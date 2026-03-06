@@ -1,26 +1,18 @@
-# 2026_1_VKernelTeam
-Backend учебного проекта Юла
+# 2026_1_VKernel_Team
 
-## Хранение данных
+Репозиторий команды VKernel_Team\
+Проект – Юла\
+Наше название - Клевер\
+Рабочий процесс – [github-flow](https://docs.github.com/en/get-started/using-github/github-flow)
 
-Вместо реляционной базы данных используется собственный модуль `internal/storage`.
-Он хранит пользователей и приложения в памяти, защищая доступ конкурентным
-`sync.RWMutex`‑ом. При указании пути (параметр `storage_path` в конфиге)
-состояние периодически сериализуется в JSON и восстанавливается при старте.
+## Участники
 
-Это решение подходит для локальной разработки и лёгких служб, когда
-поддержка СУБД не требуется.  Каждый метод, который изменяет состояние,
-первично обновляет память, затем сразу записывает файл (если он задан).
+- [Николай Угрюмов](https://github.com/ugryum1)
+- [Егор Воробьев](https://github.com/virsi)
+- [Мантров Леонид](https://github.com/leonidmantrov)
+- [Минбулатов Абдулвагаб](https://github.com/PrincepsMontis)
 
-Примеры:
+## Ссылки
 
-Конфиг
-```yaml
-env: "local" #dev prod
-storage_path: "./storage/sso.db"
-token_ttl: 24h
-grpc:
-  port: 44000
-  timeout: 10h
-
-```
+- [Backend](https://github.com/go-park-mail-ru/2026_1_VKernelTeam)
+- [Требования](https://docs.google.com/spreadsheets/d/1h1QaRvRbF2eBUzdV1tLU62hS68bdNH-bLht6N29uDK8/edit?gid=1085759601#gid=1085759601&range=A11) 
