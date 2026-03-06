@@ -19,6 +19,9 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
 	"github.com/golang-jwt/jwt/v5"
+
+	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 const (
@@ -148,6 +151,10 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.handleLogin)
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/logout", a.handleLogout)
 
+	// Ручка для Swagger UI
+	// Она будет доступна по адресу /swagger/index.html
+	a.router.Handle("/swagger/", httpSwagger.WrapHandler)
+
 	// Защищенная ручка (оборачиваем в Middleware)
 	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
 	// a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
@@ -162,6 +169,14 @@ func (a *App) setupRoutes() {
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
+// @Summary Регистрация
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body RegisterRequest true "Данные регистрации"
+// @Success 201 {object} RegisterResponse
+// @Failure 400 {object} ErrorResponse
+// @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -205,6 +220,14 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
+// @Summary Вход
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body LoginRequest true "Данные входа"
+// @Success 200 {object} map[string]string
+// @Failure 401 {object} ErrorResponse
+// @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -268,6 +291,10 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 // 	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
 // }
 
+// @Summary Выход
+// @Tags auth
+// @Success 200 {object} map[string]string
+// @Router /auth/logout [post]
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	// извлекаем токен из куки
 	cookie, err := r.Cookie("token")
@@ -332,6 +359,11 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetAds обрабатывает запросы на получение списка объявлений.
+// @Summary Список объявлений
+// @Tags ads
+// @Produce json
+// @Success 200 {array} models.Ad
+// @Router /ads [get]
 func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {

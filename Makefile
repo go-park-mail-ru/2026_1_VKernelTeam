@@ -13,8 +13,11 @@ help:
 	@echo "  build             - Build the application"
 
 
+swag:
+	swag init -g cmd/server/main.go
+
 # Run the application
-run:
+run: swag
 	go run ./cmd/server/main.go --config=./config/local.json
 
 # Run all tests
@@ -38,8 +41,8 @@ test-storage:
 	go test -v ./internal/storage/...
 
 # Build the application
-build:
-	go build -o bin/sso ./cmd/sso
+build: swag
+	go build -o bin/clover ./cmd/server/main.go
 
 # Clean up generated files
 clean:

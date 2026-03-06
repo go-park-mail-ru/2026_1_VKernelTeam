@@ -12,6 +12,11 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/logger"
 )
 
+// @title Clover API
+// @version 1.0
+// @description API сервера объявлений Клевер.
+// @host clover-go.ru
+// @BasePath /api/v1
 func main() {
 	cfg := config.MustLoadConfig()
 

@@ -24,6 +24,7 @@ COPY --from=builder /app/clover .
 COPY config ./config
 COPY static ./static
 COPY .env .env
+COPY docs ./docs
 
 # Слушаем 8000 порт
 EXPOSE 8000

@@ -1,0 +1,137 @@
+basePath: /api/v1
+definitions:
+  httpapp.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  httpapp.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.RegisterRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.RegisterResponse:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  models.Ad:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: integer
+      seller_id:
+        type: integer
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+      views:
+        type: integer
+    type: object
+host: clover-go.ru
+info:
+  contact: {}
+  description: API сервера объявлений Клевер.
+  title: Clover API
+  version: "1.0"
+paths:
+  /ads:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Ad'
+            type: array
+      summary: Список объявлений
+      tags:
+      - ads
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные входа
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapp.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Вход
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Выход
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Данные регистрации
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapp.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpapp.RegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Регистрация
+      tags:
+      - auth
+swagger: "2.0"
