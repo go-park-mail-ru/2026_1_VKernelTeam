@@ -13,11 +13,11 @@ import (
 	"time"
 
 	// "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/validator"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/ads"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -36,6 +36,7 @@ type App struct {
 
 // Ads описывает методы сервиса объявлений.
 type Ads interface {
+	GetAll() []models.Ad
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации, который
@@ -334,15 +335,8 @@ func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repo, ok := a.services.Ads.(*ads.AdsRepository)
-	if !ok {
-		a.log.Error("failed to get ads: invalid Ads repository type")
-		responser.RespondWithError(w, http.StatusInternalServerError, "internal server error")
-		return
-	}
-
 	// копируем список объявлений без гонки данных
-	adsList := repo.GetAll()
+	adsList := a.services.Ads.GetAll()
 
 	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)
@@ -357,7 +351,7 @@ func (a *App) MustRun() {
 
 // Run запускает HTTP-сервер и возвращает ошибку при сбое.
 func (a *App) Run() error {
-	const op = "httpapp.Run"
+	op := "httpapp.Run"
 
 	a.log.Info("http server started", slog.String("addr", a.srv.Addr))
 
@@ -370,7 +364,7 @@ func (a *App) Run() error {
 
 // Stop корректно останавливает сервер.
 func (a *App) Stop() {
-	const op = "httpapp.Stop"
+	op := "httpapp.Stop"
 
 	a.log.With(slog.String("op", op)).
 		Info("stopping http server", slog.Int("port", a.port))

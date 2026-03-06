@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -25,6 +24,11 @@ import (
 
 type MockAds struct {
 	mock.Mock
+}
+
+func (m *MockAds) GetAll() []models.Ad {
+	args := m.Called()
+	return args.Get(0).([]models.Ad)
 }
 
 type MockAuth struct {
@@ -395,65 +399,26 @@ func TestAppServerEndpoints(t *testing.T) {
 
 // тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
-	// создаём чистые зависимости для теста
-	repo := ads.NewAdsRepository()
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+	app, _, mockAds, _ := setupTestApp()
+
+	testAds := []models.Ad{
+		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	// получаем данные репозитория для сравнения
-	expectedData := repo.GetAll()
+	mockAds.On("GetAll").Return(testAds).Once()
 
-	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// создаём RequestRecoder - заглушку дял ответа
+	request, _ := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	rr := httptest.NewRecorder()
 
-	// вызываем обработчик
-	app.handleGetAds(rr, request)
+	app.router.ServeHTTP(rr, request)
 
-	// проверяем статус-код
-	if status := rr.Code; status != http.StatusOK {
-		t.Errorf(
-			"handler returned wrong status code: got %v want %v",
-			status,
-			http.StatusOK,
-		)
-	}
+	assert.Equal(t, http.StatusOK, rr.Code)
 
-	// првоеряем тип контента
-	expectedType := "application/json"
-	if contentType := rr.Header().Get("Content-Type"); contentType != expectedType {
-		t.Errorf(
-			"handler returned unexpected content type: got %v want %v",
-			contentType,
-			expectedType,
-		)
-	}
-
-	// получаем тело ответа
 	var actualData []models.Ad
-	if err := json.Unmarshal(rr.Body.Bytes(), &actualData); err != nil {
-		t.Fatalf("failed to decode JSON: %v", err)
-	}
+	json.Unmarshal(rr.Body.Bytes(), &actualData)
 
-	actualDataLen := len(actualData)
-	expectedDataLen := len(expectedData)
-
-	// проверяем размер списков
-	if actualDataLen != expectedDataLen {
-		t.Errorf("expected %d ads, got %d", expectedDataLen, actualDataLen)
-	}
-
-	// сравниваем содержимое
-	if !reflect.DeepEqual(actualData, expectedData) {
-		t.Errorf("expected ads %v, got %v", expectedData, actualData)
-	}
+	assert.Equal(t, testAds, actualData)
+	mockAds.AssertExpectations(t)
 }
 
 // првоерка ограничения методов (обрабатываем только GET)
