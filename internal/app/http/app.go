@@ -21,6 +21,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	opRun  = "httpapp.Run"
+	opStop = "httpapp.Stop"
+)
+
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
@@ -351,12 +356,10 @@ func (a *App) MustRun() {
 
 // Run запускает HTTP-сервер и возвращает ошибку при сбое.
 func (a *App) Run() error {
-	op := "httpapp.Run"
-
 	a.log.Info("http server started", slog.String("addr", a.srv.Addr))
 
 	if err := a.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("%s: %w", op, err)
+		return fmt.Errorf("%s: %w", opRun, err)
 	}
 
 	return nil
@@ -364,9 +367,7 @@ func (a *App) Run() error {
 
 // Stop корректно останавливает сервер.
 func (a *App) Stop() {
-	op := "httpapp.Stop"
-
-	a.log.With(slog.String("op", op)).
+	a.log.With(slog.String("opStop", opStop)).
 		Info("stopping http server", slog.Int("port", a.port))
 
 	a.srv.Close()
