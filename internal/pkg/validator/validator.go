@@ -3,24 +3,28 @@ package validator
 import (
 	"errors"
 	"regexp"
-	"strings"
-	"unicode"
 )
 
 // ошибки валидации
 var (
-	ErrInvalidEmailFormat     = errors.New("invalid email format")
-	ErrPasswordTooShort       = errors.New("password must be at least 8 characters long")
-	ErrPasswordRequiresDigit  = errors.New("password must contain at least one digit")
-	ErrPasswordRequiresLetter = errors.New("password must contain at least one latin letter")
-)
+	ErrInvalidEmailFormat        = errors.New("invalid email format")
+	ErrPasswordTooShort          = errors.New("password must be at least 8 characters long")
+	ErrPasswordRequiresDigit     = errors.New("password must contain at least one digit")
+	ErrPasswordRequiresLetter    = errors.New("password must contain at least one latin letter")
+	ErrPasswordContainsForbidden = errors.New("password contains forbidden characters")
 
-// регулярное выражение для проверки email
-var emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	// Только латиница, цифры и _
+	reStrict = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
+	// Проверка наличия хотя бы одной буквы
+	reHasLetter = regexp.MustCompile(`[a-zA-Z]`)
+	// Проверка наличия хотя бы одной цифры
+	reHasDigit = regexp.MustCompile(`[0-9]`)
+	// регулярное выражение для проверки email
+	emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
+)
 
 // ValidateEmail проверяет валидность email
 func ValidateEmail(email string) error {
-	email = strings.TrimSpace(email)
 	if !emailRegex.MatchString(email) {
 		return ErrInvalidEmailFormat
 	}
@@ -36,19 +40,15 @@ func ValidatePassword(password string) error {
 		return ErrPasswordTooShort
 	}
 
-	var hasLetter, hasDigit bool
-	for _, char := range password {
-		if unicode.IsLetter(char) && char <= unicode.MaxASCII {
-			hasLetter = true
-		} else if unicode.IsDigit(char) {
-			hasDigit = true
-		}
+	if !reStrict.MatchString(password) {
+		return ErrPasswordContainsForbidden
 	}
 
-	if !hasLetter {
+	if !reHasLetter.MatchString(password) {
 		return ErrPasswordRequiresLetter
 	}
-	if !hasDigit {
+
+	if !reHasDigit.MatchString(password) {
 		return ErrPasswordRequiresDigit
 	}
 
