@@ -348,7 +348,7 @@ func TestHandleLogout(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("InvalidTokenSignature", func(t *testing.T) {

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
 	utils "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
@@ -9,8 +10,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Свой тип для хранения ключей контекста
+type contextKey string
+
+const (
+	UserIDKey contextKey = "userID"
+	JtiKey    contextKey = "jti"
+)
+
 // AuthMiddleware проверяет каждый запрос.
-func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
+func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("token")
@@ -26,12 +35,14 @@ func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) ht
 			})
 
 			if err != nil || !token.Valid {
+				log.Warn("invalid token attempt", slog.String("error", err.Error()))
 				utils.RespondWithError(w, http.StatusUnauthorized, "invalid token")
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
+				log.Error("failed to cast claims", slog.Any("claims", token.Claims))
 				utils.RespondWithError(w, http.StatusUnauthorized, "invalid token claims")
 				return
 			}
@@ -39,6 +50,7 @@ func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) ht
 			// Блокируем запрос, если токен был отозван
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
+				log.Warn("attempt to use revoked token", slog.String("jti", jti))
 				utils.RespondWithError(w, http.StatusUnauthorized, "token has been revoked")
 				return
 			}
@@ -48,7 +60,11 @@ func AuthMiddleware(bl *blacklist.InMemory, secret string) func(http.Handler) ht
 				utils.RespondWithError(w, http.StatusUnauthorized, "invalid uid claim")
 				return
 			}
-			ctx := context.WithValue(r.Context(), "userID", int64(uidRaw))
+
+			// Кладём в контекст ID пользователя и jti
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, UserIDKey, int64(uidRaw))
+			ctx = context.WithValue(ctx, JtiKey, jti)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

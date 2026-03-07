@@ -13,12 +13,13 @@ import (
 	"time"
 
 	// "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/validator"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
 
 	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
@@ -149,15 +150,14 @@ func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.handleRegister)
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.handleLogin)
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/logout", a.handleLogout)
+
+	// Защищенная ручка (оборачиваем в Middleware)
+	authMW := middleware.AuthMiddleware(a.log, a.blacklist.(*blacklist.InMemory), a.secret)
+	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.handleLogout)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
 	a.router.Handle("/swagger/", httpSwagger.WrapHandler)
-
-	// Защищенная ручка (оборачиваем в Middleware)
-	// authMW := middleware.AuthMiddleware(a.blacklist, a.secret)
-	// a.router.Handle("POST /auth/is-admin", authMW(http.HandlerFunc(a.handleIsAdmin)))
 
 	// настройка раздачи статики
 	fs := http.FileServer(http.Dir("static"))
@@ -206,6 +206,12 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	a.log.Info(
+		"user registered successfully",
+		slog.Int64("user_id", userID),
+		slog.String("email", req.Email),
+	)
+
 	// сразу логиним
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
@@ -236,6 +242,11 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validator.ValidateEmail(req.Email); err != nil {
+		a.log.Warn(
+			"invalid login attempt",
+			slog.String("email", req.Email),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -296,51 +307,17 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]string
 // @Router /auth/logout [post]
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
-	// извлекаем токен из куки
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, "no token to logout")
-		return
-	}
-	tokenString := cookie.Value
+	a.log.Info("logout attempt", slog.String("op", "handleLogout"))
 
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok { // проверяем, что алгоритм подписи ожидаемый
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"]) // защита от атак с подменой алгоритма
-		}
-		return []byte(a.secret), nil
-	})
-	if err != nil { // если токен не распарсился, считаем его недействительным
-		a.log.Error("failed to parse token", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusUnauthorized, "invalid token")
+	// достаём jti из контекста
+	jti, ok := r.Context().Value(middleware.JtiKey).(string)
+	if !ok {
+		a.log.Error("jti not found in context")
+		responser.RespondWithError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok { // если клеймы не в виде словаря, считаем токен недействительным
-		a.log.Error("invalid token claims", slog.Any("claims", token.Claims))
-		responser.RespondWithError(w, http.StatusBadRequest, "invalid token claims")
-		return
-	}
-
-	jtiRaw, ok := claims["jti"].(string)
-	if !ok { // если jti нет или он не строка, считаем токен недействительным
-		a.log.Error("invalid or missing jti claim", slog.Any("claims", claims))
-		responser.RespondWithError(w, http.StatusBadRequest, "invalid or missing jti claim")
-		return
-	}
-
-	expRaw, ok := claims["exp"].(float64)
-	if !ok { // если exp нет или он не число, считаем токен недействительным
-		a.log.Error("invalid or missing exp claim", slog.Any("claims", claims))
-		responser.RespondWithError(w, http.StatusBadRequest, "invalid or missing exp claim")
-		return
-	}
-
-	jti := jtiRaw
-	exp := time.Unix(int64(expRaw), 0)
-
-	if err := a.services.Auth.Logout(r.Context(), jti, exp); err != nil {
+	if err := a.services.Auth.Logout(r.Context(), jti, time.Now().Add(a.tokenTTL)); err != nil {
 		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
 		return

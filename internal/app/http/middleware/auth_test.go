@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,15 +17,24 @@ import (
 )
 
 func TestAuthMiddleware(t *testing.T) {
+	// инициализируем логгер, который ничего не выводит (Discard), чтобы не спамить в консоль тестов
+	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	secret := "test-secret"
 	bl := blacklist.New(time.Minute)
 
-	mw := AuthMiddleware(bl, secret)
+	mw := AuthMiddleware(log, bl, secret)
 
+	// заглушка следующего обработчика
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		userID := r.Context().Value("userID")
-		assert.NotNil(t, userID)
+		userID, okUID := r.Context().Value(UserIDKey).(int64)
+		jti, okJTI := r.Context().Value(JtiKey).(string)
+
+		assert.True(t, okUID, "userID should be in context")
 		assert.Equal(t, int64(42), userID)
+
+		assert.True(t, okJTI, "jti should be in context")
+		assert.NotEmpty(t, jti)
+
 		w.WriteHeader(http.StatusOK)
 	})
 
