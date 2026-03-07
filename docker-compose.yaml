@@ -9,3 +9,7 @@ services:
     restart: always
     ports:
       - 8000:8000
+    volumes:
+      # путь_на_хосте : путь_в_контейнере
+      - ./static:/app/static
+      - ./storage:/app/storage

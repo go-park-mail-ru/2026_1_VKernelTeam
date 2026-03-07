@@ -61,3 +61,8 @@ fmt:
 # Run go vet
 vet:
 	go vet ./...
+
+# Updating and restarting on the server
+deploy:
+	git pull
+	docker compose up -d --build --remove-orphans

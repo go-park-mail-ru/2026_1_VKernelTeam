@@ -9,3 +9,4 @@ coverage.html
 bin/
 
 *.pem
+*.txt
