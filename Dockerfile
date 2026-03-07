@@ -25,7 +25,7 @@ COPY .env .env
 COPY docs ./docs
 
 # Создаём пустые папки для статики и хранилища
-RUN mkdir -p app/static app/storage
+RUN mkdir -p /app/static /app/storage
 
 # Слушаем 8000 порт
 EXPOSE 8000
