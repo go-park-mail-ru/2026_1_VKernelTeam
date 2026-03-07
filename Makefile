@@ -64,5 +64,5 @@ vet:
 
 # Updating and restarting on the server
 deploy:
-	git pull
+	sudo git pull
 	docker compose up -d --build --remove-orphans
