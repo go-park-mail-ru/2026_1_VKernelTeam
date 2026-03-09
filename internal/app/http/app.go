@@ -137,9 +137,9 @@ const apiPrefix = "/api/v1"
 
 func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		HttpOnly: true, // JS не увидит куку
+		Name:  "token",
+		Value: token,
+		// HttpOnly: true, // JS не увидит куку
 		// Secure:   true,                      // передача только по HTTPS
 		Path:     "/",                       // доступна везде
 		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
@@ -326,12 +326,12 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    "",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1,              // удаляем куку
-		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
+		Name:  "token",
+		Value: "",
+		Path:  "/",
+		// HttpOnly: true,
+		MaxAge:  -1,              // удаляем куку
+		Expires: time.Unix(0, 0), // на всякий случай делаем просроченной
 	})
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
