@@ -37,7 +37,7 @@ type UserProviderSaver interface {
 type Auth struct {
 	log          *slog.Logger
 	userStorage  UserProviderSaver
-	tokenRevoker storage.TokenRevoker
+	tokenRevoker TokenRevoker
 	tokenTTL     time.Duration
 	secret       string
 }
@@ -52,7 +52,7 @@ var (
 func New(
 	log *slog.Logger,
 	userStorage UserProviderSaver,
-	tokenRevoker storage.TokenRevoker,
+	tokenRevoker TokenRevoker,
 	tokenTTL time.Duration,
 	secret string,
 ) *Auth {

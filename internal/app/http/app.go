@@ -37,7 +37,7 @@ type App struct {
 	port      int
 	srv       *http.Server
 	services  Services
-	blacklist storage.TokenRevoker
+	blacklist auth.TokenRevoker
 	tokenTTL  time.Duration
 	secret    string
 }
@@ -103,7 +103,7 @@ type ErrorResponse struct {
 func New(
 	log *slog.Logger,
 	services Services,
-	bl storage.TokenRevoker,
+	bl auth.TokenRevoker,
 	port int,
 	tokenTTL time.Duration,
 	secret string,
