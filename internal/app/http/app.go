@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"time"
 
-	// "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
@@ -85,15 +84,15 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-// IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
-type IsAdminRequest struct {
-	UserID int64 `json:"user_id"`
-}
+// // IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
+// type IsAdminRequest struct {
+// 	UserID int64 `json:"user_id"`
+// }
 
-// IsAdminResponse представляет собой структуру для ответа на запрос проверки прав администратора.
-type IsAdminResponse struct {
-	IsAdmin bool `json:"is_admin"`
-}
+// // IsAdminResponse представляет собой структуру для ответа на запрос проверки прав администратора.
+// type IsAdminResponse struct {
+// 	IsAdmin bool `json:"is_admin"`
+// }
 
 // ErrorResponse представляет собой структуру для отправки ошибок в формате JSON.
 type ErrorResponse struct {
@@ -121,9 +120,11 @@ func New(
 
 	app.setupRoutes()
 
+	handlerWithCORS := middleware.CORSMiddleware(app.router)
+
 	app.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
-		Handler:      app.router,               // используем наш маршрутизатор
+		Handler:      handlerWithCORS,          // используем наш маршрутизатор с CORS
 		ReadTimeout:  15 * time.Second,         // ограничиваем время чтения запроса
 		WriteTimeout: 15 * time.Second,         // ограничиваем время записи ответа
 		IdleTimeout:  60 * time.Second,         // время жизни соединения
@@ -302,6 +303,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 // 	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
 // }
 
+// handleLogout обрабатывает запросы на выход из системы, добавляя jti токена в черный список.
 // @Summary Выход
 // @Tags auth
 // @Success 200 {object} map[string]string

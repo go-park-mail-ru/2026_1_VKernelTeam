@@ -66,7 +66,7 @@ func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
 	}
 
 	// Передаем структуру services вместо одного mockAuth
-	app := New(logger, services, bl, 8080, time.Hour, "secret")
+	app := New(logger, services, bl, 0, time.Hour, "secret")
 
 	return app, mockAuth, mockAds, bl
 }
