@@ -170,13 +170,15 @@ func (a *App) setupRoutes() {
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
-// @Summary Регистрация
+// @Summary User registration
+// @Description Creates a new user account and performs automatic login
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body RegisterRequest true "Данные регистрации"
-// @Success 201 {object} RegisterResponse
-// @Failure 400 {object} ErrorResponse
+// @Param input body RegisterRequest true "Registration data"
+// @Success 200 {object} RegisterResponse "user registered successfully"
+// @Failure 400 {object} ErrorResponse "invalid request body / invalid email / invalid password / user already exists"
+// @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
@@ -198,7 +200,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			responser.RespondWithError(w, http.StatusConflict, "user already exists")
+			responser.RespondWithError(w, http.StatusBadRequest, "user already exists")
 			return
 		}
 
@@ -223,17 +225,18 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	a.setAuthCookie(w, token)
 
-	responser.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
+	responser.RespondWithJSON(w, http.StatusOK, RegisterResponse{UserID: userID})
 }
 
-// handleLogin обрабатывает запросы на вход в систему и возвращает JWT.
-// @Summary Вход
+// @Summary User login
+// @Description Authenticates user and sets auth cookie
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body LoginRequest true "Данные входа"
-// @Success 200 {object} map[string]string
-// @Failure 401 {object} ErrorResponse
+// @Param input body LoginRequest true "Login credentials"
+// @Success 200 {object} map[string]string "login successful"
+// @Failure 400 {object} ErrorResponse "invalid request body / invalid email / invalid password / invalid email or password"
+// @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
@@ -304,10 +307,14 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 // }
 
 // handleLogout обрабатывает запросы на выход из системы, добавляя jti токена в черный список.
-// @Summary Выход
+// @Summary User logout
+// @Description Invalidates current session and clears the auth cookie
 // @Tags auth
-// @Success 200 {object} map[string]string
+// @Success 200 {object} map[string]string "logout successful"
+// @Failure 401 {object} ErrorResponse "invalid or expired token"
+// @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/logout [post]
+// @Security CookieAuth
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	a.log.Info("logout attempt", slog.String("op", "handleLogout"))
 
@@ -338,16 +345,19 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetAds обрабатывает запросы на получение списка объявлений.
-// @Summary Список объявлений
+// @Summary Get ads list
+// @Description Returns a list of all ads
 // @Tags ads
 // @Produce json
-// @Success 200 {array} models.Ad
+// @Success 200 {array} models.Ad "successfully received list of ads"
+// @Failure 400 {object} ErrorResponse "method not allowed / invalid parameters"
+// @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /ads [get]
 func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {
-		// формируем и отправляем ошибку 405
-		responser.RespondWithError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		// формируем и отправляем ошибку
+		responser.RespondWithError(w, http.StatusBadRequest, "Method not allowed")
 		return
 	}
 

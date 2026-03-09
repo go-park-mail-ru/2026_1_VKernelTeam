@@ -14,9 +14,12 @@ import (
 
 // @title Clover API
 // @version 1.0
-// @description API сервера объявлений Клевер.
+// @description API for the Clover service.
 // @host clover-go.ru
 // @BasePath /api/v1
+// @securityDefinitions.apikey CookieAuth
+// @in cookie
+// @name token
 func main() {
 	cfg := config.MustLoadConfig()
 

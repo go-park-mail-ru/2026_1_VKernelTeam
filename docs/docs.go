@@ -17,21 +17,34 @@ const docTemplate = `{
     "paths": {
         "/ads": {
             "get": {
+                "description": "Returns a list of all ads",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "ads"
                 ],
-                "summary": "Список объявлений",
+                "summary": "Get ads list",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "successfully received list of ads",
                         "schema": {
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/models.Ad"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "method not allowed / invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     }
                 }
@@ -39,6 +52,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
+                "description": "Authenticates user and sets auth cookie",
                 "consumes": [
                     "application/json"
                 ],
@@ -48,10 +62,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Вход",
+                "summary": "User login",
                 "parameters": [
                     {
-                        "description": "Данные входа",
+                        "description": "Login credentials",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -62,7 +76,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "login successful",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -70,8 +84,14 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "400": {
+                        "description": "invalid request body / invalid email / invalid password / invalid email or password",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
@@ -81,18 +101,36 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Invalidates current session and clears the auth cookie",
                 "tags": [
                     "auth"
                 ],
-                "summary": "Выход",
+                "summary": "User logout",
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "logout successful",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    },
+                    "401": {
+                        "description": "invalid or expired token",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     }
                 }
@@ -100,6 +138,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
+                "description": "Creates a new user account and performs automatic login",
                 "consumes": [
                     "application/json"
                 ],
@@ -109,10 +148,10 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Регистрация",
+                "summary": "User registration",
                 "parameters": [
                     {
-                        "description": "Данные регистрации",
+                        "description": "Registration data",
                         "name": "input",
                         "in": "body",
                         "required": true,
@@ -122,14 +161,20 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "user registered successfully",
                         "schema": {
                             "$ref": "#/definitions/httpapp.RegisterResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "invalid request body / invalid email / invalid password / user already exists",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal server error",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
@@ -215,6 +260,13 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "CookieAuth": {
+            "type": "apiKey",
+            "name": "token",
+            "in": "cookie"
+        }
     }
 }`
 
@@ -225,7 +277,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Clover API",
-	Description:      "API сервера объявлений Клевер.",
+	Description:      "API for the Clover service.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -52,30 +52,40 @@ definitions:
 host: clover-go.ru
 info:
   contact: {}
-  description: API сервера объявлений Клевер.
+  description: API for the Clover service.
   title: Clover API
   version: "1.0"
 paths:
   /ads:
     get:
+      description: Returns a list of all ads
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: successfully received list of ads
           schema:
             items:
               $ref: '#/definitions/models.Ad'
             type: array
-      summary: Список объявлений
+        "400":
+          description: method not allowed / invalid parameters
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Get ads list
       tags:
       - ads
   /auth/login:
     post:
       consumes:
       - application/json
+      description: Authenticates user and sets auth cookie
       parameters:
-      - description: Данные входа
+      - description: Login credentials
         in: body
         name: input
         required: true
@@ -85,36 +95,53 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: login successful
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid request body / invalid email / invalid password / invalid
+            email or password
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Invalidates current session and clears the auth cookie
+      responses:
+        "200":
+          description: logout successful
           schema:
             additionalProperties:
               type: string
             type: object
         "401":
-          description: Unauthorized
+          description: invalid or expired token
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
-      summary: Вход
-      tags:
-      - auth
-  /auth/logout:
-    post:
-      responses:
-        "200":
-          description: OK
+        "500":
+          description: internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Выход
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: User logout
       tags:
       - auth
   /auth/register:
     post:
       consumes:
       - application/json
+      description: Creates a new user account and performs automatic login
       parameters:
-      - description: Данные регистрации
+      - description: Registration data
         in: body
         name: input
         required: true
@@ -123,15 +150,25 @@ paths:
       produces:
       - application/json
       responses:
-        "201":
-          description: Created
+        "200":
+          description: user registered successfully
           schema:
             $ref: '#/definitions/httpapp.RegisterResponse'
         "400":
-          description: Bad Request
+          description: invalid request body / invalid email / invalid password / user
+            already exists
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
-      summary: Регистрация
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: User registration
       tags:
       - auth
+securityDefinitions:
+  CookieAuth:
+    in: cookie
+    name: token
+    type: apiKey
 swagger: "2.0"
