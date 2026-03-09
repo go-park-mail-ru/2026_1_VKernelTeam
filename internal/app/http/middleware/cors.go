@@ -10,7 +10,7 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 
 		// Разрешаем только определенные домены.
-		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:80" || origin == "http://localhost:8000" || origin == "http://localhost:80" {
+		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
 			// Если домен не разрешен, можно либо не устанавливать заголовок, либо установить его в "*", что разрешит все домены.
