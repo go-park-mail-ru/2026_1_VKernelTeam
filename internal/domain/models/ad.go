@@ -6,7 +6,7 @@ import "time"
 
 // Ad содержит поля объявления.
 type Ad struct {
-	ID          int       `json:"id"`
+	ID          int64     `json:"id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Price       int       `json:"price"`
