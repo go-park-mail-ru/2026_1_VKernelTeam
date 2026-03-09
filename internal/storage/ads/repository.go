@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
 // AdsRepository отвечает за доступ к данным

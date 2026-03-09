@@ -12,15 +12,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app/http/middleware"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/validator"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/services/auth"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/validator"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
 
-	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/docs"
+	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/docs"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 

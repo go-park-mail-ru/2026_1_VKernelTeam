@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
 // ErrUserExists возвращается, когда пытаются создать пользователя с email, который уже существует в хранилище.

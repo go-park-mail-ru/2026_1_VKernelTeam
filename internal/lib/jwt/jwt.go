@@ -4,7 +4,7 @@ package jwt
 import (
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

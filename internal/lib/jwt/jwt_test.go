@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

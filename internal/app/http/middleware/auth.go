@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	utils "github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/pkg/responser"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/storage/blacklist"
+	utils "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
 	"github.com/golang-jwt/jwt/v5"
 )
 

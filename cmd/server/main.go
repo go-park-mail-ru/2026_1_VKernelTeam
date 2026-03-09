@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/app"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/logger"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/logger"
 )
 
 // @title Clover API

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/sso/internal/config"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

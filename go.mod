@@ -1,4 +1,4 @@
-module github.com/go-park-mail-ru/2026_1_VKernelTeam/sso
+module github.com/go-park-mail-ru/2026_1_VKernelTeam/clover
 
 go 1.26.0
 
