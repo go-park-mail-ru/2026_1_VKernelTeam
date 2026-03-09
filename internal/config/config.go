@@ -31,7 +31,10 @@ type HTTPConfig struct {
 // MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
 // Это удобный хелпер для вызова из main.
 func MustLoadConfig() *Config {
-	_ = godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		panic("Error loading .env file")
+	}
 
 	path := fetchConfigPath()
 	if path == "" {
