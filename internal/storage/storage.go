@@ -58,6 +58,14 @@ func New(path string) (*Storage, error) {
 		path:         path,
 	}
 
+	for _, u := range generateMockUsers() {
+		s.usersByEmail[u.Email] = u
+		s.usersByID[u.ID] = u
+		if u.ID > s.nextUserID {
+			s.nextUserID = u.ID
+		}
+	}
+
 	if path == "" {
 		return s, nil
 	}
@@ -179,4 +187,53 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 		return false, ErrUserNotFound
 	}
 	return u.IsAdmin, nil
+}
+
+// generateMockUsers returns a slice of mock users (profiles) suitable for testing.
+// It includes various roles, empty emails, and different data variations.
+func generateMockUsers() []models.User {
+	return []models.User{
+		{
+			ID:       1,
+			Email:    "admin@vk.com",
+			PassHash: []byte("hashed_password_1"),
+			IsAdmin:  true,
+		},
+		{
+			ID:       2,
+			Email:    "ivan.ivanov@mail.ru",
+			PassHash: []byte("hashed_password_2"),
+			IsAdmin:  false,
+		},
+		{
+			ID:       3,
+			Email:    "petr.petrov@yandex.ru",
+			PassHash: []byte("hashed_password_3"),
+			IsAdmin:  false,
+		},
+		{
+			ID:       4,
+			Email:    "anna.smith@gmail.com",
+			PassHash: []byte("hashed_password_4"),
+			IsAdmin:  false,
+		},
+		{
+			ID:       5,
+			Email:    "weird.user+test@domain.co.uk",
+			PassHash: []byte("hashed_password_5"),
+			IsAdmin:  false,
+		},
+		{
+			ID:       6,
+			Email:    "errtytyu@gmail.com",
+			PassHash: []byte("hashed_password_6"),
+			IsAdmin:  false,
+		},
+		{
+			ID:       7,
+			Email:    "moderator@local.host",
+			PassHash: []byte("hashed_password_7"),
+			IsAdmin:  true,
+		},
+	}
 }

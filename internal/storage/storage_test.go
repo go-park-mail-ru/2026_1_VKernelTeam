@@ -94,7 +94,7 @@ func TestIsAdmin(t *testing.T) {
 		t.Errorf("expected user 2 not to be admin")
 	}
 
-	_, err := st.IsAdmin(context.Background(), 3)
+	_, err := st.IsAdmin(context.Background(), 999)
 	if err != ErrUserNotFound {
 		t.Errorf("expected ErrUserNotFound")
 	}
