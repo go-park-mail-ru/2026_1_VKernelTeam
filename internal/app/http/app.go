@@ -139,8 +139,8 @@ func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		HttpOnly: true,                      // JS не увидит куку
-		Secure:   true,                      // передача только по HTTPS
+		HttpOnly: true, // JS не увидит куку
+		// Secure:   true,                      // передача только по HTTPS
 		Path:     "/",                       // доступна везде
 		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
 		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
