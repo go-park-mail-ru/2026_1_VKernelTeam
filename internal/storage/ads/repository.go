@@ -9,13 +9,13 @@ import (
 
 // AdsRepository отвечает за доступ к данным
 type AdsRepository struct {
-	sync.RWMutex
-	Data []models.Ad // список объявлений
+	mu sync.RWMutex
+	data []models.Ad // список объявлений
 }
 
 func NewAdsRepository() *AdsRepository {
 	return &AdsRepository{
-		Data: generateMockAds(),
+		data: generateMockAds(),
 	}
 }
 
@@ -140,11 +140,11 @@ func generateMockAds() []models.Ad {
 
 // метод для получения данных (чтобы не обращаться к полю data напрямую)
 func (r *AdsRepository) GetAll() []models.Ad {
-	r.RLock()
-	defer r.RUnlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	// создаем новый слайс и копируем туда данные
-	result := make([]models.Ad, len(r.Data))
-	copy(result, r.Data)
+	result := make([]models.Ad, len(r.data))
+	copy(result, r.data)
 	return result
 }
