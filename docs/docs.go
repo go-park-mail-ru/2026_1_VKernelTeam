@@ -242,14 +242,26 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
                 "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
                     "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
+                "favorites_count": {
+                    "type": "integer"
+                },
                 "id": {
                     "type": "integer"
+                },
+                "location": {
+                    "type": "string"
                 },
                 "photos": {
                     "type": "array",
@@ -263,16 +275,16 @@ const docTemplate = `{
                 "seller_id": {
                     "type": "integer"
                 },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "status": {
+                    "type": "string"
                 },
                 "title": {
                     "type": "string"
                 },
-                "views": {
+                "updated_at": {
+                    "type": "string"
+                },
+                "views_count": {
                     "type": "integer"
                 }
             }
