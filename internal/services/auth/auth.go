@@ -45,7 +45,7 @@ type Auth struct {
 // ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
 // сохранёнными данными.
 var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 // New создаёт новый экземпляр Auth с переданными зависимостями.

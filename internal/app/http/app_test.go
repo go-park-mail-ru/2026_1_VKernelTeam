@@ -235,7 +235,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {
@@ -246,7 +246,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("EmptyPassword", func(t *testing.T) {
@@ -257,7 +257,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("ShortPassword", func(t *testing.T) {
@@ -268,7 +268,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("PasswordNoDigit", func(t *testing.T) {
@@ -279,7 +279,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("PasswordNoLetter", func(t *testing.T) {
@@ -290,7 +290,7 @@ func TestHandleLogin(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	})
 
 	t.Run("InvalidCredentials", func(t *testing.T) {

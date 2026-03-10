@@ -58,12 +58,12 @@ info:
 paths:
   /ads:
     get:
-      description: Returns a list of all ads
+      description: Возвращает список всех объявлений
       produces:
       - application/json
       responses:
         "200":
-          description: successfully received list of ads
+          description: список объявлений успешно получен
           schema:
             items:
               $ref: '#/definitions/models.Ad'
@@ -76,14 +76,14 @@ paths:
           description: internal server error
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
-      summary: Get ads list
+      summary: Получить список объявлений
       tags:
       - ads
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Authenticates user and sets auth cookie
+      description: Аутентифицирует пользователя и устанавливает куку с токеном
       parameters:
       - description: Login credentials
         in: body
@@ -101,20 +101,24 @@ paths:
               type: string
             type: object
         "400":
-          description: invalid request body / invalid email / invalid password / invalid
-            email or password
+          description: invalid request body
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "401":
+          description: email validation error / password validation error / invalid
+            credentials
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
         "500":
           description: internal server error
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
-      summary: User login
+      summary: Вход пользователя
       tags:
       - auth
   /auth/logout:
     post:
-      description: Invalidates current session and clears the auth cookie
+      description: Инвалидирует текущую сессию и очищает аутентификационную куку
       responses:
         "200":
           description: logout successful
@@ -132,14 +136,14 @@ paths:
             $ref: '#/definitions/httpapp.ErrorResponse'
       security:
       - CookieAuth: []
-      summary: User logout
+      summary: Выход пользователя
       tags:
       - auth
   /auth/register:
     post:
       consumes:
       - application/json
-      description: Creates a new user account and performs automatic login
+      description: Создаёт нового пользователя и автоматически выполняет вход
       parameters:
       - description: Registration data
         in: body
@@ -163,7 +167,7 @@ paths:
           description: internal server error
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
-      summary: User registration
+      summary: Регистрация пользователя
       tags:
       - auth
 securityDefinitions:

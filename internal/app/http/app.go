@@ -99,6 +99,12 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+// ValidationErrors представляет собой структуру для отправки ошибок валидации по полям.
+type ValidationErrors struct {
+	Email    string `json:"email,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
@@ -170,8 +176,8 @@ func (a *App) setupRoutes() {
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.
-// @Summary User registration
-// @Description Creates a new user account and performs automatic login
+// @Summary Регистрация пользователя
+// @Description Создаёт нового пользователя и автоматически выполняет вход
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -187,13 +193,18 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Собираем все ошибки валидации
+	validationErrors := ValidationErrors{}
 	if err := validator.ValidateEmail(req.Email); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
+		validationErrors.Email = err.Error()
+	}
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		validationErrors.Password = err.Error()
 	}
 
-	if err := validator.ValidatePassword(req.Password); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+	// Если есть хотя бы одна ошибка валидации, возвращаем их все
+	if validationErrors.Email != "" || validationErrors.Password != "" {
+		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
@@ -228,14 +239,15 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	responser.RespondWithJSON(w, http.StatusOK, RegisterResponse{UserID: userID})
 }
 
-// @Summary User login
-// @Description Authenticates user and sets auth cookie
+// @Summary Вход пользователя
+// @Description Аутентифицирует пользователя и устанавливает куку с токеном
 // @Tags auth
 // @Accept json
 // @Produce json
 // @Param input body LoginRequest true "Login credentials"
 // @Success 200 {object} map[string]string "login successful"
-// @Failure 400 {object} ErrorResponse "invalid request body / invalid email / invalid password / invalid email or password"
+// @Failure 400 {object} ErrorResponse "invalid request body"
+// @Failure 401 {object} ErrorResponse "email validation error / password validation error / invalid credentials"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -245,25 +257,31 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Собираем все ошибки валидации
+	validationErrors := ValidationErrors{}
 	if err := validator.ValidateEmail(req.Email); err != nil {
-		a.log.Warn(
-			"invalid login attempt",
-			slog.String("email", req.Email),
-			slog.String("error", err.Error()),
-		)
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
+		validationErrors.Email = err.Error()
+	}
+	if err := validator.ValidatePassword(req.Password); err != nil {
+		validationErrors.Password = err.Error()
 	}
 
-	if err := validator.ValidatePassword(req.Password); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+	// Если есть хотя бы одна ошибка валидации, логируем и возвращаем их все
+	if validationErrors.Email != "" || validationErrors.Password != "" {
+		a.log.Info(
+			"invalid login attempt",
+			slog.String("email", req.Email),
+			slog.String("email_error", validationErrors.Email),
+			slog.String("password_error", validationErrors.Password),
+		)
+		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
 		return
 	}
 
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			responser.RespondWithError(w, http.StatusUnauthorized, "invalid email or password")
+			responser.RespondWithError(w, http.StatusUnauthorized, "invalid credentials")
 			return
 		}
 
@@ -307,8 +325,8 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 // }
 
 // handleLogout обрабатывает запросы на выход из системы, добавляя jti токена в черный список.
-// @Summary User logout
-// @Description Invalidates current session and clears the auth cookie
+// @Summary Выход пользователя
+// @Description Инвалидирует текущую сессию и очищает аутентификационную куку
 // @Tags auth
 // @Success 200 {object} map[string]string "logout successful"
 // @Failure 401 {object} ErrorResponse "invalid or expired token"
@@ -345,11 +363,11 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetAds обрабатывает запросы на получение списка объявлений.
-// @Summary Get ads list
-// @Description Returns a list of all ads
+// @Summary Получить список объявлений
+// @Description Возвращает список всех объявлений
 // @Tags ads
 // @Produce json
-// @Success 200 {array} models.Ad "successfully received list of ads"
+// @Success 200 {array} models.Ad "список объявлений успешно получен"
 // @Failure 400 {object} ErrorResponse "method not allowed / invalid parameters"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /ads [get]

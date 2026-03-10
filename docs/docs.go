@@ -17,17 +17,17 @@ const docTemplate = `{
     "paths": {
         "/ads": {
             "get": {
-                "description": "Returns a list of all ads",
+                "description": "Возвращает список всех объявлений",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "ads"
                 ],
-                "summary": "Get ads list",
+                "summary": "Получить список объявлений",
                 "responses": {
                     "200": {
-                        "description": "successfully received list of ads",
+                        "description": "список объявлений успешно получен",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -52,7 +52,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Authenticates user and sets auth cookie",
+                "description": "Аутентифицирует пользователя и устанавливает куку с токеном",
                 "consumes": [
                     "application/json"
                 ],
@@ -62,7 +62,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "User login",
+                "summary": "Вход пользователя",
                 "parameters": [
                     {
                         "description": "Login credentials",
@@ -85,7 +85,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid request body / invalid email / invalid password / invalid email or password",
+                        "description": "invalid request body",
+                        "schema": {
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "email validation error / password validation error / invalid credentials",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
@@ -106,11 +112,11 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Invalidates current session and clears the auth cookie",
+                "description": "Инвалидирует текущую сессию и очищает аутентификационную куку",
                 "tags": [
                     "auth"
                 ],
-                "summary": "User logout",
+                "summary": "Выход пользователя",
                 "responses": {
                     "200": {
                         "description": "logout successful",
@@ -138,7 +144,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Creates a new user account and performs automatic login",
+                "description": "Создаёт нового пользователя и автоматически выполняет вход",
                 "consumes": [
                     "application/json"
                 ],
@@ -148,7 +154,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "User registration",
+                "summary": "Регистрация пользователя",
                 "parameters": [
                     {
                         "description": "Registration data",

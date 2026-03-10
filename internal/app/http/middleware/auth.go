@@ -35,7 +35,7 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 			})
 
 			if err != nil || !token.Valid {
-				log.Warn("invalid token attempt", slog.String("error", err.Error()))
+				log.Info("invalid token attempt", slog.String("error", err.Error()))
 				utils.RespondWithError(w, http.StatusUnauthorized, "invalid token")
 				return
 			}
@@ -50,7 +50,7 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 			// Блокируем запрос, если токен был отозван
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
-				log.Warn("attempt to use revoked token", slog.String("jti", jti))
+				log.Info("attempt to use revoked token", slog.String("jti", jti))
 				utils.RespondWithError(w, http.StatusUnauthorized, "token has been revoked")
 				return
 			}
