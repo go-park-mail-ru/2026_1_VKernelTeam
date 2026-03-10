@@ -145,6 +145,7 @@ func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: token,
+		Domain:   "clover-go.ru",
 		// HttpOnly: true, // JS не увидит куку
 		// Secure:   true,                      // передача только по HTTPS
 		Path:     "/",                       // доступна везде
@@ -353,6 +354,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: "",
+		Domain:   "clover-go.ru"
 		Path:  "/",
 		// HttpOnly: true,
 		MaxAge:  -1,              // удаляем куку
