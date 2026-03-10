@@ -29,6 +29,18 @@ const (
 	opStop = "httpapp.Stop"
 )
 
+// ошибки HTTP-обработчиков
+var (
+	ErrInvalidRequestBody   = "invalid request body"
+	ErrUserAlreadyExists    = "user already exists"
+	ErrFailedToRegisterUser = "failed to register user"
+	ErrAutoLoginFailed      = "registered, but failed to login"
+	ErrFailedToLogin        = "failed to login"
+	ErrInternalError        = "internal error"
+	ErrFailedToLogout       = "failed to logout"
+	ErrMethodNotAllowed     = "Method not allowed"
+)
+
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
@@ -186,13 +198,13 @@ func (a *App) setupRoutes() {
 // @Produce json
 // @Param input body RegisterRequest true "Registration data"
 // @Success 200 {object} RegisterResponse "user registered successfully"
-// @Failure 400 {object} ValidationErrors "invalid request body / email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / user already exists"
+// @Failure 409 {object} ErrorResponse "user already exists"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, "invalid request body")
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
@@ -217,12 +229,12 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			responser.RespondWithError(w, http.StatusBadRequest, "user already exists")
+			responser.RespondWithError(w, http.StatusConflict, ErrUserAlreadyExists)
 			return
 		}
 
 		a.log.Error("failed to register user", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, "failed to register user")
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToRegisterUser)
 		return
 	}
 
@@ -236,7 +248,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		a.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, "registered, but failed to login")
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
 		return
 	}
 
@@ -259,7 +271,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, "invalid request body")
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
@@ -287,12 +299,12 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
-			responser.RespondWithError(w, http.StatusUnauthorized, "invalid credentials")
+			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())
 			return
 		}
 
 		a.log.Error("failed to login", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, "failed to login")
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogin)
 		return
 	}
 
@@ -346,13 +358,13 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	jti, ok := r.Context().Value(middleware.JtiKey).(string)
 	if !ok {
 		a.log.Error("jti not found in context")
-		responser.RespondWithError(w, http.StatusInternalServerError, "internal error")
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
 
 	if err := a.services.Auth.Logout(r.Context(), jti, time.Now().Add(a.tokenTTL)); err != nil {
 		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, "failed to logout")
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogout)
 		return
 	}
 
@@ -375,14 +387,14 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 // @Tags ads
 // @Produce json
 // @Success 200 {array} models.Ad "список объявлений успешно получен"
-// @Failure 400 {object} ErrorResponse "method not allowed / invalid parameters"
+// @Failure 405 {object} ErrorResponse "method not allowed / invalid parameters"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /ads [get]
 func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {
 		// формируем и отправляем ошибку
-		responser.RespondWithError(w, http.StatusBadRequest, "Method not allowed")
+		responser.RespondWithError(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
 		return
 	}
 

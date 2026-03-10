@@ -5,12 +5,17 @@ import (
 	"net/http"
 )
 
+// ошибки responser
+var (
+	ErrJSONMarshalFailed = "couldn't convert the received data to JSON"
+)
+
 // RespondWithJSON отправляет готовый объект
 func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 	// преобразуем полученные данные в json
 	response, err := json.Marshal(payload)
 	if err != nil {
-		RespondWithError(w, http.StatusBadRequest, "couldn't convert the received data to JSON")
+		RespondWithError(w, http.StatusBadRequest, ErrJSONMarshalFailed)
 		return
 	}
 

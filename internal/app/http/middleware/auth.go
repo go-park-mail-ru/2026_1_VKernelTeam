@@ -18,13 +18,22 @@ const (
 	JtiKey    contextKey = "jti"
 )
 
+// ошибки middleware
+var (
+	ErrMissingTokenCookie = "missing token cookie"
+	ErrInvalidToken       = "invalid token"
+	ErrInvalidTokenClaims = "invalid token claims"
+	ErrTokenRevoked       = "token has been revoked"
+	ErrInvalidUidClaim    = "invalid uid claim"
+)
+
 // AuthMiddleware проверяет каждый запрос.
 func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("token")
 			if err != nil {
-				utils.RespondWithError(w, http.StatusUnauthorized, "missing token cookie")
+				utils.RespondWithError(w, http.StatusUnauthorized, ErrMissingTokenCookie)
 				return
 			}
 
@@ -36,14 +45,14 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 
 			if err != nil || !token.Valid {
 				log.Info("invalid token attempt", slog.String("error", err.Error()))
-				utils.RespondWithError(w, http.StatusUnauthorized, "invalid token")
+				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidToken)
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
 				log.Error("failed to cast claims", slog.Any("claims", token.Claims))
-				utils.RespondWithError(w, http.StatusUnauthorized, "invalid token claims")
+				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidTokenClaims)
 				return
 			}
 
@@ -51,13 +60,13 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
 				log.Info("attempt to use revoked token", slog.String("jti", jti))
-				utils.RespondWithError(w, http.StatusUnauthorized, "token has been revoked")
+				utils.RespondWithError(w, http.StatusUnauthorized, ErrTokenRevoked)
 				return
 			}
 
 			uidRaw, ok := claims["uid"].(float64)
 			if !ok {
-				utils.RespondWithError(w, http.StatusUnauthorized, "invalid uid claim")
+				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidUidClaim)
 				return
 			}
 
