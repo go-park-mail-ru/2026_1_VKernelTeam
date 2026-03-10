@@ -26,7 +26,7 @@ type TokenRevoker interface {
 // UserProviderSaver предоставляет методы сохранения пользователя в хранилище
 // получения данных о пользователе и проверки его административных прав.
 type UserProviderSaver interface {
-	SaveUser(ctx context.Context, email string, passHash []byte) (uid int64, err error)
+	SaveUser(ctx context.Context, email string, passHash []byte, name string) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
@@ -120,7 +120,7 @@ func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time) error {
 // RegisterNewUser создаёт нового пользователя с указанным email и паролем.
 // Пароль хэшируется, и данные сохраняются через UserSaver. Возвращает
 // идентификатор пользователя.
-func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int64, error) {
+func (a *Auth) RegisterNewUser(ctx context.Context, email, password, name string) (int64, error) {
 	const op = "auth.RegisterNewUser"
 
 	log := a.log.With(
@@ -135,7 +135,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password string) (int
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
 
-	id, err := a.userStorage.SaveUser(ctx, email, passHash)
+	id, err := a.userStorage.SaveUser(ctx, email, passHash, name)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			log.Error("user already exists")

@@ -51,7 +51,7 @@ type Ads interface {
 // использует HTTP-приложение.
 type Auth interface {
 	Login(ctx context.Context, email string, password string) (token string, err error)
-	RegisterNewUser(ctx context.Context, email string, password string) (userID int64, err error)
+	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	// IsAdmin(ctx context.Context, userID int64) (bool, error)
 	Logout(ctx context.Context, jti string, exp time.Time) error
 }
@@ -66,6 +66,7 @@ type Services struct {
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Name     string `json:"name"`
 }
 
 // RegisterResponse представляет собой структуру для ответа на запрос регистрации пользователя.
@@ -103,6 +104,7 @@ type ErrorResponse struct {
 type ValidationErrors struct {
 	Email    string `json:"email,omitempty"`
 	Password string `json:"password,omitempty"`
+	Name     string `json:"name,omitempty"`
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -143,9 +145,9 @@ const apiPrefix = "/api/v1"
 
 func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: token,
-		Domain:   "clover-go.ru",
+		Name:   "token",
+		Value:  token,
+		Domain: "clover-go.ru",
 		// HttpOnly: true, // JS не увидит куку
 		// Secure:   true,                      // передача только по HTTPS
 		Path:     "/",                       // доступна везде
@@ -202,14 +204,17 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := validator.ValidatePassword(req.Password); err != nil {
 		validationErrors.Password = err.Error()
 	}
+	if err := validator.ValidateName(req.Name); err != nil {
+		validationErrors.Name = err.Error()
+	}
 
 	// Если есть хотя бы одна ошибка валидации, возвращаем их все
-	if validationErrors.Email != "" || validationErrors.Password != "" {
+	if validationErrors.Email != "" || validationErrors.Password != "" || validationErrors.Name != "" {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
-	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password)
+	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			responser.RespondWithError(w, http.StatusBadRequest, "user already exists")
@@ -237,7 +242,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	a.setAuthCookie(w, token)
 
-	responser.RespondWithJSON(w, http.StatusOK, RegisterResponse{UserID: userID})
+	responser.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
 }
 
 // @Summary Вход пользователя
@@ -352,10 +357,10 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: "",
-		Domain:   "clover-go.ru",
-		Path:  "/",
+		Name:   "token",
+		Value:  "",
+		Domain: "clover-go.ru",
+		Path:   "/",
 		// HttpOnly: true,
 		MaxAge:  -1,              // удаляем куку
 		Expires: time.Unix(0, 0), // на всякий случай делаем просроченной

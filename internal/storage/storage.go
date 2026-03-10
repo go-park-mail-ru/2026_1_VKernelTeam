@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
@@ -140,7 +141,7 @@ func (s *Storage) persist() error {
 
 // SaveUser удовлетворяет интерфейсу auth.UserSaver. Он возвращает ErrUserExists, если пользователь с
 // таким же email уже существует.
-func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -150,7 +151,15 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	}
 
 	s.nextUserID++
-	u := models.User{ID: s.nextUserID, Email: email, PassHash: passHash}
+	now := time.Now()
+	u := models.User{
+		ID:        s.nextUserID,
+		Name:      name,
+		Email:     email,
+		PassHash:  passHash,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
 	s.usersByEmail[email] = u
 	s.usersByID[u.ID] = u
 
@@ -192,48 +201,70 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 // generateMockUsers returns a slice of mock users (profiles) suitable for testing.
 // It includes various roles, empty emails, and different data variations.
 func generateMockUsers() []models.User {
+	now := time.Now()
 	return []models.User{
 		{
-			ID:       1,
-			Email:    "admin@vk.com",
-			PassHash: []byte("hashed_password_1"),
-			IsAdmin:  true,
+			ID:        1,
+			Name:      "Admin User",
+			Email:     "admin@vk.com",
+			PassHash:  []byte("hashed_password_1"),
+			IsAdmin:   true,
+			CreatedAt: now.Add(-time.Hour * 24 * 30), // 30 days ago
+			UpdatedAt: now,
 		},
 		{
-			ID:       2,
-			Email:    "ivan.ivanov@mail.ru",
-			PassHash: []byte("hashed_password_2"),
-			IsAdmin:  false,
+			ID:        2,
+			Name:      "Ivan Ivanov",
+			Email:     "ivan.ivanov@mail.ru",
+			PassHash:  []byte("hashed_password_2"),
+			IsAdmin:   false,
+			CreatedAt: now.Add(-time.Hour * 24 * 20),
+			UpdatedAt: now.Add(-time.Hour * 24 * 5),
 		},
 		{
-			ID:       3,
-			Email:    "petr.petrov@yandex.ru",
-			PassHash: []byte("hashed_password_3"),
-			IsAdmin:  false,
+			ID:        3,
+			Name:      "Petr Petrov",
+			Email:     "petr.petrov@yandex.ru",
+			PassHash:  []byte("hashed_password_3"),
+			IsAdmin:   false,
+			CreatedAt: now.Add(-time.Hour * 24 * 15),
+			UpdatedAt: now.Add(-time.Hour * 24 * 10),
 		},
 		{
-			ID:       4,
-			Email:    "anna.smith@gmail.com",
-			PassHash: []byte("hashed_password_4"),
-			IsAdmin:  false,
+			ID:        4,
+			Name:      "Anna Smith",
+			Email:     "anna.smith@gmail.com",
+			PassHash:  []byte("hashed_password_4"),
+			IsAdmin:   false,
+			CreatedAt: now.Add(-time.Hour * 24 * 10),
+			UpdatedAt: now.Add(-time.Hour * 24 * 2),
 		},
 		{
-			ID:       5,
-			Email:    "weird.user+test@domain.co.uk",
-			PassHash: []byte("hashed_password_5"),
-			IsAdmin:  false,
+			ID:        5,
+			Name:      "Weird User",
+			Email:     "weird.user+test@domain.co.uk",
+			PassHash:  []byte("hashed_password_5"),
+			IsAdmin:   false,
+			CreatedAt: now.Add(-time.Hour * 24 * 5),
+			UpdatedAt: now.Add(-time.Hour * 24 * 1),
 		},
 		{
-			ID:       6,
-			Email:    "errtytyu@gmail.com",
-			PassHash: []byte("hashed_password_6"),
-			IsAdmin:  false,
+			ID:        6,
+			Name:      "Errty Tyu",
+			Email:     "errtytyu@gmail.com",
+			PassHash:  []byte("hashed_password_6"),
+			IsAdmin:   false,
+			CreatedAt: now.Add(-time.Hour * 24 * 3),
+			UpdatedAt: now.Add(-time.Hour * 24 * 1),
 		},
 		{
-			ID:       7,
-			Email:    "moderator@local.host",
-			PassHash: []byte("hashed_password_7"),
-			IsAdmin:  true,
+			ID:        7,
+			Name:      "Moderator User",
+			Email:     "moderator@local.host",
+			PassHash:  []byte("hashed_password_7"),
+			IsAdmin:   true,
+			CreatedAt: now.Add(-time.Hour * 24 * 7),
+			UpdatedAt: now,
 		},
 	}
 }

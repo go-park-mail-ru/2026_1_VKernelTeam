@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
@@ -23,7 +24,7 @@ func TestSaveAndLoad(t *testing.T) {
 		t.Fatalf("failed to create storage: %v", err)
 	}
 
-	uid, err := st.SaveUser(context.Background(), "foo@example.com", []byte("hash"))
+	uid, err := st.SaveUser(context.Background(), "foo@example.com", []byte("hash"), "Foo User")
 	if err != nil {
 		t.Fatalf("save user: %v", err)
 	}
@@ -63,7 +64,8 @@ func TestConcurrency(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			email := fmt.Sprintf("user%d@example.com", i)
-			if _, err := st.SaveUser(context.Background(), email, []byte("h")); err != nil {
+			name := fmt.Sprintf("User %d", i)
+			if _, err := st.SaveUser(context.Background(), email, []byte("h"), name); err != nil {
 				t.Errorf("save %s: %v", email, err)
 			}
 		}(i)
@@ -81,8 +83,8 @@ func TestConcurrency(t *testing.T) {
 
 func TestIsAdmin(t *testing.T) {
 	st, _ := New("")
-	st.usersByID[1] = models.User{ID: 1, IsAdmin: true}
-	st.usersByID[2] = models.User{ID: 2, IsAdmin: false}
+	st.usersByID[1] = models.User{ID: 1, Name: "Admin", Email: "admin@test.com", IsAdmin: true, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	st.usersByID[2] = models.User{ID: 2, Name: "User", Email: "user@test.com", IsAdmin: false, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	admin, _ := st.IsAdmin(context.Background(), 1)
 	if !admin {
@@ -124,7 +126,7 @@ func TestNew_DirCreation(t *testing.T) {
 func TestSaveUser_PersistError(t *testing.T) {
 	st, _ := New("")
 	st.path = "/invalid_dir/invalid_1234/storage.json"
-	_, err := st.SaveUser(context.Background(), "test@test.com", []byte("hash"))
+	_, err := st.SaveUser(context.Background(), "test@test.com", []byte("hash"), "Test User")
 	if err == nil {
 		t.Errorf("expected err due to invalid persist path")
 	}

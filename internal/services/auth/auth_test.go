@@ -20,14 +20,14 @@ import (
 // Mock implementations for testing
 
 type mockUserStorage struct {
-	SaveUserFunc func(ctx context.Context, email string, passHash []byte) (int64, error)
+	SaveUserFunc func(ctx context.Context, email string, passHash []byte, name string) (int64, error)
 	UserFunc     func(ctx context.Context, email string) (models.User, error)
 	IsAdminFunc  func(ctx context.Context, userID int64) (bool, error)
 }
 
-func (m *mockUserStorage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+func (m *mockUserStorage) SaveUser(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 	if m.SaveUserFunc != nil {
-		return m.SaveUserFunc(ctx, email, passHash)
+		return m.SaveUserFunc(ctx, email, passHash, name)
 	}
 	return 0, nil
 }
@@ -72,7 +72,7 @@ func TestRegisterNewUser_Success(t *testing.T) {
 	log := getTestLogger()
 
 	storageMock := &mockUserStorage{
-		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
+		SaveUserFunc: func(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 			return 1, nil
 		},
 	}
@@ -81,7 +81,7 @@ func TestRegisterNewUser_Success(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
+	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123", "Test User")
 	if err != nil {
 		t.Fatalf("RegisterNewUser failed: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 	log := getTestLogger()
 
 	storageMock := &mockUserStorage{
-		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
+		SaveUserFunc: func(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 			return 0, storage.ErrUserExists
 		},
 	}
@@ -106,7 +106,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123")
+	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123", "Existing User")
 	if err == nil {
 		t.Fatalf("expected error for existing user")
 	}
@@ -125,9 +125,12 @@ func TestLogin_Success(t *testing.T) {
 	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{
-				ID:       1,
-				Email:    email,
-				PassHash: passHash,
+				ID:        1,
+				Name:      "Test User",
+				Email:     email,
+				PassHash:  passHash,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			}, nil
 		},
 	}
@@ -155,9 +158,12 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
 			return models.User{
-				ID:       1,
-				Email:    email,
-				PassHash: passHash,
+				ID:        1,
+				Name:      "Test User",
+				Email:     email,
+				PassHash:  passHash,
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
 			}, nil
 		},
 	}
@@ -269,7 +275,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 	log := getTestLogger()
 
 	storageMock := &mockUserStorage{
-		SaveUserFunc: func(ctx context.Context, email string, passHash []byte) (int64, error) {
+		SaveUserFunc: func(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 			return 0, errors.New("db failure")
 		},
 	}
@@ -278,7 +284,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123")
+	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123", "Test User")
 	if err == nil {
 		t.Fatalf("expected error when saving user fails")
 	}

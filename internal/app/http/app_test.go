@@ -40,8 +40,8 @@ func (m *MockAuth) Login(ctx context.Context, email string, password string) (st
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password string) (int64, error) {
-	args := m.Called(ctx, email, password)
+func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password string, name string) (int64, error) {
+	args := m.Called(ctx, email, password, name)
 	return args.Get(0).(int64), args.Error(1)
 }
 
@@ -75,12 +75,12 @@ func TestHandleRegister(t *testing.T) {
 	app, mockAuth, _, _ := setupTestApp()
 
 	t.Run("ValidRequest", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123"}
+		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: "Test User"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "Password123").Return(int64(1), nil).Once()
+		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "Password123", "Test User").Return(int64(1), nil).Once()
 
 		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", nil).Once()
 
@@ -117,7 +117,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "invalid-email", Password: "Password123"}
+		reqBody := RegisterRequest{Email: "invalid-email", Password: "Password123", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -128,7 +128,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("EmptyPassword", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com"}
+		reqBody := RegisterRequest{Email: "test@test.com", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -139,7 +139,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("ShortPassword", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Short1"}
+		reqBody := RegisterRequest{Email: "test@test.com", Password: "Short1", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -150,7 +150,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("PasswordNoDigit", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password"}
+		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -161,7 +161,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("PasswordNoLetter", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "1234567890"}
+		reqBody := RegisterRequest{Email: "test@test.com", Password: "1234567890", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -172,12 +172,12 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("UserExists", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "exist@test.com", Password: "Password123"}
+		reqBody := RegisterRequest{Email: "exist@test.com", Password: "Password123", Name: "Exist"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "Password123").Return(int64(0), storage.ErrUserExists).Once()
+		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "Password123", "Exist").Return(int64(0), storage.ErrUserExists).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -186,17 +186,28 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("InternalError", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "err@test.com", Password: "Password123"}
+		reqBody := RegisterRequest{Email: "err@test.com", Password: "Password123", Name: "Err"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "err@test.com", "Password123").Return(int64(0), errors.New("internal")).Once()
+		mockAuth.On("RegisterNewUser", mock.Anything, "err@test.com", "Password123", "Err").Return(int64(0), errors.New("internal")).Once()
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
 		mockAuth.AssertExpectations(t)
+	})
+
+	t.Run("EmptyName", func(t *testing.T) {
+		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: ""}
+		bodyBytes, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
+		rr := httptest.NewRecorder()
+
+		app.router.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 }
 
