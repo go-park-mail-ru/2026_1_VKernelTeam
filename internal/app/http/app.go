@@ -354,7 +354,7 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: "",
-		Domain:   "clover-go.ru"
+		Domain:   "clover-go.ru",
 		Path:  "/",
 		// HttpOnly: true,
 		MaxAge:  -1,              // удаляем куку
