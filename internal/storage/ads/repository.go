@@ -72,7 +72,7 @@ func generateMockAds() []models.Ad {
 			CategoryID:     4,
 			Title:          "Комплект книг Гарри Поттер",
 			Description:    "Полное собрание от издательства РОСМЭН. Идеальное состояние, как новые.",
-			Price:          3500,
+			Price:          0,
 			Status:         "active",
 			Location:       "Новосибирск",
 			Photos:         []string{"/static/img/4.png"},
