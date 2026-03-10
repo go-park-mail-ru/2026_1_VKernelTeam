@@ -35,7 +35,7 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "400": {
+                    "405": {
                         "description": "method not allowed / invalid parameters",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
@@ -173,10 +173,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpapp.RegisterResponse"
                         }
                     },
-                    "400": {
-                        "description": "invalid request body / email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / user already exists",
+                    "409": {
+                        "description": "user already exists",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ValidationErrors"
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     },
                     "500": {

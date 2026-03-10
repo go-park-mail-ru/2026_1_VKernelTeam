@@ -9,12 +9,12 @@ func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
-		// Разрешаем только определенные домены.
-		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" {
+		// Разрешаем только определенные домены. Порт 80 считается эквивалентным домену без порта,
+		// поэтому обрабатываем его отдельно.
+		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:80" ||
+			origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
-			// Если домен не разрешен, можно либо не устанавливать заголовок, либо установить его в "*", что разрешит все домены.
-			// w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
 
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
