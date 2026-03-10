@@ -11,7 +11,7 @@ type Ad struct {
 	CategoryID     int64     `json:"category_id"`
 	Title          string    `json:"title"`
 	Description    string    `json:"description"`
-	Price          int       `json:"price"`
+	Price          int64     `json:"price"`
 	Status         string    `json:"status"`
 	ViewsCount     int64     `json:"views_count"`
 	FavoritesCount int64     `json:"favorites_count"`
