@@ -91,9 +91,9 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "email validation error / password validation error / invalid credentials",
+                        "description": "email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / invalid credentials",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
                     },
                     "500": {
@@ -174,9 +174,9 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid request body / invalid email / invalid password / user already exists",
+                        "description": "invalid request body / email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / user already exists",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
                     },
                     "500": {
@@ -225,6 +225,17 @@ const docTemplate = `{
             "properties": {
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "httpapp.ValidationErrors": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         },

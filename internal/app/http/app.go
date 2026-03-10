@@ -183,7 +183,7 @@ func (a *App) setupRoutes() {
 // @Produce json
 // @Param input body RegisterRequest true "Registration data"
 // @Success 200 {object} RegisterResponse "user registered successfully"
-// @Failure 400 {object} ErrorResponse "invalid request body / invalid email / invalid password / user already exists"
+// @Failure 400 {object} ValidationErrors "invalid request body / email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / user already exists"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -247,7 +247,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 // @Param input body LoginRequest true "Login credentials"
 // @Success 200 {object} map[string]string "login successful"
 // @Failure 400 {object} ErrorResponse "invalid request body"
-// @Failure 401 {object} ErrorResponse "email validation error / password validation error / invalid credentials"
+// @Failure 401 {object} ValidationErrors "email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / invalid credentials"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
