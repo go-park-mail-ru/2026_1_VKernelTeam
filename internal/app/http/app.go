@@ -428,5 +428,10 @@ func (a *App) Stop() {
 	a.log.With(slog.String("opStop", opStop)).
 		Info("stopping http server", slog.Int("port", a.port))
 
-	a.srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := a.srv.Shutdown(ctx); err != nil {
+		a.log.Error("failed to shutdown http server gracefully", slog.String("error", err.Error()))
+	}
 }

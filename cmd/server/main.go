@@ -39,6 +39,6 @@ func main() {
 	log.Info("received signal", "signal", sign)
 
 	log.Info("stopping applications")
-	application.HTTPServer.Stop()
+	application.Stop()
 	log.Info("applications stopped")
 }

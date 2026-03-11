@@ -69,20 +69,14 @@ func (s *InMemory) startSweeper() {
 
 // cleanup удаляет истёкшие токены из чёрного списка
 func (s *InMemory) cleanup() {
-	// Получаем список ключей под блокировкой (быстро)
 	s.mu.Lock()
-	keysToDelete := make([]string, 0)
+	defer s.mu.Unlock()
 	now := time.Now()
 	for jti, exp := range s.tokens {
 		if now.After(exp) {
-			keysToDelete = append(keysToDelete, jti)
+			delete(s.tokens, jti)
 		}
 	}
-	// Удаляем в той же блокировке, но список уже подготовлен
-	for _, jti := range keysToDelete {
-		delete(s.tokens, jti)
-	}
-	s.mu.Unlock()
 }
 
 // Stop корректно завершает горутину sweeper'а (graceful shutdown)

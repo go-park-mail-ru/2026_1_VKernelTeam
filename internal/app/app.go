@@ -14,9 +14,9 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
 )
 
-// App содержит корневые объекты приложения, например HTTP-сервер.
 type App struct {
 	HTTPServer *httpapp.App
+	Blacklist  *blacklist.InMemory
 }
 
 // New собирает все зависимости и возвращает готовое приложение.
@@ -49,5 +49,12 @@ func New(
 
 	return &App{
 		HTTPServer: httpApp,
+		Blacklist:  tokenBlacklist,
 	}
+}
+
+// Stop корректно завершает работу всех компонентов приложения
+func (a *App) Stop() {
+	a.Blacklist.Stop()
+	a.HTTPServer.Stop()
 }
