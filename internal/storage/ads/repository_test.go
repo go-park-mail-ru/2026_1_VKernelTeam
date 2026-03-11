@@ -11,7 +11,7 @@ func TestGetAll(t *testing.T) {
 
 	results := testRepo.GetAll()
 
-	assert.Len(t, results, 4)
+	assert.Len(t, results, 20)
 
 	got := results[0]
 

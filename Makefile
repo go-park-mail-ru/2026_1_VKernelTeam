@@ -3,66 +3,71 @@
 
 help:
 	@echo "Available targets:"
-	@echo "  test              - Run all tests"
-	@echo "  test-verbose      - Run all tests with verbose output"
-	@echo "  test-coverage     - Run tests with coverage report"
-	@echo "  test-auth         - Run only auth service tests"
-	@echo "  test-storage      - Run only storage tests"
-	@echo "  clean             - Remove coverage files"
-	@echo "  run               - Run the application"
-	@echo "  build             - Build the application"
+	@echo "  test              - Запустить все тесты"
+	@echo "  test-verbose      - Запустить все тесты с подробным выводом"
+	@echo "  test-coverage     - Запустить тесты и показать отчет о покрытии"
+	@echo "  test-auth         - Запустить тесты только для сервиса аутентификации"
+	@echo "  test-storage      - Запустить тесты только для слоя хранения (storage)"
+	@echo "  clean             - Удалить временные файлы и отчеты о покрытии"
+	@echo "  run               - Запустить приложение локально"
+	@echo "  build             - Скомпилировать бинарный файл приложения"
+	@echo "  swag              - Сгенерировать Swagger-документацию"
+	@echo "  deploy            - Обновить код и перезапустить контейнеры на сервере"
 
 
+# Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go
 
-# Run the application
+# Запуск приложения с локальным конфигом
 run: swag
 	go run ./cmd/server/main.go --config=./config/local.json
 
-# Run all tests
+# Запуск всех тестов
 test:
 	go test ./...
 
-# Run tests with verbose output
+# Запуск тестов с подробным выводом
 test-verbose:
 	go test -v ./...
 
-# Run tests with coverage
+# Проверка покрытия кода тестами
 test-coverage:
 	go test -cover ./internal/...
 
-# Run only auth service tests
+# Тестирование только логики аутентификации
 test-auth:
 	go test -v ./internal/services/auth/...
 
-# Run only storage tests
+# Тестирование только компонентов хранилища
 test-storage:
 	go test -v ./internal/storage/...
 
-# Build the application
+# Сборка приложения в исполняемый файл
 build: swag
 	go build -o bin/clover ./cmd/server/main.go
 
-# Clean up generated files
+# Очистка проекта от собранных файлов и отчетов
 clean:
 	go clean
 	rm -f coverage.out coverage.html
 	rm -rf bin/
 
-# Run linter (requires: golangci-lint)
+# Запуск линтера (требуется установленный golangci-lint)
 lint:
 	golangci-lint run --fix ./...
 
-# Format code
+# Форматирование кода по стандарту Go
 fmt:
 	go fmt ./...
 
-# Run go vet
+# Запуск статического анализатора go vet
 vet:
 	go vet ./...
 
-# Updating and restarting on the server
+# Обновление и перезапуск на сервере
+# Используется zero-downtime подход: сначала сборка, затем замена контейнеров
 deploy:
 	sudo git pull
 	docker compose up -d --build --remove-orphans
+	docker image prune -f
