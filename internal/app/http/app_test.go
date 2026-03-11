@@ -86,7 +86,7 @@ func TestHandleRegister(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusCreated, rr.Code)
+		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Contains(t, rr.Header().Get("Set-Cookie"), "token=fake-token-after-reg")
 
 		var resp RegisterResponse
@@ -181,7 +181,7 @@ func TestHandleRegister(t *testing.T) {
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusConflict, rr.Code)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
 		mockAuth.AssertExpectations(t)
 	})
 
@@ -453,9 +453,9 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	// вызываем обработчик
 	app.handleGetAds(rr, request)
 
-	// ожидаем код 405 - method not allowed
-	if rr.Code != http.StatusMethodNotAllowed {
-		t.Errorf("expected status 405 for POST request, got %v", rr.Code)
+	// ожидаем код 400 - method not allowed
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status 400 for POST request, got %v", rr.Code)
 	}
 }
 
@@ -518,7 +518,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	app.handleGetAds(rr, request)
 
 	// проверяем статус
-	if rr.Code != http.StatusMethodNotAllowed {
-		t.Errorf("expected 405, got %d", rr.Code)
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
 	}
 }

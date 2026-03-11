@@ -198,7 +198,7 @@ func (a *App) setupRoutes() {
 // @Produce json
 // @Param input body RegisterRequest true "Registration data"
 // @Success 200 {object} RegisterResponse "user registered successfully"
-// @Failure 409 {object} ErrorResponse "user already exists"
+// @Failure 400 {object} ErrorResponse "user already exists"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +229,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password, req.Name)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			responser.RespondWithError(w, http.StatusConflict, ErrUserAlreadyExists)
+			responser.RespondWithError(w, http.StatusBadRequest, ErrUserAlreadyExists)
 			return
 		}
 
@@ -254,7 +254,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	a.setAuthCookie(w, token)
 
-	responser.RespondWithJSON(w, http.StatusCreated, RegisterResponse{UserID: userID})
+	responser.RespondWithJSON(w, http.StatusOK, RegisterResponse{UserID: userID})
 }
 
 // @Summary Вход пользователя
@@ -387,14 +387,14 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 // @Tags ads
 // @Produce json
 // @Success 200 {array} models.Ad "список объявлений успешно получен"
-// @Failure 405 {object} ErrorResponse "method not allowed / invalid parameters"
+// @Failure 400 {object} ErrorResponse "method not allowed"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /ads [get]
 func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {
 		// формируем и отправляем ошибку
-		responser.RespondWithError(w, http.StatusMethodNotAllowed, ErrMethodNotAllowed)
+		responser.RespondWithError(w, http.StatusBadRequest, ErrMethodNotAllowed)
 		return
 	}
 
