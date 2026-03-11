@@ -87,8 +87,8 @@ paths:
             items:
               $ref: '#/definitions/models.Ad'
             type: array
-        "405":
-          description: method not allowed / invalid parameters
+        "400":
+          description: method not allowed
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
         "500":
@@ -178,7 +178,7 @@ paths:
           description: user registered successfully
           schema:
             $ref: '#/definitions/httpapp.RegisterResponse'
-        "409":
+        "400":
           description: user already exists
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'

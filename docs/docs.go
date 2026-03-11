@@ -35,8 +35,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "405": {
-                        "description": "method not allowed / invalid parameters",
+                    "400": {
+                        "description": "method not allowed",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
@@ -173,7 +173,7 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpapp.RegisterResponse"
                         }
                     },
-                    "409": {
+                    "400": {
                         "description": "user already exists",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
