@@ -14,6 +14,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/lib/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,6 +29,7 @@ type TokenRevoker interface {
 type UserProviderSaver interface {
 	SaveUser(ctx context.Context, email string, passHash []byte, name string) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
+	UserByID(ctx context.Context, userID int64) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 }
 
@@ -97,7 +99,43 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, model
 	return token, user, nil
 }
 
-// Logout отзывает токен пользователя, добавляя в чёрный список его jti
+// ValidateTokenAndGetUser проверяет валидность JWT-токена и возвращает данные пользователя
+func (a *Auth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
+	const op = "auth.ValidateTokenAndGetUser"
+	log := a.log.With(slog.String("op", op))
+
+	token, err := jwt.ParseToken(tokenString, a.secret)
+	if err != nil {
+		log.Info("failed to parse token", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%w", err)
+	}
+
+	claims, ok := token.Claims.(jwtlib.MapClaims)
+	if !ok {
+		log.Error("failed to extract claims from token")
+		return models.User{}, errors.New("invalid token claims")
+	}
+
+	uidRaw, ok := claims["uid"].(float64)
+	if !ok {
+		log.Error("invalid uid claim in token")
+		return models.User{}, errors.New("invalid uid claim")
+	}
+
+	userID := int64(uidRaw)
+	user, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			log.Info("user not found", slog.Int64("user_id", userID))
+			return models.User{}, fmt.Errorf("user not found: %w", err)
+		}
+		log.Error("failed to get user by id", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%w", err)
+	}
+
+	log.Info("token validated successfully", slog.Int64("user_id", userID))
+	return user, nil
+}
 func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time) error {
 	const op = "auth.Logout"
 

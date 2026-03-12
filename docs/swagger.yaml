@@ -5,12 +5,14 @@ definitions:
       error:
         type: string
     type: object
-  httpapp.LoginRequest:
+  httpapp.LoginResponse:
     properties:
       email:
         type: string
-      password:
+      name:
         type: string
+      user_id:
+        type: integer
     type: object
   httpapp.RegisterRequest:
     properties:
@@ -26,13 +28,16 @@ definitions:
       user_id:
         type: integer
     type: object
-  httpapp.ValidationErrors:
+  httpapp.UnifiedLoginRequest:
     properties:
       email:
-        type: string
-      name:
+        description: опционально для логина по email/пароль
         type: string
       password:
+        description: опционально для логина по email/пароль
+        type: string
+      token:
+        description: опционально для валидации существующего токена
         type: string
     type: object
   models.Ad:
@@ -102,33 +107,30 @@ paths:
     post:
       consumes:
       - application/json
-      description: Аутентифицирует пользователя и устанавливает куку с токеном
+      description: Аутентифицирует пользователя по email/пароль или валидирует существующий
+        токен
       parameters:
-      - description: Login credentials
+      - description: Login credentials or token
         in: body
         name: input
         required: true
         schema:
-          $ref: '#/definitions/httpapp.LoginRequest'
+          $ref: '#/definitions/httpapp.UnifiedLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: login successful
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httpapp.LoginResponse'
         "400":
           description: invalid request body
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
         "401":
-          description: email validation errors (invalid email format) / password validation
-            errors (too short, requires digit, requires letter, contains forbidden
-            characters) / invalid credentials
+          description: invalid credentials or token
           schema:
-            $ref: '#/definitions/httpapp.ValidationErrors'
+            $ref: '#/definitions/httpapp.ErrorResponse'
         "500":
           description: internal server error
           schema:

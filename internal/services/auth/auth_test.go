@@ -22,6 +22,7 @@ import (
 type mockUserStorage struct {
 	SaveUserFunc func(ctx context.Context, email string, passHash []byte, name string) (int64, error)
 	UserFunc     func(ctx context.Context, email string) (models.User, error)
+	UserByIDFunc func(ctx context.Context, userID int64) (models.User, error)
 	IsAdminFunc  func(ctx context.Context, userID int64) (bool, error)
 }
 
@@ -35,6 +36,13 @@ func (m *mockUserStorage) SaveUser(ctx context.Context, email string, passHash [
 func (m *mockUserStorage) User(ctx context.Context, email string) (models.User, error) {
 	if m.UserFunc != nil {
 		return m.UserFunc(ctx, email)
+	}
+	return models.User{}, nil
+}
+
+func (m *mockUserStorage) UserByID(ctx context.Context, userID int64) (models.User, error) {
+	if m.UserByIDFunc != nil {
+		return m.UserByIDFunc(ctx, userID)
 	}
 	return models.User{}, nil
 }

@@ -63,6 +63,7 @@ type Ads interface {
 // использует HTTP-приложение.
 type Auth interface {
 	Login(ctx context.Context, email string, password string) (string, models.User, error)
+	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	// IsAdmin(ctx context.Context, userID int64) (bool, error)
 	Logout(ctx context.Context, jti string, exp time.Time) error
@@ -90,6 +91,13 @@ type RegisterResponse struct {
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+// UnifiedLoginRequest может содержать либо учетные данные (email + пароль), либо существующий токен.
+type UnifiedLoginRequest struct {
+	Email    *string `json:"email"`    // опционально для логина по email/пароль
+	Password *string `json:"password"` // опционально для логина по email/пароль
+	Token    *string `json:"token"`    // опционально для валидации существующего токена
 }
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
@@ -264,37 +272,74 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Вход пользователя
-// @Description Аутентифицирует пользователя и устанавливает куку с токеном
+// @Description Аутентифицирует пользователя по email/пароль или валидирует существующий токен
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body LoginRequest true "Login credentials"
-// @Success 200 {object} map[string]string "login successful"
+// @Param input body UnifiedLoginRequest true "Login credentials or token"
+// @Success 200 {object} LoginResponse "login successful"
 // @Failure 400 {object} ErrorResponse "invalid request body"
-// @Failure 401 {object} ValidationErrors "email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / invalid credentials"
+// @Failure 401 {object} ErrorResponse "invalid credentials or token"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
+	var req UnifiedLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	// Собираем все ошибки валидации
+	// Определяем режим входа
+	if req.Token != nil && *req.Token != "" {
+		// Режим валидации токена
+		a.handleTokenLogin(w, r, *req.Token)
+		return
+	}
+
+	// Режим входа по email/пароль
+	// Проверяем наличие email
+	email := ""
+	if req.Email != nil {
+		email = *req.Email
+	}
+
+	// Проверяем наличие пароля
+	password := ""
+	if req.Password != nil {
+		password = *req.Password
+	}
+
+	if email == "" || password == "" {
+		// Вернуть как ошибку валидации
+		validationErrors := ValidationErrors{}
+		if email == "" {
+			validationErrors.Email = "email is required"
+		}
+		if password == "" {
+			validationErrors.Password = "password is required"
+		}
+		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
+		return
+	}
+
+	a.handleCredentialsLogin(w, r, email, password)
+}
+
+// handleCredentialsLogin обрабатывает вход пользователя по email и паролю
+func (a *App) handleCredentialsLogin(w http.ResponseWriter, r *http.Request, email, password string) {
 	validationErrors := ValidationErrors{}
-	if err := validator.ValidateEmail(req.Email); err != nil {
+	if err := validator.ValidateEmail(email); err != nil {
 		validationErrors.Email = err.Error()
 	}
-	if err := validator.ValidatePassword(req.Password); err != nil {
+	if err := validator.ValidatePassword(password); err != nil {
 		validationErrors.Password = err.Error()
 	}
 
-	// Если есть хотя бы одна ошибка валидации, логируем и возвращаем их все
+	// Если есть хотя бы одна ошибка валидации
 	if validationErrors.Email != "" || validationErrors.Password != "" {
 		a.log.Info(
 			"invalid login attempt",
-			slog.String("email", req.Email),
+			slog.String("email", email),
 			slog.String("email_error", validationErrors.Email),
 			slog.String("password_error", validationErrors.Password),
 		)
@@ -302,7 +347,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, user, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
+	token, user, err := a.services.Auth.Login(r.Context(), email, password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())
@@ -315,7 +360,25 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.setAuthCookie(w, token)
+	a.respondWithUser(w, user)
+}
 
+// handleTokenLogin обрабатывает вход пользователя путём валидации существующего токена
+func (a *App) handleTokenLogin(w http.ResponseWriter, r *http.Request, tokenString string) {
+	user, err := a.services.Auth.ValidateTokenAndGetUser(r.Context(), tokenString)
+	if err != nil {
+		a.log.Info("invalid token attempt", slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusUnauthorized, "invalid or expired token")
+		return
+	}
+
+	// Устанавливаем куку с токеном
+	a.setAuthCookie(w, tokenString)
+	a.respondWithUser(w, user)
+}
+
+// respondWithUser отправляет успешный ответ с данными пользователя
+func (a *App) respondWithUser(w http.ResponseWriter, user models.User) {
 	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
 		UserID: user.ID,
 		Email:  user.Email,

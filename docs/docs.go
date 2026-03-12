@@ -52,7 +52,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Аутентифицирует пользователя и устанавливает куку с токеном",
+                "description": "Аутентифицирует пользователя по email/пароль или валидирует существующий токен",
                 "consumes": [
                     "application/json"
                 ],
@@ -65,12 +65,12 @@ const docTemplate = `{
                 "summary": "Вход пользователя",
                 "parameters": [
                     {
-                        "description": "Login credentials",
+                        "description": "Login credentials or token",
                         "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpapp.LoginRequest"
+                            "$ref": "#/definitions/httpapp.UnifiedLoginRequest"
                         }
                     }
                 ],
@@ -78,10 +78,7 @@ const docTemplate = `{
                     "200": {
                         "description": "login successful",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httpapp.LoginResponse"
                         }
                     },
                     "400": {
@@ -91,9 +88,9 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / invalid credentials",
+                        "description": "invalid credentials or token",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ValidationErrors"
+                            "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     },
                     "500": {
@@ -198,14 +195,17 @@ const docTemplate = `{
                 }
             }
         },
-        "httpapp.LoginRequest": {
+        "httpapp.LoginResponse": {
             "type": "object",
             "properties": {
                 "email": {
                     "type": "string"
                 },
-                "password": {
+                "name": {
                     "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -231,16 +231,19 @@ const docTemplate = `{
                 }
             }
         },
-        "httpapp.ValidationErrors": {
+        "httpapp.UnifiedLoginRequest": {
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
-                },
-                "name": {
+                    "description": "опционально для логина по email/пароль",
                     "type": "string"
                 },
                 "password": {
+                    "description": "опционально для логина по email/пароль",
+                    "type": "string"
+                },
+                "token": {
+                    "description": "опционально для валидации существующего токена",
                     "type": "string"
                 }
             }

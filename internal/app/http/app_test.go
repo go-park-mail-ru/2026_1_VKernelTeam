@@ -40,6 +40,11 @@ func (m *MockAuth) Login(ctx context.Context, email string, password string) (st
 	return args.String(0), args.Get(1).(models.User), args.Error(2)
 }
 
+func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
+	args := m.Called(ctx, tokenString)
+	return args.Get(0).(models.User), args.Error(1)
+}
+
 func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password string, name string) (int64, error) {
 	args := m.Called(ctx, email, password, name)
 	return args.Get(0).(int64), args.Error(1)

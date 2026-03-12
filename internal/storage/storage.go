@@ -198,6 +198,18 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	return u.IsAdmin, nil
 }
 
+// UserByID вычисляет пользователя по его ID, используя внутреннюю карту usersByID.
+func (s *Storage) UserByID(ctx context.Context, userID int64) (models.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	u, ok := s.usersByID[userID]
+	if !ok {
+		return models.User{}, ErrUserNotFound
+	}
+	return u, nil
+}
+
 // generateMockUsers returns a slice of mock users (profiles) suitable for testing.
 // It includes various roles, empty emails, and different data variations.
 func generateMockUsers() []models.User {
