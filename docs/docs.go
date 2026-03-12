@@ -82,15 +82,15 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid request body",
+                        "description": "invalid request body or missing fields",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "invalid credentials or token",
+                        "description": "email/password validation errors or invalid credentials/token",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
                     },
                     "500": {
@@ -171,9 +171,9 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "user already exists",
+                        "description": "validation failed (email/password/name) or user already exists",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
                     },
                     "500": {
@@ -244,6 +244,20 @@ const docTemplate = `{
                 },
                 "token": {
                     "description": "опционально для валидации существующего токена",
+                    "type": "string"
+                }
+            }
+        },
+        "httpapp.ValidationErrors": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
                     "type": "string"
                 }
             }

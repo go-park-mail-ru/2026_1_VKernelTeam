@@ -208,7 +208,7 @@ func (a *App) setupRoutes() {
 // @Produce json
 // @Param input body RegisterRequest true "Registration data"
 // @Success 200 {object} RegisterResponse "user registered successfully"
-// @Failure 400 {object} ErrorResponse "user already exists"
+// @Failure 400 {object} ValidationErrors "validation failed (email/password/name) or user already exists"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/register [post]
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -278,8 +278,8 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param input body UnifiedLoginRequest true "Login credentials or token"
 // @Success 200 {object} LoginResponse "login successful"
-// @Failure 400 {object} ErrorResponse "invalid request body"
-// @Failure 401 {object} ErrorResponse "invalid credentials or token"
+// @Failure 400 {object} ErrorResponse "invalid request body or missing fields"
+// @Failure 401 {object} ValidationErrors "email/password validation errors or invalid credentials/token"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
