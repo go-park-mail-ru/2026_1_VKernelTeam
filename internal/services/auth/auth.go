@@ -68,10 +68,8 @@ func New(
 // Login аутентифицирует пользователя по email и паролю и возвращает JWT-токен. В случае
 // ошибок возвращается описанная ошибка.
 func (a *Auth) Login(ctx context.Context, email, password string) (string, error) {
-	const op = "auth.Login"
 
 	log := a.log.With(
-		slog.String("op", op),
 		slog.String("email", email),
 	)
 	log.Info("logging in user")
@@ -80,21 +78,21 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, error
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Error("user not found")
-			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
+			return "", fmt.Errorf("%w", ErrInvalidCredentials)
 		}
 		log.Error("failed to get user")
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
 		log.Info("invalid credentials")
-		return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
+		return "", fmt.Errorf("%w", ErrInvalidCredentials)
 	}
 
 	token, err := jwt.NewToken(user, a.tokenTTL, a.secret)
 	if err != nil {
 		log.Error("failed to generate token")
-		return "", fmt.Errorf("%s: %w", op, err)
+		return "", fmt.Errorf("%w", err)
 	}
 	log.Info("user logged in")
 	return token, nil
