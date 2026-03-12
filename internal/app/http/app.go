@@ -157,8 +157,8 @@ const apiPrefix = "/api/v1"
 
 func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   "token",
-		Value:  token,
+		Name:  "token",
+		Value: token,
 		// Domain: "clover-go.ru", // Убран хардкод домена для работы на localhost
 		// HttpOnly: true, // JS не увидит куку
 		// Secure:   true,                      // передача только по HTTPS
@@ -369,10 +369,10 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.SetCookie(w, &http.Cookie{
-		Name:   "token",
-		Value:  "",
+		Name:  "token",
+		Value: "",
 		// Domain: "clover-go.ru", // Убран хардкод домена
-		Path:   "/",
+		Path: "/",
 		// HttpOnly: true,
 		MaxAge:  -1,              // удаляем куку
 		Expires: time.Unix(0, 0), // на всякий случай делаем просроченной

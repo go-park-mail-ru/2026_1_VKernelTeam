@@ -7,10 +7,15 @@ linters:
   disable-all: true
   enable:
     - govet
-    - gosimple
+    - staticcheck
     - bodyclose
     - noctx
     - errcheck
     - gocognit
     - goconst
+    - unused
+
+formatters:
+  enable:
     - gofmt
+    - goimports
