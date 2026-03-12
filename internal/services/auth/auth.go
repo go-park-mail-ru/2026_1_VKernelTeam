@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/lib/jwt"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
