@@ -67,35 +67,34 @@ func New(
 
 // Login аутентифицирует пользователя по email и паролю и возвращает JWT-токен. В случае
 // ошибок возвращается описанная ошибка.
-func (a *Auth) Login(ctx context.Context, email, password string) (string, error) {
+func (a *Auth) Login(ctx context.Context, email, password string) (string, models.User, error) {
 
-	log := a.log.With(
-		slog.String("email", email),
-	)
+	log := a.log.With(slog.String("email", email))
 	log.Info("logging in user")
 
 	user, err := a.userStorage.User(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			log.Error("user not found")
-			return "", fmt.Errorf("%w", ErrInvalidCredentials)
+			return "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
 		}
 		log.Error("failed to get user")
-		return "", fmt.Errorf("%w", err)
+		return "", models.User{}, fmt.Errorf("%w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
 		log.Info("invalid credentials")
-		return "", fmt.Errorf("%w", ErrInvalidCredentials)
+		return "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
 	}
 
 	token, err := jwt.NewToken(user, a.tokenTTL, a.secret)
 	if err != nil {
 		log.Error("failed to generate token")
-		return "", fmt.Errorf("%w", err)
+		return "", models.User{}, fmt.Errorf("%w", err)
 	}
+
 	log.Info("user logged in")
-	return token, nil
+	return token, user, nil
 }
 
 // Logout отзывает токен пользователя, добавляя в чёрный список его jti

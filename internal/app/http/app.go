@@ -62,7 +62,7 @@ type Ads interface {
 // Auth описывает минимальный набор методов сервиса аутентификации, который
 // использует HTTP-приложение.
 type Auth interface {
-	Login(ctx context.Context, email string, password string) (token string, err error)
+	Login(ctx context.Context, email string, password string) (string, models.User, error)
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	// IsAdmin(ctx context.Context, userID int64) (bool, error)
 	Logout(ctx context.Context, jti string, exp time.Time) error
@@ -94,7 +94,9 @@ type LoginRequest struct {
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
 type LoginResponse struct {
-	Token string `json:"token"`
+	UserID int64  `json:"user_id"`
+	Email  string `json:"email"`
+	Name   string `json:"name"`
 }
 
 // // IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
@@ -245,7 +247,7 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// сразу логиним
-	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
+	token, user, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		a.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
@@ -254,7 +256,11 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	a.setAuthCookie(w, token)
 
-	responser.RespondWithJSON(w, http.StatusOK, RegisterResponse{UserID: userID})
+	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
+		UserID: user.ID,
+		Email:  user.Email,
+		Name:   user.Name,
+	})
 }
 
 // @Summary Вход пользователя
@@ -296,7 +302,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
+	token, user, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())
@@ -310,7 +316,11 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	a.setAuthCookie(w, token)
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
+		UserID: user.ID,
+		Email:  user.Email,
+		Name:   user.Name,
+	})
 }
 
 // handleIsAdmin проверяет, является ли указанный пользователь администратором.

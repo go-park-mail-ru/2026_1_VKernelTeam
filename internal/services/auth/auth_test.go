@@ -139,7 +139,7 @@ func TestLogin_Success(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	token, err := auth.Login(context.Background(), "test@example.com", password)
+	token, _, err := auth.Login(context.Background(), "test@example.com", password)
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	_, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
+	_, _, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
 	if err == nil {
 		t.Fatalf("expected error for invalid credentials")
 	}
@@ -193,7 +193,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	_, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
+	_, _, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
 	if err == nil {
 		t.Fatalf("expected error for non-existent user")
 	}
@@ -305,7 +305,7 @@ func TestLogin_UserProviderError(t *testing.T) {
 
 	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
 
-	_, err := auth.Login(context.Background(), "user@example.com", "pwd")
+	_, _, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
 		t.Fatalf("expected error when user provider fails")
 	}
