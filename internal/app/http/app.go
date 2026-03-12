@@ -160,7 +160,7 @@ func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 		Name:  "token",
 		Value: token,
 		// Domain: "clover-go.ru", // Убран хардкод домена для работы на localhost
-		// HttpOnly: true, // JS не увидит куку
+		HttpOnly: true, // JS не увидит куку
 		// Secure:   true,                      // передача только по HTTPS
 		Path:     "/",                       // доступна везде
 		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
@@ -372,10 +372,10 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 		Name:  "token",
 		Value: "",
 		// Domain: "clover-go.ru", // Убран хардкод домена
-		Path: "/",
-		// HttpOnly: true,
-		MaxAge:  -1,              // удаляем куку
-		Expires: time.Unix(0, 0), // на всякий случай делаем просроченной
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,              // удаляем куку
+		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
 	})
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
