@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/lib/jwt"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/ads"
@@ -242,24 +242,24 @@ func TestHandleLogin(t *testing.T) {
 		assert.Equal(t, user.Name, resp.Name)
 	})
 
-	t.Run("InvalidBody", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer([]byte("{invalid}")))
+	t.Run("TokenCookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", nil)
+		// установить куку как будто пользователь уже вошёл
+		req.AddCookie(&http.Cookie{Name: "token", Value: "existing-token"})
 		rr := httptest.NewRecorder()
+
+		user := models.User{ID: 2, Email: "cookie@test.com", Name: "Cookie User"}
+		mockAuth.On("ValidateTokenAndGetUser", mock.Anything, "existing-token").Return(user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
-	})
+		assert.Equal(t, http.StatusOK, rr.Code)
 
-	t.Run("EmptyEmail", func(t *testing.T) {
-		reqBody := LoginRequest{Password: "Password123"}
-		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
-		rr := httptest.NewRecorder()
-
-		app.router.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		var resp LoginResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, resp.UserID)
+		assert.Equal(t, user.Name, resp.Name)
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {

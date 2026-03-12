@@ -52,7 +52,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Аутентифицирует пользователя по email/пароль или валидирует существующий токен",
+                "description": "Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен",
                 "consumes": [
                     "application/json"
                 ],
@@ -65,12 +65,12 @@ const docTemplate = `{
                 "summary": "Вход пользователя",
                 "parameters": [
                     {
-                        "description": "Login credentials or token",
+                        "description": "Login credentials",
                         "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/httpapp.UnifiedLoginRequest"
+                            "$ref": "#/definitions/httpapp.LoginRequest"
                         }
                     }
                 ],
@@ -195,6 +195,17 @@ const docTemplate = `{
                 }
             }
         },
+        "httpapp.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
         "httpapp.LoginResponse": {
             "type": "object",
             "properties": {
@@ -228,23 +239,6 @@ const docTemplate = `{
             "properties": {
                 "user_id": {
                     "type": "integer"
-                }
-            }
-        },
-        "httpapp.UnifiedLoginRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "description": "опционально для логина по email/пароль",
-                    "type": "string"
-                },
-                "password": {
-                    "description": "опционально для логина по email/пароль",
-                    "type": "string"
-                },
-                "token": {
-                    "description": "опционально для валидации существующего токена",
-                    "type": "string"
                 }
             }
         },

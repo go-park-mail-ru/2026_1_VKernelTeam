@@ -5,6 +5,13 @@ definitions:
       error:
         type: string
     type: object
+  httpapp.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
   httpapp.LoginResponse:
     properties:
       email:
@@ -27,18 +34,6 @@ definitions:
     properties:
       user_id:
         type: integer
-    type: object
-  httpapp.UnifiedLoginRequest:
-    properties:
-      email:
-        description: опционально для логина по email/пароль
-        type: string
-      password:
-        description: опционально для логина по email/пароль
-        type: string
-      token:
-        description: опционально для валидации существующего токена
-        type: string
     type: object
   httpapp.ValidationErrors:
     properties:
@@ -116,15 +111,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Аутентифицирует пользователя по email/пароль или валидирует существующий
-        токен
+      description: Аутентифицирует пользователя по email/пароль или, при наличии cookie,
+        проверяет токен
       parameters:
-      - description: Login credentials or token
+      - description: Login credentials
         in: body
         name: input
         required: true
         schema:
-          $ref: '#/definitions/httpapp.UnifiedLoginRequest'
+          $ref: '#/definitions/httpapp.LoginRequest'
       produces:
       - application/json
       responses:

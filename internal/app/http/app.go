@@ -93,13 +93,6 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-// UnifiedLoginRequest может содержать либо учетные данные (email + пароль), либо существующий токен.
-type UnifiedLoginRequest struct {
-	Email    *string `json:"email"`    // опционально для логина по email/пароль
-	Password *string `json:"password"` // опционально для логина по email/пароль
-	Token    *string `json:"token"`    // опционально для валидации существующего токена
-}
-
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
 type LoginResponse struct {
 	UserID int64  `json:"user_id"`
@@ -272,57 +265,44 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 // @Summary Вход пользователя
-// @Description Аутентифицирует пользователя по email/пароль или валидирует существующий токен
+// @Description Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body UnifiedLoginRequest true "Login credentials or token"
+// @Param input body LoginRequest true "Login credentials"
 // @Success 200 {object} LoginResponse "login successful"
 // @Failure 400 {object} ErrorResponse "invalid request body or missing fields"
 // @Failure 401 {object} ValidationErrors "email/password validation errors or invalid credentials/token"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/login [post]
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
-	var req UnifiedLoginRequest
+	// сначала ищем токен в куке
+	if cookie, err := r.Cookie("token"); err == nil && cookie.Value != "" {
+		// есть токен, пытаемся его валидировать
+		a.handleTokenLogin(w, r, cookie.Value)
+		return
+	}
+
+	// иначе - вход по email/пароль из тела
+	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	// Определяем режим входа
-	if req.Token != nil && *req.Token != "" {
-		// Режим валидации токена
-		a.handleTokenLogin(w, r, *req.Token)
-		return
-	}
-
-	// Режим входа по email/пароль
-	// Проверяем наличие email
-	email := ""
-	if req.Email != nil {
-		email = *req.Email
-	}
-
-	// Проверяем наличие пароля
-	password := ""
-	if req.Password != nil {
-		password = *req.Password
-	}
-
-	if email == "" || password == "" {
-		// Вернуть как ошибку валидации
+	if req.Email == "" || req.Password == "" {
 		validationErrors := ValidationErrors{}
-		if email == "" {
+		if req.Email == "" {
 			validationErrors.Email = "email is required"
 		}
-		if password == "" {
+		if req.Password == "" {
 			validationErrors.Password = "password is required"
 		}
 		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
 		return
 	}
 
-	a.handleCredentialsLogin(w, r, email, password)
+	a.handleCredentialsLogin(w, r, req.Email, req.Password)
 }
 
 // handleCredentialsLogin обрабатывает вход пользователя по email и паролю

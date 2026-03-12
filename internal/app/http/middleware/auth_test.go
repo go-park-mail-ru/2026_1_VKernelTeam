@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/lib/jwt"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
