@@ -195,6 +195,23 @@ paths:
       summary: Регистрация пользователя
       tags:
       - auth
+  /users/profile:
+    get:
+      description: Получает данные текущего пользователя на основе куки
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapp.LoginResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Профиль пользователя
+      tags:
+      - users
 securityDefinitions:
   CookieAuth:
     in: cookie
