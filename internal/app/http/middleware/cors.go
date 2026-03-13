@@ -12,7 +12,8 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		// Разрешаем только определенные домены. Порт 80 считается эквивалентным домену без порта,
 		// поэтому обрабатываем его отдельно.
 		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:80" ||
-			origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" {
+			origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" ||
+			origin == "http://localhost:80" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
 		}
