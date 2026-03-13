@@ -13,9 +13,8 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		// поэтому обрабатываем его отдельно.
 		if origin == "http://clover-go.ru" || origin == "http://clover-go.ru:80" ||
 			origin == "http://clover-go.ru:8080" || origin == "http://localhost:8080" ||
-			origin == "http://localhost:80" {
+			origin == "http://localhost:80" ||  origin == "http://localhost" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-		} else {
 		}
 
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
