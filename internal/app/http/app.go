@@ -180,8 +180,6 @@ func (a *App) setupRoutes() {
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist.(*blacklist.InMemory), a.secret)
 	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.handleLogout)))
 
-	a.router.Handle("GET "+apiPrefix+"/users/profile", authMW(http.HandlerFunc(a.handleGetProfile)))
-
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
 	a.router.Handle("/swagger/", httpSwagger.WrapHandler)
@@ -193,30 +191,6 @@ func (a *App) setupRoutes() {
 
 	// регистрируем обработчик объявлений
 	a.router.HandleFunc("GET "+apiPrefix+"/ads", a.handleGetAds)
-}
-
-// handleGetProfile возвращает данные текущего авторизованного пользователя.
-// @Summary Профиль пользователя
-// @Description Получает данные текущего пользователя на основе куки
-// @Tags users
-// @Produce json
-// @Success 200 {object} LoginResponse
-// @Failure 401 {object} ErrorResponse
-// @Router /users/profile [get]
-func (a *App) handleGetProfile(w http.ResponseWriter, r *http.Request) {
-	// Твой мидлвар положил UserIDKey в контекст. Достаем его.
-	uid, ok := r.Context().Value(middleware.UserIDKey).(int64)
-	if !ok {
-		a.log.Error("user id not found in context")
-		responser.RespondWithError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-
-	responser.RespondWithJSON(w, http.StatusOK, map[string]any{
-		"user_id": uid,
-		"email":   "user@example.com", // TODO
-		"name":    "User",
-	})
 }
 
 // handleRegister обрабатывает запросы на регистрацию новых пользователей.

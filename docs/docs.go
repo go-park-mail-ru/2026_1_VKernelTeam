@@ -184,32 +184,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/users/profile": {
-            "get": {
-                "description": "Получает данные текущего пользователя на основе куки",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Профиль пользователя",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/httpapp.LoginResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
