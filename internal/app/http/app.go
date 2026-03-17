@@ -55,6 +55,8 @@ type App struct {
 }
 
 // Ads описывает методы сервиса объявлений.
+//
+//go:generate mockgen -source=app.go -destination=mocks/mock_app.go -package=mocks
 type Ads interface {
 	GetAll() []models.Ad
 }

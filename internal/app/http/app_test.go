@@ -2,7 +2,6 @@ package httpapp
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -12,55 +11,25 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http/mocks"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type MockAds struct {
-	mock.Mock
-}
-
-func (m *MockAds) GetAll() []models.Ad {
-	args := m.Called()
-	return args.Get(0).([]models.Ad)
-}
-
-type MockAuth struct {
-	mock.Mock
-}
-
-func (m *MockAuth) Login(ctx context.Context, email string, password string) (string, models.User, error) {
-	args := m.Called(ctx, email, password)
-	return args.String(0), args.Get(1).(models.User), args.Error(2)
-}
-
-func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
-	args := m.Called(ctx, tokenString)
-	return args.Get(0).(models.User), args.Error(1)
-}
-
-func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password string, name string) (int64, error) {
-	args := m.Called(ctx, email, password, name)
-	return args.Get(0).(int64), args.Error(1)
-}
-
-func (m *MockAuth) Logout(ctx context.Context, jti string, exp time.Time) error {
-	args := m.Called(ctx, jti, exp)
-	return args.Error(0)
-}
-
-func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
+func setupTestApp(t *testing.T) (*App, *mocks.MockAuth, *mocks.MockAds, *blacklist.InMemory) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
 	// Создаем моки для обоих сервисов
-	mockAuth := new(MockAuth)
-	mockAds := new(MockAds)
+	mockAuth := mocks.NewMockAuth(ctrl)
+	mockAds := mocks.NewMockAds(ctrl)
 
 	bl := blacklist.New(time.Minute)
 
@@ -77,7 +46,7 @@ func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
 }
 
 func TestHandleRegister(t *testing.T) {
-	app, mockAuth, _, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: "Test User"}
@@ -87,9 +56,13 @@ func TestHandleRegister(t *testing.T) {
 
 		user := models.User{ID: 1, Email: "test@test.com", Name: "Test User"}
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "Password123", "Test User").Return(int64(1), nil).Once()
+		mockAuth.EXPECT().
+			RegisterNewUser(gomock.Any(), "test@test.com", "Password123", "Test User").
+			Return(int64(1), nil)
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", user, nil).Once()
+		mockAuth.EXPECT().
+			Login(gomock.Any(), "test@test.com", "Password123").
+			Return("fake-token-after-reg", user, nil)
 
 		app.router.ServeHTTP(rr, req)
 
@@ -100,7 +73,6 @@ func TestHandleRegister(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), resp.UserID)
 		assert.Equal(t, "Test User", resp.Name)
-		mockAuth.AssertExpectations(t)
 	})
 
 	t.Run("InvalidBody", func(t *testing.T) {
@@ -184,12 +156,13 @@ func TestHandleRegister(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "Password123", "Exist").Return(int64(0), storage.ErrUserExists).Once()
+		mockAuth.EXPECT().
+			RegisterNewUser(gomock.Any(), "exist@test.com", "Password123", "Exist").
+			Return(int64(0), storage.ErrUserExists)
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
-		mockAuth.AssertExpectations(t)
 	})
 
 	t.Run("InternalError", func(t *testing.T) {
@@ -198,12 +171,13 @@ func TestHandleRegister(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "err@test.com", "Password123", "Err").Return(int64(0), errors.New("internal")).Once()
+		mockAuth.EXPECT().
+			RegisterNewUser(gomock.Any(), "err@test.com", "Password123", "Err").
+			Return(int64(0), errors.New("internal"))
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
-		mockAuth.AssertExpectations(t)
 	})
 
 	t.Run("EmptyName", func(t *testing.T) {
@@ -219,7 +193,7 @@ func TestHandleRegister(t *testing.T) {
 }
 
 func TestHandleLogin(t *testing.T) {
-	app, mockAuth, _, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "test@test.com", Password: "Password123"}
@@ -229,7 +203,9 @@ func TestHandleLogin(t *testing.T) {
 
 		user := models.User{ID: 1, Email: "test@test.com", Name: "Test User"}
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token", user, nil).Once()
+		mockAuth.EXPECT().
+			Login(gomock.Any(), "test@test.com", "Password123").
+			Return("fake-token", user, nil)
 
 		app.router.ServeHTTP(rr, req)
 
@@ -249,7 +225,9 @@ func TestHandleLogin(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		user := models.User{ID: 2, Email: "cookie@test.com", Name: "Cookie User"}
-		mockAuth.On("ValidateTokenAndGetUser", mock.Anything, "existing-token").Return(user, nil).Once()
+		mockAuth.EXPECT().
+			ValidateTokenAndGetUser(gomock.Any(), "existing-token").
+			Return(user, nil)
 
 		app.router.ServeHTTP(rr, req)
 
@@ -323,12 +301,13 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "wrong@test.com", "Password123").Return("", models.User{}, auth.ErrInvalidCredentials).Once()
+		mockAuth.EXPECT().
+			Login(gomock.Any(), "wrong@test.com", "Password123").
+			Return("", models.User{}, auth.ErrInvalidCredentials)
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusUnauthorized, rr.Code)
-		mockAuth.AssertExpectations(t)
 	})
 
 	t.Run("InternalError", func(t *testing.T) {
@@ -337,17 +316,18 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "err@test.com", "Password123").Return("", models.User{}, errors.New("internal")).Once()
+		mockAuth.EXPECT().
+			Login(gomock.Any(), "err@test.com", "Password123").
+			Return("", models.User{}, errors.New("internal"))
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
-		mockAuth.AssertExpectations(t)
 	})
 }
 
 func TestHandleLogout(t *testing.T) {
-	app, mockAuth, _, _ := setupTestApp()
+	app, mockAuth, _, _ := setupTestApp(t)
 
 	user := models.User{ID: 1, Email: "test@test.com"}
 	validToken, _ := ssntjwt.NewToken(user, time.Hour, "secret")
@@ -357,13 +337,14 @@ func TestHandleLogout(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(nil).Once()
+		mockAuth.EXPECT().
+			Logout(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(time.Time{})).
+			Return(nil)
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Contains(t, rr.Header().Get("Set-Cookie"), "token=")
-		mockAuth.AssertExpectations(t)
 	})
 
 	t.Run("NoCookie", func(t *testing.T) {
@@ -391,17 +372,18 @@ func TestHandleLogout(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(errors.New("err")).Once()
+		mockAuth.EXPECT().
+			Logout(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(time.Time{})).
+			Return(errors.New("err"))
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
-		mockAuth.AssertExpectations(t)
 	})
 }
 
 func TestAppServerEndpoints(t *testing.T) {
-	app, _, _, _ := setupTestApp()
+	app, _, _, _ := setupTestApp(t)
 
 	// Ensure Stop and MustRun logic are partially covered
 	go func() {
@@ -412,7 +394,7 @@ func TestAppServerEndpoints(t *testing.T) {
 	err := app.Run()
 	assert.NoError(t, err) // Run should return nil on normal Stop
 
-	app2, _, _, _ := setupTestApp()
+	app2, _, _, _ := setupTestApp(t)
 	assert.Panics(t, func() {
 		app2.srv.Addr = "invalid:port"
 		app2.MustRun()
@@ -423,13 +405,13 @@ func TestAppServerEndpoints(t *testing.T) {
 
 // тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
-	app, _, mockAds, _ := setupTestApp()
+	app, _, mockAds, _ := setupTestApp(t)
 
 	testAds := []models.Ad{
 		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	mockAds.On("GetAll").Return(testAds).Once()
+	mockAds.EXPECT().GetAll().Return(testAds)
 
 	request, _ := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	rr := httptest.NewRecorder()
@@ -442,17 +424,11 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	json.Unmarshal(rr.Body.Bytes(), &actualData)
 
 	assert.Equal(t, testAds, actualData)
-	mockAds.AssertExpectations(t)
 }
 
 // првоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
-	// создаём чистые зависимости для теста
-	repo := ads.NewAdsRepository()
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, _, _ := setupTestApp(t)
 
 	// создаём POST запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
@@ -474,11 +450,9 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 
 // првоерка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
-	repo := &ads.AdsRepository{Data: []models.Ad{}}
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, mockAds, _ := setupTestApp(t)
+
+	mockAds.EXPECT().GetAll().Return([]models.Ad{})
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
@@ -511,12 +485,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 
 // тестируем ошибку сервера
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
-	// создаём чистые зависимости для теста
-	repo := ads.NewAdsRepository()
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, _, _ := setupTestApp(t)
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
