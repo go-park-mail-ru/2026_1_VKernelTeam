@@ -209,6 +209,9 @@ const docTemplate = `{
         "httpapp.LoginResponse": {
             "type": "object",
             "properties": {
+                "csrf_token": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },

@@ -95,9 +95,10 @@ type LoginRequest struct {
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
 type LoginResponse struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
+	UserID    int64  `json:"user_id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	CsrfToken string `json:"csrf_token"`
 }
 
 // // IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
@@ -143,11 +144,12 @@ func New(
 
 	app.setupRoutes()
 
-	handlerWithCORS := middleware.CORSMiddleware(app.router)
+	handlerWithCSRF := middleware.CSRFMiddleware(app.router)
+	finalHandler := middleware.CORSMiddleware(handlerWithCSRF)
 
 	app.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
-		Handler:      handlerWithCORS,          // используем наш маршрутизатор с CORS
+		Handler:      finalHandler,             // передаем итоговую цепочку
 		ReadTimeout:  15 * time.Second,         // ограничиваем время чтения запроса
 		WriteTimeout: 15 * time.Second,         // ограничиваем время записи ответа
 		IdleTimeout:  60 * time.Second,         // время жизни соединения
@@ -158,7 +160,8 @@ func New(
 
 const apiPrefix = "/api/v1"
 
-func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
+func (a *App) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
+	// JWT-токен
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: token,
@@ -168,6 +171,16 @@ func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
 		Path:     "/",                       // доступна везде
 		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
 		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
+	})
+
+	// CSRF-токен
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		HttpOnly: false, // JS должен иметь доступ
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(a.tokenTTL.Seconds()),
 	})
 }
 
@@ -255,13 +268,10 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.setAuthCookie(w, token)
+	csrfToken := middleware.GenerateCSRFToken()
+	a.setAuthCookie(w, token, csrfToken)
 
-	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-	})
+	a.respondWithUser(w, user, csrfToken)
 }
 
 // @Summary Вход пользователя
@@ -339,8 +349,10 @@ func (a *App) handleCredentialsLogin(w http.ResponseWriter, r *http.Request, ema
 		return
 	}
 
-	a.setAuthCookie(w, token)
-	a.respondWithUser(w, user)
+	csrfToken := middleware.GenerateCSRFToken()
+
+	a.setAuthCookie(w, token, csrfToken)
+	a.respondWithUser(w, user, csrfToken)
 }
 
 // handleTokenLogin обрабатывает вход пользователя путём валидации существующего токена
@@ -352,17 +364,20 @@ func (a *App) handleTokenLogin(w http.ResponseWriter, r *http.Request, tokenStri
 		return
 	}
 
-	// Устанавливаем куку с токеном
-	a.setAuthCookie(w, tokenString)
-	a.respondWithUser(w, user)
+	csrfToken := middleware.GenerateCSRFToken()
+
+	// Устанавливаем куку с токенами
+	a.setAuthCookie(w, tokenString, csrfToken)
+	a.respondWithUser(w, user, csrfToken)
 }
 
 // respondWithUser отправляет успешный ответ с данными пользователя
-func (a *App) respondWithUser(w http.ResponseWriter, user models.User) {
+func (a *App) respondWithUser(w http.ResponseWriter, user models.User, csrfToken string) {
 	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CsrfToken: csrfToken,
 	})
 }
 
@@ -421,14 +436,26 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// удаляем JWT
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: "",
 		// Domain: "clover-go.ru", // Убран хардкод домена
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   -1,              // удаляем куку
-		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	})
+
+	// удаляем CSRF
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
 	})
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
