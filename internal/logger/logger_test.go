@@ -48,4 +48,3 @@ func TestSetupLogger_HandlerTypes(t *testing.T) {
 		})
 	}
 }
-

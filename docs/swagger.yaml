@@ -12,6 +12,15 @@ definitions:
       password:
         type: string
     type: object
+  httpapp.LoginResponse:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: integer
+    type: object
   httpapp.RegisterRequest:
     properties:
       email:
@@ -87,8 +96,8 @@ paths:
             items:
               $ref: '#/definitions/models.Ad'
             type: array
-        "405":
-          description: method not allowed / invalid parameters
+        "400":
+          description: method not allowed
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
         "500":
@@ -102,7 +111,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Аутентифицирует пользователя и устанавливает куку с токеном
+      description: Аутентифицирует пользователя по email/пароль или, при наличии cookie,
+        проверяет токен
       parameters:
       - description: Login credentials
         in: body
@@ -116,17 +126,13 @@ paths:
         "200":
           description: login successful
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/httpapp.LoginResponse'
         "400":
-          description: invalid request body
+          description: invalid request body or missing fields
           schema:
             $ref: '#/definitions/httpapp.ErrorResponse'
         "401":
-          description: email validation errors (invalid email format) / password validation
-            errors (too short, requires digit, requires letter, contains forbidden
-            characters) / invalid credentials
+          description: email/password validation errors or invalid credentials/token
           schema:
             $ref: '#/definitions/httpapp.ValidationErrors'
         "500":
@@ -178,10 +184,10 @@ paths:
           description: user registered successfully
           schema:
             $ref: '#/definitions/httpapp.RegisterResponse'
-        "409":
-          description: user already exists
+        "400":
+          description: validation failed (email/password/name) or user already exists
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/httpapp.ValidationErrors'
         "500":
           description: internal server error
           schema:

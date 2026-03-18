@@ -35,8 +35,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "405": {
-                        "description": "method not allowed / invalid parameters",
+                    "400": {
+                        "description": "method not allowed",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
@@ -52,7 +52,7 @@ const docTemplate = `{
         },
         "/auth/login": {
             "post": {
-                "description": "Аутентифицирует пользователя и устанавливает куку с токеном",
+                "description": "Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен",
                 "consumes": [
                     "application/json"
                 ],
@@ -78,20 +78,17 @@ const docTemplate = `{
                     "200": {
                         "description": "login successful",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/httpapp.LoginResponse"
                         }
                     },
                     "400": {
-                        "description": "invalid request body",
+                        "description": "invalid request body or missing fields",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "email validation errors (invalid email format) / password validation errors (too short, requires digit, requires letter, contains forbidden characters) / invalid credentials",
+                        "description": "email/password validation errors or invalid credentials/token",
                         "schema": {
                             "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
@@ -173,10 +170,10 @@ const docTemplate = `{
                             "$ref": "#/definitions/httpapp.RegisterResponse"
                         }
                     },
-                    "409": {
-                        "description": "user already exists",
+                    "400": {
+                        "description": "validation failed (email/password/name) or user already exists",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/httpapp.ValidationErrors"
                         }
                     },
                     "500": {
@@ -206,6 +203,20 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                }
+            }
+        },
+        "httpapp.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },

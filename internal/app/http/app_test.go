@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/lib/jwt"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/ads"
@@ -35,9 +35,14 @@ type MockAuth struct {
 	mock.Mock
 }
 
-func (m *MockAuth) Login(ctx context.Context, email string, password string) (string, error) {
+func (m *MockAuth) Login(ctx context.Context, email string, password string) (string, models.User, error) {
 	args := m.Called(ctx, email, password)
-	return args.String(0), args.Error(1)
+	return args.String(0), args.Get(1).(models.User), args.Error(2)
+}
+
+func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
+	args := m.Called(ctx, tokenString)
+	return args.Get(0).(models.User), args.Error(1)
 }
 
 func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password string, name string) (int64, error) {
@@ -80,19 +85,21 @@ func TestHandleRegister(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
+		user := models.User{ID: 1, Email: "test@test.com", Name: "Test User"}
+
 		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "Password123", "Test User").Return(int64(1), nil).Once()
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", nil).Once()
+		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Contains(t, rr.Header().Get("Set-Cookie"), "token=fake-token-after-reg")
 
-		var resp RegisterResponse
+		var resp LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), resp.UserID)
+		assert.Equal(t, "Test User", resp.Name)
 		mockAuth.AssertExpectations(t)
 	})
 
@@ -220,33 +227,39 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token", nil).Once()
+		user := models.User{ID: 1, Email: "test@test.com", Name: "Test User"}
+
+		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token", user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Contains(t, rr.Header().Get("Set-Cookie"), "token=fake-token")
-		mockAuth.AssertExpectations(t)
+
+		var resp LoginResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, resp.UserID)
+		assert.Equal(t, user.Name, resp.Name)
 	})
 
-	t.Run("InvalidBody", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer([]byte("{invalid}")))
+	t.Run("TokenCookie", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", nil)
+		// установить куку как будто пользователь уже вошёл
+		req.AddCookie(&http.Cookie{Name: "token", Value: "existing-token"})
 		rr := httptest.NewRecorder()
+
+		user := models.User{ID: 2, Email: "cookie@test.com", Name: "Cookie User"}
+		mockAuth.On("ValidateTokenAndGetUser", mock.Anything, "existing-token").Return(user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
-		assert.Equal(t, http.StatusBadRequest, rr.Code)
-	})
+		assert.Equal(t, http.StatusOK, rr.Code)
 
-	t.Run("EmptyEmail", func(t *testing.T) {
-		reqBody := LoginRequest{Password: "Password123"}
-		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
-		rr := httptest.NewRecorder()
-
-		app.router.ServeHTTP(rr, req)
-
-		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+		var resp LoginResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, resp.UserID)
+		assert.Equal(t, user.Name, resp.Name)
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {
@@ -310,7 +323,7 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "wrong@test.com", "Password123").Return("", auth.ErrInvalidCredentials).Once()
+		mockAuth.On("Login", mock.Anything, "wrong@test.com", "Password123").Return("", models.User{}, auth.ErrInvalidCredentials).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -324,7 +337,7 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "err@test.com", "Password123").Return("", errors.New("internal")).Once()
+		mockAuth.On("Login", mock.Anything, "err@test.com", "Password123").Return("", models.User{}, errors.New("internal")).Once()
 
 		app.router.ServeHTTP(rr, req)
 
