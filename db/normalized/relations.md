@@ -1,69 +1,39 @@
 ## Аргументация выбранных типов данных и ограничений целостности
-- **Идентификаторы (PK/FK):** Мы используем bigint GENERATED ALWAYS AS IDENTITY вместо запрещенного serial. Это современный стандарт PostgreSQL, который жестко привязывает последовательность к таблице и предотвращает ручную вставку дублирующихся ID.
-
-- **Строки:** Везде используется тип text, который в PostgreSQL работает так же быстро, как и varchar, но не требует жесткого указания длины.
-
-- **Цены (price):** Используется bigint для хранения цены в рублях. Это исключает ошибки округления, свойственные типам с плавающей точкой (float/numeric).
-
-- **Даты (created_at, updated_at):** Используется timestamp with time zone (в DDL пишется как timestamptz). Это гарантирует, что мы всегда знаем точное время события независимо от часового пояса сервера. Обязательное наличие этих полей учтено.
-
+- **Идентификаторы (PK/FK):** Используется `bigint GENERATED ALWAYS AS IDENTITY` вместо устаревшего `serial`. Это предотвращает ручную вставку дублирующихся ID и обеспечивает строгую автоинкрементацию.
+- **Строки:** Везде используется тип `text`. В PostgreSQL он работает так же быстро, как и `varchar(n)`, но для защиты данных добавлены жесткие ограничения `CHECK (length(field) BETWEEN X AND Y)`. Поле email снабжено регулярным выражением для проверки формата.
+- **Цены (price):** Используется `bigint` для хранения цены в минимальных единицах валюты (копейках). Это исключает ошибки округления типов с плавающей точкой (float/numeric). Добавлено ограничение `CHECK (price >= 0)`.
+- **Даты (created_at, updated_at):** Используется `timestamp with time zone` (в DDL пишется как `timestamptz`). Это гарантирует корректную работу со временем независимо от часового пояса сервера.
+- **Статусы:** Использованы текстовые поля со строгими проверками `CHECK (status IN (...))`, что заменяет ENUM и упрощает миграции при добавлении новых статусов.
 
 ## Ограничения (Constraints)
-Во всех таблицах явно прописаны PRIMARY KEY. Названия в единственном числе. Применены FOREIGN KEY с каскадными операциями ON DELETE CASCADE там, где удаление родительской сущности должно удалять зависимые (например, сообщения в чате). Для защиты от неполных данных везде, где возможно, указан NOT NULL.
-
-
-## Описание таблиц (Отношения)
-- **user:** Хранит данные профиля пользователя.
-
-- **product:** Основная сущность объявления/товара. Содержит ссылки на продавца и категорию.
-
-- **product_price_history:** Лог изменения цен на товары для истории.
-
-- **product_status_history:** Лог изменения статусов (активен, продан, заблокирован) товара.
-
-- **category:** Иерархический справочник категорий товаров.
-
-- **product_image:** Хранит ссылки на изображения товаров.
-
-- **favorite:** Таблица-связка для хранения избранных товаров пользователя (составной ключ).
-
-- **cart_item:** Таблица-связка для корзины покупок (составной ключ).
-
-- **review:** Отзывы покупателей о продавцах (или товарах).
-
-- **chat:** Сущность чата между продавцом и покупателем по конкретному товару.
-
-- **message:** Сообщения, привязанные к конкретному чату.
+Во всех таблицах явно прописаны `PRIMARY KEY`. Применены `FOREIGN KEY` с каскадными операциями `ON DELETE CASCADE` там, где удаление родительской сущности должно безусловно удалять зависимые (например, сообщения в чате, просмотры товара). В критичных местах (оформленные заказы, категории) используется `ON DELETE RESTRICT` или `ON DELETE SET NULL` для защиты исторических данных.
 
 ## Функциональные зависимости:
 ### Relation user:
-- {id} -> email, password_hash, first_name, second_name, avatar_url, rating, created_at, updated_at
-- {email} -> id, password_hash, first_name, second_name, avatar_url, rating, created_at, updated_at
+- {id} -> email, password_hash, first_name, second_name, avatar_path, rating, created_at, updated_at
+- {email} -> id, password_hash, first_name, second_name, avatar_path, rating, created_at, updated_at
 
 ### Relation product:
-- {id} -> seller_id, category_id, title, description, price, status, views_count, favorites_count, created_at, updated_at, deleted_at
+- {id} -> seller_id, category_id, title, description, price, status, created_at, updated_at, deleted_at
 
-### Relation product_price_history:
-- {id} -> product_id, old_price, new_price, created_at, updated_at
+### Relation order:
+- {id} -> buyer_id, total_amount, status, created_at, updated_at
 
-### Relation product_status_history:
-- {id} -> product_id, old_status, new_status, created_at, updated_at
+### Relation order_item:
+- {order_id, product_id} -> price_at_purchase
 
 ### Relation category:
 - {id} -> name, parent_id, created_at, updated_at
-{name} -> id, parent_id, created_at, updated_at
+- {name} -> id, parent_id, created_at, updated_at
 
 ### Relation product_image:
-- {id} -> product_id, url, is_main, created_at, updated_at
+- {id} -> product_id, file_path, sort_order, created_at, updated_at
 
 ### Relation favorite:
-- {user_id, product_id} -> created_at, updated_at
+- {user_id, product_id} -> created_at
 
 ### Relation cart_item:
-- {user_id, product_id} -> created_at, updated_at
-
-### Relation review:
-- {id} -> sender_id, receiver_id, product_id, rating, content, created_at, updated_at
+- {user_id, product_id} -> quantity, created_at, updated_at
 
 ### Relation chat:
 - {id} -> product_id, buyer_id, seller_id, created_at, updated_at
@@ -71,15 +41,17 @@
 ### Relation message:
 - {id} -> chat_id, sender_id, text_content, is_read, created_at, updated_at
 
-## Доказательство соответствия нормальным формам (1НФ, 2НФ, 3НФ, НФБК):
+## Доказательство соответствия нормальным формам:
+
 ### 1НФ (Первая нормальная форма)
-Во всех отношениях все атрибуты атомарны (неделимы). Не используем составные типы (json, массивы).
+Во всех отношениях атрибуты атомарны. Отсутствуют массивы (`text[]`) или `jsonb` структуры для хранения множественных значений (изображения вынесены в `product_image`). У каждой таблицы определен первичный ключ.
 
 ### 2НФ (Вторая нормальная форма)
-Схема находится в 1НФ, и в ней нет частичных зависимостей. Для таблиц с простым первичным ключом (id) это выполняется автоматически. В таблицах favorite и cart_item с составным первичным ключом {user_id, product_id} неключевые атрибуты (created_at, updated_at) зависят только от всего составного ключа целиком.
+Схема находится в 1НФ, и в ней нет частичных зависимостей от составных ключей. В таблицах `favorite`, `cart_item` и `order_item` составной первичный ключ. Все неключевые атрибуты в них (например, `quantity` в корзине или `price_at_purchase` в позициях заказа) зависят от всего составного ключа целиком.
 
-### 3НФ (Третья нормальная форма)
-Схема находится во 2НФ и не содержит транзитивных зависимостей. Все неключевые атрибуты зависят исключительно от первичного ключа, а не от других неключевых атрибутов. (Например, в product атрибут category_id хранит только ссылку, а название категории вынесено в отдельную таблицу category).
+### 3НФ и НФБК (Осознанная денормализация)
+В архитектуре применены преднамеренные отступления от строгой 3НФ/НФБК ради оптимизации производительности под высокие нагрузки (Highload):
+1. **Таблица `chat`:** Хранит атрибут `seller_id`, который транзитивно зависит от ключа через `product_id` ($Chat \rightarrow Product \rightarrow Seller$). Эта денормализация сделана намеренно, чтобы при запросе списка диалогов пользователя избежать ресурсоемкого `JOIN` с таблицей `product`.
+2. **Таблица `user`:** Содержит агрегированное вычисляемое поле `rating`. По правилам 3НФ его следовало бы вычислять динамически `AVG(rating)` из таблицы `review`. Однако для профилей с тысячами отзывов это создаст критическую нагрузку на БД при каждом просмотре. Значение предрассчитано.
 
-### НФБК (Нормальная форма Бойса-Кодда)
-Схема находится в 3НФ. В наших отношениях детерминантами выступают только {id}, {email}, {name} (для категории) и комбинация {user_id, product_id}. Все они являются либо первичными ключами (PK), либо уникальными ключами (UK), следовательно, требования НФБК строго соблюдены.
+В остальном схема строго соответствует 3НФ и НФБК (детерминантами выступают только потенциальные ключи).

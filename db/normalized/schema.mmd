@@ -5,6 +5,8 @@ erDiagram
     user ||--o{ cart_item : "adds_to_cart"
     user ||--o{ chat : "participates"
     user ||--o{ message : "sends"
+    user ||--o{ order : "places"
+    user ||--o{ refresh_token : "has"
 
     category ||--o{ product : "contains"
     category ||--o{ category : "parent_of"
@@ -16,7 +18,10 @@ erDiagram
     product ||--o{ product_status_history : "has"
     product ||--o{ cart_item : "is_in"
     product ||--o{ chat : "discussed_in"
+    product ||--o{ product_view : "viewed_by"
+    product ||--o{ order_item : "sold_in"
 
+    order ||--|{ order_item : "contains"
     chat ||--o{ message : "contains"
 
     user {
@@ -25,10 +30,17 @@ erDiagram
         text password_hash
         text first_name
         text second_name
-        text avatar_url
+        text avatar_path
         numeric rating
         timestamp created_at
         timestamp updated_at
+    }
+
+    refresh_token {
+        text token PK
+        bigint user_id FK
+        timestamp expires_at
+        timestamp created_at
     }
 
     product {
@@ -39,11 +51,16 @@ erDiagram
         text description
         bigint price
         text status
-        bigint views_count
-        bigint favorites_count
         timestamp created_at
         timestamp updated_at
         timestamp deleted_at
+    }
+
+    product_view {
+        bigint id PK
+        bigint product_id FK
+        bigint user_id FK "NULLable"
+        timestamp viewed_at
     }
 
     product_price_history {
@@ -52,7 +69,6 @@ erDiagram
         bigint old_price
         bigint new_price
         timestamp created_at
-        timestamp updated_at
     }
 
     product_status_history {
@@ -61,13 +77,12 @@ erDiagram
         text old_status
         text new_status
         timestamp created_at
-        timestamp updated_at
     }
 
     category {
         bigint id PK
         text name UK
-        bigint parent_id FK
+        bigint parent_id FK "NULLable"
         timestamp created_at
         timestamp updated_at
     }
@@ -75,8 +90,8 @@ erDiagram
     product_image {
         bigint id PK
         bigint product_id FK
-        text url
-        boolean is_main
+        text file_path
+        integer sort_order
         timestamp created_at
         timestamp updated_at
     }
@@ -85,14 +100,29 @@ erDiagram
         bigint user_id PK_FK
         bigint product_id PK_FK
         timestamp created_at
-        timestamp updated_at
     }
 
     cart_item {
         bigint user_id PK_FK
         bigint product_id PK_FK
+        integer quantity
         timestamp created_at
         timestamp updated_at
+    }
+
+    order {
+        bigint id PK
+        bigint buyer_id FK
+        bigint total_amount
+        text status
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    order_item {
+        bigint order_id PK_FK
+        bigint product_id PK_FK
+        bigint price_at_purchase
     }
 
     review {
