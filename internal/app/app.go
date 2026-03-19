@@ -8,10 +8,11 @@ import (
 
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/ads"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
+	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ads"
+	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 type App struct {
@@ -39,7 +40,7 @@ func New(
 	// создеём сервис Ads
 	adsService := ads.NewAdsRepository()
 
-	services := httpapp.Services{
+	services := handlers.Services{
 		Ads:  adsService,
 		Auth: authService,
 	}

@@ -12,12 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/ads"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
+	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -64,8 +63,8 @@ func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
 
 	bl := blacklist.New(time.Minute)
 
-	// Собираем структуру Services, которую ожидает httpapp.New
-	services := Services{
+	// Собираем структуру handlers.Services, которую ожидает httpapp.New
+	services := handlers.Services{
 		Auth: mockAuth,
 		Ads:  mockAds,
 	}
@@ -184,7 +183,7 @@ func TestHandleRegister(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "Password123", "Exist").Return(int64(0), storage.ErrUserExists).Once()
+		mockAuth.On("RegisterNewUser", mock.Anything, "exist@test.com", "Password123", "Exist").Return(int64(0), auth.ErrUserAlreadyExists).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -445,14 +444,10 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	mockAds.AssertExpectations(t)
 }
 
-// првоерка ограничения методов (обрабатываем только GET)
+// prvоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
-	// создаём чистые зависимости для теста
-	repo := ads.NewAdsRepository()
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, mockAds, _ := setupTestApp()
+	_ = mockAds // POST не дойдёт до вызова GetAll
 
 	// создаём POST запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
@@ -460,11 +455,11 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// создаём RequestRecoder - заглушку дял ответа
+	// создаём RequestRecoder - заглушку для ответа
 	rr := httptest.NewRecorder()
 
 	// вызываем обработчик
-	app.handleGetAds(rr, request)
+	app.adsHandlers.HandleGetAds(rr, request)
 
 	// ожидаем код 400 - method not allowed
 	if rr.Code != http.StatusBadRequest {
@@ -472,13 +467,10 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	}
 }
 
-// првоерка, что сервер не падает при отсутствии объявлений
+// проверка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
-	repo := &ads.AdsRepository{Data: []models.Ad{}}
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, mockAds, _ := setupTestApp()
+	mockAds.On("GetAll").Return([]models.Ad{}).Once()
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
@@ -486,11 +478,11 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// создаём RequestRecoder - заглушку дял ответа
+	// создаём RequestRecoder - заглушку для ответа
 	rr := httptest.NewRecorder()
 
 	// вызываем обработчик
-	app.handleGetAds(rr, request)
+	app.adsHandlers.HandleGetAds(rr, request)
 
 	// проверяем статус-код
 	if status := rr.Code; status != http.StatusOK {
@@ -503,23 +495,20 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 		t.Fatalf("failed to decode JSON: %v", err)
 	}
 
-	// првоеряем, что вернулся пустой массив, а не nil
+	// проверяем, что вернулся пустой массив, а не nil
 	if len(actualData) != 0 {
 		t.Errorf("expected 0 ads, got %d", len(actualData))
 	}
+	mockAds.AssertExpectations(t)
 }
 
-// тестируем ошибку сервера
+// тестируем неверный метод
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
-	// создаём чистые зависимости для теста
-	repo := ads.NewAdsRepository()
-	app := &App{
-		services: Services{Ads: repo},
-		log:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
-	}
+	app, _, mockAds, _ := setupTestApp()
+	_ = mockAds // DELETE не дойдёт до вызова GetAll
 
 	// создаём запрос к эндпоинту
-	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
+	request, err := http.NewRequest("DELETE", apiPrefix+"/ads", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -528,7 +517,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	// вызываем handler
-	app.handleGetAds(rr, request)
+	app.adsHandlers.HandleGetAds(rr, request)
 
 	// проверяем статус
 	if rr.Code != http.StatusBadRequest {
