@@ -1,0 +1,30 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+)
+
+// HandleGetAds обрабатывает запросы на получение списка объявлений
+// @Summary Получить список объявлений
+// @Description Возвращает список всех объявлений
+// @Tags ads
+// @Produce json
+// @Success 200 {array} models.Ad "список объявлений успешно получен"
+// @Failure 400 {object} ErrorResponse "method not allowed"
+// @Failure 500 {object} ErrorResponse "internal server error"
+// @Router /ads [get]
+func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
+	// обрабатываем только GET запросы
+	if r.Method != http.MethodGet {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrMethodNotAllowed)
+		return
+	}
+
+	// копируем список объявлений без гонки данных
+	adsList := h.services.Ads.GetAll()
+
+	// формируем и отправляем ответ
+	responser.RespondWithJSON(w, http.StatusOK, adsList)
+}
