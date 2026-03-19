@@ -415,10 +415,13 @@ func (a *App) respondWithUser(w http.ResponseWriter, user models.User, csrfToken
 // @Description Инвалидирует текущую сессию и очищает аутентификационную куку
 // @Tags auth
 // @Success 200 {object} map[string]string "logout successful"
+// @Failure 400 {object} ErrorResponse "Missing CSRF cookie or CSRF token mismatch"
 // @Failure 401 {object} ErrorResponse "invalid or expired token"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/logout [post]
 // @Security CookieAuth
+// @Security CsrfCookieAuth
+// @Security CsrfHeaderAuth
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	a.log.Info("logout attempt", slog.String("op", "handleLogout"))
 
