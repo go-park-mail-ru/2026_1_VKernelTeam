@@ -21,3 +21,24 @@ func TestNewToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, tokenStr)
 }
+
+func TestParseToken(t *testing.T) {
+	user := models.User{ID: 42}
+	secret := "my_super_secret"
+	duration := time.Minute * 5
+
+	tokenStr, err := NewToken(user, duration, secret)
+	require.NoError(t, err)
+
+	t.Run("Valid token", func(t *testing.T) {
+		parsedToken, err := ParseToken(tokenStr, secret)
+		require.NoError(t, err)
+		assert.True(t, parsedToken.Valid)
+	})
+
+	t.Run("Invalid secret", func(t *testing.T) {
+		wrongSecret := "wrong_secret"
+		_, err := ParseToken(tokenStr, wrongSecret)
+		assert.Error(t, err)
+	})
+}
