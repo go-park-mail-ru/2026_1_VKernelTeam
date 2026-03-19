@@ -39,6 +39,50 @@ definitions:
       password:
         type: string
     type: object
+  httpapp.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  httpapp.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.LoginResponse:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  httpapp.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.RegisterResponse:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  httpapp.ValidationErrors:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
   models.Ad:
     properties:
       category_id:
