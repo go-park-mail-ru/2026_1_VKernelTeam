@@ -57,7 +57,8 @@ CREATE TABLE product_image (
     file_path text NOT NULL,
     sort_order integer DEFAULT 0 NOT NULL,
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (product_id, sort_order)
 );
 
 -- Заказы (Формирование сделки)
@@ -70,11 +71,11 @@ CREATE TABLE "order" (
     updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- Позиции заказа (Товары внутри сделки)
 CREATE TABLE order_item (
     order_id bigint NOT NULL REFERENCES "order" (id) ON DELETE CASCADE,
     product_id bigint NOT NULL REFERENCES product (id) ON DELETE RESTRICT,
     price_at_purchase bigint NOT NULL CHECK (price_at_purchase >= 0),
+    quantity integer NOT NULL DEFAULT 1 CHECK (quantity > 0),
     PRIMARY KEY (order_id, product_id)
 );
 
@@ -105,7 +106,9 @@ CREATE TABLE review (
     rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
     content text NOT NULL CHECK (length(content) BETWEEN 5 AND 2000),
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (sender_id, product_id, receiver_id),
+    CHECK (sender_id != receiver_id)
 );
 
 -- Чаты
@@ -115,7 +118,9 @@ CREATE TABLE chat (
     buyer_id bigint NOT NULL REFERENCES "user" (id) ON DELETE CASCADE,
     seller_id bigint NOT NULL REFERENCES "user" (id) ON DELETE CASCADE,
     created_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
+    updated_at timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    UNIQUE (product_id, buyer_id, seller_id),
+    CHECK (buyer_id != seller_id)
 );
 
 -- Сообщения

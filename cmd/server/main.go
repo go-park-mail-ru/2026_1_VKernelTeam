@@ -23,7 +23,6 @@ import (
 // @name token
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	cfg := config.MustLoadConfig()
 
@@ -42,6 +41,8 @@ func main() {
 	sign := <-stop
 	log.Info("received signal", "signal", sign)
 
+	cancel()
+	
 	log.Info("stopping applications")
 	application.Stop()
 	log.Info("applications stopped")

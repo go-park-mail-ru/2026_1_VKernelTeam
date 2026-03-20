@@ -1,8 +1,9 @@
 -- Создание начальных пользователей
 INSERT INTO "user" (email, password_hash, first_name, second_name)
 VALUES
-    ('admin@example.com', 'hash_admin_123', 'Иван', 'Иванов'),
-    ('buyer@example.com', 'hash_buyer_456', 'Петр', 'Петров');
+    ('admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMy.MqrqvQdgxbPKq1K1O6nKsH1v1E7qqGC', 'Иван', 'Иванов'),
+    ('buyer@example.com', '$2a$10$K4GfjvPtKhVqYdE.YmVdB.7xOdIgK1KxHpVqkXs8vQ8xPqVKjKjKy', 'Петр', 'Петров')
+ON CONFLICT (email) DO NOTHING;
 
 -- Создание категорий
 INSERT INTO category (name)
@@ -10,8 +11,12 @@ VALUES
     ('Электроника'),
     ('Недвижимость');
 
--- Создание подкатегории
 INSERT INTO category (name, parent_id)
+VALUES (
+    'Смартфоны',
+    (SELECT id FROM category WHERE name = 'Электроника')
+)
+ON CONFLICT (name) DO NOTHING;
 SELECT 'Смартфоны', id FROM category WHERE name = 'Электроника';
 
 -- Добавление товара
