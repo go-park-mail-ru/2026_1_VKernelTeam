@@ -1,0 +1,203 @@
+basePath: /api/v1
+definitions:
+  httpapp.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  httpapp.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.LoginResponse:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  httpapp.RegisterRequest:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  httpapp.RegisterResponse:
+    properties:
+      user_id:
+        type: integer
+    type: object
+  httpapp.ValidationErrors:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  models.Ad:
+    properties:
+      category_id:
+        type: integer
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      favorites_count:
+        type: integer
+      id:
+        type: integer
+      location:
+        type: string
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: integer
+      seller_id:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      views_count:
+        type: integer
+    type: object
+host: clover-go.ru
+info:
+  contact: {}
+  description: API for the Clover service.
+  title: Clover API
+  version: "1.0"
+paths:
+  /ads:
+    get:
+      description: Возвращает список всех объявлений
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список объявлений успешно получен
+          schema:
+            items:
+              $ref: '#/definitions/models.Ad'
+            type: array
+        "400":
+          description: method not allowed
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Получить список объявлений
+      tags:
+      - ads
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентифицирует пользователя по email/пароль или, при наличии cookie,
+        проверяет токен
+      parameters:
+      - description: Login credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapp.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: login successful
+          schema:
+            $ref: '#/definitions/httpapp.LoginResponse'
+        "400":
+          description: invalid request body or missing fields
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "401":
+          description: email/password validation errors or invalid credentials/token
+          schema:
+            $ref: '#/definitions/httpapp.ValidationErrors'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Вход пользователя
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Инвалидирует текущую сессию и очищает аутентификационную куку
+      responses:
+        "200":
+          description: logout successful
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: invalid or expired token
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Выход пользователя
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт нового пользователя и автоматически выполняет вход
+      parameters:
+      - description: Registration data
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapp.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: user registered successfully
+          schema:
+            $ref: '#/definitions/httpapp.RegisterResponse'
+        "400":
+          description: validation failed (email/password/name) or user already exists
+          schema:
+            $ref: '#/definitions/httpapp.ValidationErrors'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/httpapp.ErrorResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+securityDefinitions:
+  CookieAuth:
+    in: cookie
+    name: token
+    type: apiKey
+swagger: "2.0"
