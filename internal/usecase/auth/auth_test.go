@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+	pg "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgresql"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -106,7 +106,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 
 	storageMock := &mockUserStorage{
 		SaveUserFunc: func(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
-			return 0, storage.ErrUserExists
+			return 0, pg.ErrUserExists
 		},
 	}
 
@@ -193,7 +193,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 	storageMock := &mockUserStorage{
 		UserFunc: func(ctx context.Context, email string) (models.User, error) {
-			return models.User{}, storage.ErrUserNotFound
+			return models.User{}, pg.ErrUserNotFound
 		},
 	}
 
@@ -262,7 +262,7 @@ func TestIsAdmin_Error(t *testing.T) {
 
 	storageMock := &mockUserStorage{
 		IsAdminFunc: func(ctx context.Context, userID int64) (bool, error) {
-			return false, storage.ErrUserNotFound
+			return false, pg.ErrUserNotFound
 		},
 	}
 

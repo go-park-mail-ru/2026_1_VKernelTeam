@@ -16,7 +16,6 @@ import (
 // не десериализуем в эту структуру напрямую. Поля уже имеют нужный тип.
 type Config struct {
 	Env             string
-	StoragePath     string
 	DatabaseDSN     string
 	TokenTTL        time.Duration
 	HTTP            HTTPConfig
@@ -55,8 +54,6 @@ func MustLoadConfig() *Config {
 	// Анонимная прокси-структура, которая в точности JSON.
 	var rawConfig struct {
 		Env             string     `json:"env"`
-		StoragePath     string     `json:"storage_path"`
-		DatabaseDSN     string     `json:"database_dsn"`
 		TokenTTL        string     `json:"token_ttl"`
 		HTTP            HTTPConfig `json:"http"`
 		CleanupInterval string     `json:"cleanup_interval"`
@@ -80,7 +77,6 @@ func MustLoadConfig() *Config {
 	// попутно преобразуя типы с помощью хелпера.
 	return &Config{
 		Env:             rawConfig.Env,
-		StoragePath:     rawConfig.StoragePath,
 		DatabaseDSN:     dsn,
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,

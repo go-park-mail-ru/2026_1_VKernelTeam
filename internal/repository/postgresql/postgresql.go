@@ -12,7 +12,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+)
+
+// Sentinel-ошибки — используются в usecase/auth для проверки через errors.Is.
+var (
+	ErrUserExists   = errors.New("user already exists")
+	ErrUserNotFound = errors.New("user not found")
 )
 
 // GetAll возвращает список активных объявлений с агрегированными фото,
@@ -136,7 +141,7 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte, n
 	if err != nil {
 		// pgx возвращает код 23505 при нарушении UNIQUE
 		if isPgUniqueViolation(err) {
-			return 0, storage.ErrUserExists
+			return 0, ErrUserExists
 		}
 		return 0, fmt.Errorf("SaveUser: %w", err)
 	}
@@ -160,7 +165,7 @@ func (s *Storage) User(ctx context.Context, email string) (models.User, error) {
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, storage.ErrUserNotFound
+			return models.User{}, ErrUserNotFound
 		}
 		return models.User{}, fmt.Errorf("User: %w", err)
 	}
@@ -177,7 +182,7 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	err := s.pool.QueryRow(ctx, query, userID).Scan(&id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return false, storage.ErrUserNotFound
+			return false, ErrUserNotFound
 		}
 		return false, fmt.Errorf("IsAdmin: %w", err)
 	}
@@ -199,7 +204,7 @@ func (s *Storage) UserByID(ctx context.Context, userID int64) (models.User, erro
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.User{}, storage.ErrUserNotFound
+			return models.User{}, ErrUserNotFound
 		}
 		return models.User{}, fmt.Errorf("UserByID: %w", err)
 	}
