@@ -1,0 +1,156 @@
+erDiagram
+    user ||--o{ product : "creates"
+    user ||--o{ review : "writes_receives"
+    user ||--o{ favorite : "adds_to"
+    user ||--o{ cart_item : "adds_to_cart"
+    user ||--o{ chat : "participates"
+    user ||--o{ message : "sends"
+    user ||--o{ order : "places"
+    user ||--o{ refresh_token : "has"
+
+    category ||--o{ product : "contains"
+    category ||--o{ category : "parent_of"
+
+    product ||--o{ product_image : "has"
+    product ||--o{ favorite : "is_in"
+    product ||--o{ review : "is_about"
+    product ||--o{ product_price_history : "has"
+    product ||--o{ product_status_history : "has"
+    product ||--o{ cart_item : "is_in"
+    product ||--o{ chat : "discussed_in"
+    product ||--o{ product_view : "viewed_by"
+    product ||--o{ order_item : "sold_in"
+
+    order ||--|{ order_item : "contains"
+    chat ||--o{ message : "contains"
+
+    user {
+        bigint id PK
+        text email UK
+        text password_hash
+        text first_name
+        text second_name
+        text avatar_path
+        numeric rating
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    refresh_token {
+        text token PK
+        bigint user_id FK
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    product {
+        bigint id PK
+        bigint seller_id FK
+        bigint category_id FK
+        text title
+        text description
+        bigint price
+        text status
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+
+    product_view {
+        bigint id PK
+        bigint product_id FK
+        bigint user_id FK "NULLable"
+        timestamp viewed_at
+    }
+
+    product_price_history {
+        bigint id PK
+        bigint product_id FK
+        bigint old_price
+        bigint new_price
+        timestamp created_at
+    }
+
+    product_status_history {
+        bigint id PK
+        bigint product_id FK
+        text old_status
+        text new_status
+        timestamp created_at
+    }
+
+    category {
+        bigint id PK
+        text name UK
+        bigint parent_id FK "NULLable"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    product_image {
+        bigint id PK
+        bigint product_id FK
+        text file_path
+        integer sort_order
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    favorite {
+        bigint user_id PK_FK
+        bigint product_id PK_FK
+        timestamp created_at
+    }
+
+    cart_item {
+        bigint user_id PK_FK
+        bigint product_id PK_FK
+        integer quantity
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    order {
+        bigint id PK
+        bigint buyer_id FK
+        bigint total_amount
+        text status
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    order_item {
+        bigint order_id PK_FK
+        bigint product_id PK_FK
+        bigint price_at_purchase
+    }
+
+    review {
+        bigint id PK
+        bigint sender_id FK
+        bigint receiver_id FK
+        bigint product_id FK
+        integer rating
+        text content
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    chat {
+        bigint id PK
+        bigint product_id FK
+        bigint buyer_id FK
+        bigint seller_id FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    message {
+        bigint id PK
+        bigint chat_id FK
+        bigint sender_id FK
+        text text_content
+        boolean is_read
+        timestamp created_at
+        timestamp updated_at
+    }
