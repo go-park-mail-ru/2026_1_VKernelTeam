@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +22,9 @@ import (
 // @in cookie
 // @name token
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	cfg := config.MustLoadConfig()
 
 	log := logger.SetupLogger(cfg.Env)
@@ -28,7 +32,7 @@ func main() {
 	log.Info("starting applications")
 	// convert string to time.Duration
 
-	application := app.New(log, cfg)
+	application := app.New(ctx,log, cfg)
 	go application.HTTPServer.MustRun()
 	log.Info("applications started")
 

@@ -4,28 +4,30 @@
 package app
 
 import (
+	"context"
 	"log/slog"
 
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
-	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
-	ads "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ads"
 	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
+	pg "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgresql"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 type App struct {
 	HTTPServer *httpapp.App
 	Blacklist  *blacklist.InMemory
+	pgStorage  *pg.Storage
 }
 
 // New собирает все зависимости и возвращает готовое приложение.
 func New(
+	ctx context.Context,
 	log *slog.Logger,
 	cfg *config.Config,
 ) *App {
-	storage, err := storage.New(cfg.StoragePath)
+	pgStorage, err := pg.New(ctx, cfg.DatabaseDSN)
 	if err != nil {
 		log.Error("failed to initialize storage", "err", err)
 		panic(err)
@@ -35,13 +37,11 @@ func New(
 	tokenBlacklist := blacklist.New(cfg.CleanupInterval)
 
 	// создаём сервис Auth
-	authService := auth.New(log, storage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
+	authService := auth.New(log, pgStorage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
 
-	// создеём сервис Ads
-	adsService := ads.NewAdsRepository()
-
+	// pgStorage реализует интерфейс handlers.Ads (метод GetAll)
 	services := handlers.Services{
-		Ads:  adsService,
+		Ads:  pgStorage,
 		Auth: authService,
 	}
 
@@ -51,6 +51,7 @@ func New(
 	return &App{
 		HTTPServer: httpApp,
 		Blacklist:  tokenBlacklist,
+		pgStorage:  pgStorage,
 	}
 }
 
@@ -58,4 +59,5 @@ func New(
 func (a *App) Stop() {
 	a.Blacklist.Stop()
 	a.HTTPServer.Stop()
+	a.pgStorage.Close()
 }

@@ -15,6 +15,10 @@ help:
 	@echo "  deploy            - Обновить код и перезапустить контейнеры на сервере"
 
 
+migrate:
+	migrate -path ./internal/repository/postgresql/migrations \
+        -database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
+
 # Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go -o ./api

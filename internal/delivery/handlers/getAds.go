@@ -23,7 +23,11 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// копируем список объявлений без гонки данных
-	adsList := h.services.Ads.GetAll()
+	adsList, err := h.services.Ads.GetAll(r.Context())
+	if err != nil {
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
 
 	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)

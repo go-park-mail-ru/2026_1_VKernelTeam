@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -16,11 +17,11 @@ type mockAdsService struct {
 	GetAllFunc func() []models.Ad
 }
 
-func (m *mockAdsService) GetAll() []models.Ad {
+func (m *mockAdsService) GetAll(_ context.Context) ([]models.Ad, error) {
 	if m.GetAllFunc != nil {
-		return m.GetAllFunc()
+		return m.GetAllFunc(), nil
 	}
-	return nil
+	return []models.Ad{}, nil
 }
 
 func newTestAdsHandlers(adsSvc Ads) *AdsHandlers {

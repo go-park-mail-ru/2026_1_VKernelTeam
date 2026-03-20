@@ -36,6 +36,7 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 
 		t.Setenv("CONFIG_PATH", tmpFile.Name())
 		t.Setenv("TOKEN_SECRET", "test-secret-key")
+		t.Setenv("DATABASE_DSN", "postgres://user:pass@localhost:5432/testdb?sslmode=disable")
 
 		cfg := MustLoadConfig()
 		assert.NotNil(t, cfg)
@@ -53,6 +54,7 @@ func TestMustLoadConfig_EmptyPath(t *testing.T) {
 	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	t.Setenv("CONFIG_PATH", "")
 	t.Setenv("TOKEN_SECRET", "dummy")
+	t.Setenv("DATABASE_DSN", "postgres://user:pass@localhost:5432/testdb?sslmode=disable")
 	assert.PanicsWithValue(t, "config path is empty", func() {
 		MustLoadConfig()
 	})

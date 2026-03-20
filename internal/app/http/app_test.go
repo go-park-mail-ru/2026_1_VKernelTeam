@@ -25,9 +25,9 @@ type MockAds struct {
 	mock.Mock
 }
 
-func (m *MockAds) GetAll() []models.Ad {
-	args := m.Called()
-	return args.Get(0).([]models.Ad)
+func (m *MockAds) GetAll(ctx context.Context) ([]models.Ad, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]models.Ad), args.Error(1)
 }
 
 type MockAuth struct {
@@ -428,7 +428,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	mockAds.On("GetAll").Return(testAds).Once()
+	mockAds.On("GetAll", mock.Anything).Return(testAds, nil).Once()
 
 	request, _ := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	rr := httptest.NewRecorder()
@@ -470,7 +470,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 // проверка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	app, _, mockAds, _ := setupTestApp()
-	mockAds.On("GetAll").Return([]models.Ad{}).Once()
+	mockAds.On("GetAll", mock.Anything).Return([]models.Ad{}, nil).Once()
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)

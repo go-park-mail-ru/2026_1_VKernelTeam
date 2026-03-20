@@ -17,6 +17,7 @@ import (
 type Config struct {
 	Env             string
 	StoragePath     string
+	DatabaseDSN     string
 	TokenTTL        time.Duration
 	HTTP            HTTPConfig
 	CleanupInterval time.Duration
@@ -55,6 +56,7 @@ func MustLoadConfig() *Config {
 	var rawConfig struct {
 		Env             string     `json:"env"`
 		StoragePath     string     `json:"storage_path"`
+		DatabaseDSN     string     `json:"database_dsn"`
 		TokenTTL        string     `json:"token_ttl"`
 		HTTP            HTTPConfig `json:"http"`
 		CleanupInterval string     `json:"cleanup_interval"`
@@ -69,11 +71,17 @@ func MustLoadConfig() *Config {
 		panic("TOKEN_SECRET is not set in environment or .env file")
 	}
 
+	dsn := os.Getenv("DATABASE_DSN")
+	if dsn == "" {
+		panic("DATABASE_DSN is not set in environment or .env file")
+	}
+
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
 	return &Config{
 		Env:             rawConfig.Env,
 		StoragePath:     rawConfig.StoragePath,
+		DatabaseDSN:     dsn,
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),
