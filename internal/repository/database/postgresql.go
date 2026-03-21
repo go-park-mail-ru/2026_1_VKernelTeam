@@ -20,9 +20,9 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-// GetAll возвращает список активных объявлений с агрегированными фото,
+// GetAllAds возвращает список активных объявлений с агрегированными фото,
 // количеством просмотров и избранного.
-func (s *Storage) GetAll(ctx context.Context) ([]models.Ad, error) {
+func (s *Storage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	const query = `
 		SELECT
 			p.id,

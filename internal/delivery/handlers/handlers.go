@@ -33,7 +33,7 @@ type Services struct {
 
 // Ads описывает методы сервиса объявлений
 type Ads interface {
-	GetAll(ctx context.Context) ([]models.Ad, error)
+	GetAllAds(ctx context.Context) ([]models.Ad, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации

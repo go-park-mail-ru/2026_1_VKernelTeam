@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 
-	// TODO: заменить на интерфейс, чтобы не зависеть от конкретной реализации хранилища
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	jwtlib "github.com/golang-jwt/jwt/v5"

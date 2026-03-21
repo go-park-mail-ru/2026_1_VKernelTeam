@@ -25,7 +25,7 @@ type MockAds struct {
 	mock.Mock
 }
 
-func (m *MockAds) GetAll(ctx context.Context) ([]models.Ad, error) {
+func (m *MockAds) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	args := m.Called(ctx)
 	return args.Get(0).([]models.Ad), args.Error(1)
 }

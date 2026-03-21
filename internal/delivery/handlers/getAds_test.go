@@ -14,12 +14,12 @@ import (
 
 // mockAdsService реализует интерфейс Ads для тестов
 type mockAdsService struct {
-	GetAllFunc func() []models.Ad
+	GetAllAdsFunc func() []models.Ad
 }
 
-func (m *mockAdsService) GetAll(_ context.Context) ([]models.Ad, error) {
-	if m.GetAllFunc != nil {
-		return m.GetAllFunc(), nil
+func (m *mockAdsService) GetAllAds(_ context.Context) ([]models.Ad, error) {
+	if m.GetAllAdsFunc != nil {
+		return m.GetAllAdsFunc(), nil
 	}
 	return []models.Ad{}, nil
 }
@@ -36,7 +36,7 @@ func TestHandleGetAds_Success(t *testing.T) {
 		{ID: 2, Title: "Second Ad", Price: 2000},
 	}
 	h := newTestAdsHandlers(&mockAdsService{
-		GetAllFunc: func() []models.Ad { return ads },
+		GetAllAdsFunc: func() []models.Ad { return ads },
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/ads", nil)
@@ -64,7 +64,7 @@ func TestHandleGetAds_Success(t *testing.T) {
 // TestHandleGetAds_EmptyList — возвращает пустой список без ошибок
 func TestHandleGetAds_EmptyList(t *testing.T) {
 	h := newTestAdsHandlers(&mockAdsService{
-		GetAllFunc: func() []models.Ad { return []models.Ad{} },
+		GetAllAdsFunc: func() []models.Ad { return []models.Ad{} },
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/ads", nil)
