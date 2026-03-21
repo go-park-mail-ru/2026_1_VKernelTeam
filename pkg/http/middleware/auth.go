@@ -5,10 +5,14 @@ import (
 	"log/slog"
 	"net/http"
 
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
-	utils "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// TokenChecker интерфейс для проверки отозванных токенов
+type TokenChecker interface {
+	Check(jti string) bool
+}
 
 // Свой тип для хранения ключей контекста
 type contextKey string
@@ -28,12 +32,12 @@ var (
 )
 
 // AuthMiddleware проверяет каждый запрос.
-func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) func(http.Handler) http.Handler {
+func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie("token")
 			if err != nil {
-				utils.RespondWithError(w, http.StatusUnauthorized, ErrMissingTokenCookie)
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrMissingTokenCookie)
 				return
 			}
 
@@ -45,14 +49,14 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 
 			if err != nil || !token.Valid {
 				log.Info("invalid token attempt", slog.String("error", err.Error()))
-				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidToken)
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrInvalidToken)
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
 				log.Error("failed to cast claims", slog.Any("claims", token.Claims))
-				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidTokenClaims)
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrInvalidTokenClaims)
 				return
 			}
 
@@ -60,13 +64,13 @@ func AuthMiddleware(log *slog.Logger, bl *blacklist.InMemory, secret string) fun
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
 				log.Info("attempt to use revoked token", slog.String("jti", jti))
-				utils.RespondWithError(w, http.StatusUnauthorized, ErrTokenRevoked)
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrTokenRevoked)
 				return
 			}
 
 			uidRaw, ok := claims["uid"].(float64)
 			if !ok {
-				utils.RespondWithError(w, http.StatusUnauthorized, ErrInvalidUidClaim)
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrInvalidUidClaim)
 				return
 			}
 

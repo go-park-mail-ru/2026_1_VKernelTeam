@@ -75,7 +75,7 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	token, user, err := h.services.Auth.Login(r.Context(), email, password)
+	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), email, password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())
@@ -88,6 +88,7 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 	}
 
 	h.setAuthCookie(w, token)
+	h.setRefreshCookie(w, refreshToken)
 	h.respondWithUser(w, user)
 }
 

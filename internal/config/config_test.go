@@ -18,6 +18,7 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		content := `{
 			"env": "local",
 			"token_ttl": "1h",
+			"refresh_ttl": "168h",
 			"http": {"port": 8080},
 			"cleanup_interval": "1m"
 		}`
@@ -36,6 +37,7 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		t.Setenv("CONFIG_PATH", tmpFile.Name())
 		t.Setenv("TOKEN_SECRET", "test-secret-key")
 		t.Setenv("DATABASE_DSN", "postgres://user:pass@localhost:5432/testdb?sslmode=disable")
+		t.Setenv("REDIS_ADDR", "localhost:6379")
 
 		cfg := MustLoadConfig()
 		assert.NotNil(t, cfg)
@@ -43,6 +45,7 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		assert.Equal(t, "local", cfg.Env)
 		assert.Equal(t, 8080, cfg.HTTP.Port)
 		assert.Equal(t, time.Hour, cfg.TokenTTL)
+		assert.Equal(t, 168*time.Hour, cfg.RefreshTTL)
 		assert.Equal(t, time.Minute, cfg.CleanupInterval)
 	})
 }

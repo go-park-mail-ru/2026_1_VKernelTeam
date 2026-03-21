@@ -13,3 +13,17 @@ services:
       # путь_на_хосте : путь_в_контейнере
       - ./static:/app/static
       - ./storage:/app/storage
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:

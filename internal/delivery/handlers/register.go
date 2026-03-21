@@ -66,7 +66,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// сразу логиним
-	token, user, err := h.services.Auth.Login(r.Context(), req.Email, req.Password)
+	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		h.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
@@ -74,5 +74,6 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.setAuthCookie(w, token)
+	h.setRefreshCookie(w, refreshToken)
 	h.respondWithUser(w, user)
 }

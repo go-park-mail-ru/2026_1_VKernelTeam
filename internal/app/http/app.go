@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
 	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
@@ -44,7 +42,7 @@ type App struct {
 	port         int
 	srv          *http.Server
 	services     handlers.Services
-	blacklist    auth.TokenRevoker
+	blacklist    middleware.TokenChecker
 	tokenTTL     time.Duration
 	secret       string
 	authHandlers *handlers.AuthHandlers
@@ -102,9 +100,10 @@ type ValidationErrors struct {
 func New(
 	log *slog.Logger,
 	services handlers.Services,
-	bl auth.TokenRevoker,
+	bl middleware.TokenChecker,
 	port int,
 	tokenTTL time.Duration,
+	refreshTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
@@ -117,7 +116,7 @@ func New(
 		secret:    secret,
 	}
 
-	app.authHandlers = handlers.NewAuthHandlers(log, services, bl, tokenTTL, secret)
+	app.authHandlers = handlers.NewAuthHandlers(log, services, tokenTTL, refreshTTL, secret)
 	app.adsHandlers = handlers.NewAdsHandlers(log, services)
 
 	app.setupRoutes()
@@ -141,9 +140,10 @@ const apiPrefix = "/api/v1"
 func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.authHandlers.HandleRegister)
 	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+apiPrefix+"/auth/refresh", a.authHandlers.HandleRefresh)
 
 	// Защищенная ручка (оборачиваем в Middleware)
-	authMW := middleware.AuthMiddleware(a.log, a.blacklist.(*blacklist.InMemory), a.secret)
+	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
 	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
 
 	// Ручка для Swagger UI

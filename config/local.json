@@ -1,7 +1,7 @@
 {
   "env": "local",
-  "storage_path": "./storage/sso.db",
-  "token_ttl": "24h",
+  "token_ttl": "1m",
+  "refresh_ttl": "168h",
   "http": {
     "port": 8000
   },

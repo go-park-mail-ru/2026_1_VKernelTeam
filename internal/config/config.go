@@ -17,6 +17,8 @@ import (
 type Config struct {
 	Env             string
 	DatabaseDSN     string
+	RedisAddr       string
+	RefreshTTL      time.Duration
 	TokenTTL        time.Duration
 	HTTP            HTTPConfig
 	CleanupInterval time.Duration
@@ -54,6 +56,7 @@ func MustLoadConfig() *Config {
 	// Анонимная прокси-структура, которая в точности JSON.
 	var rawConfig struct {
 		Env             string     `json:"env"`
+		RefreshTTL      string     `json:"refresh_ttl"`
 		TokenTTL        string     `json:"token_ttl"`
 		HTTP            HTTPConfig `json:"http"`
 		CleanupInterval string     `json:"cleanup_interval"`
@@ -73,11 +76,18 @@ func MustLoadConfig() *Config {
 		panic("DATABASE_DSN is not set in environment or .env file")
 	}
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		panic("REDIS_ADDR is not set in environment or .env file")
+	}
+
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
 	return &Config{
 		Env:             rawConfig.Env,
 		DatabaseDSN:     dsn,
+		RedisAddr:       redisAddr,
+		RefreshTTL:      parseDuration(rawConfig.RefreshTTL, "refresh_ttl"),
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),

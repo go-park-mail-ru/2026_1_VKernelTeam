@@ -29,7 +29,12 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.services.Auth.Logout(r.Context(), jti, time.Now().Add(h.tokenTTL)); err != nil {
+	var refreshToken string
+	if cookie, err := r.Cookie("refresh_token"); err == nil {
+		refreshToken = cookie.Value
+	}
+
+	if err := h.services.Auth.Logout(r.Context(), jti, time.Now().Add(h.tokenTTL), refreshToken); err != nil {
 		h.log.Error("failed to logout in service", slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogout)
 		return
@@ -38,11 +43,19 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: "",
-		// Domain: "clover-go.ru", // Убран хардкод домена
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   -1,              // удаляем куку
 		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
 	})
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})

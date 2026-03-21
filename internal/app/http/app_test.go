@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/stretchr/testify/assert"
@@ -34,9 +33,9 @@ type MockAuth struct {
 	mock.Mock
 }
 
-func (m *MockAuth) Login(ctx context.Context, email string, password string) (string, models.User, error) {
+func (m *MockAuth) Login(ctx context.Context, email string, password string) (string, string, models.User, error) {
 	args := m.Called(ctx, email, password)
-	return args.String(0), args.Get(1).(models.User), args.Error(2)
+	return args.String(0), args.String(1), args.Get(2).(models.User), args.Error(3)
 }
 
 func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
@@ -49,19 +48,30 @@ func (m *MockAuth) RegisterNewUser(ctx context.Context, email string, password s
 	return args.Get(0).(int64), args.Error(1)
 }
 
-func (m *MockAuth) Logout(ctx context.Context, jti string, exp time.Time) error {
-	args := m.Called(ctx, jti, exp)
+func (m *MockAuth) Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error {
+	args := m.Called(ctx, jti, exp, refreshToken)
 	return args.Error(0)
 }
 
-func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
+func (m *MockAuth) Refresh(ctx context.Context, token string) (string, string, error) {
+	args := m.Called(ctx, token)
+	return args.String(0), args.String(1), args.Error(2)
+}
+
+type mockTokenChecker struct{}
+
+func (m *mockTokenChecker) Check(_ string) bool {
+	return false
+}
+
+func setupTestApp() (*App, *MockAuth, *MockAds, *mockTokenChecker) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	// Создаем моки для обоих сервисов
 	mockAuth := new(MockAuth)
 	mockAds := new(MockAds)
 
-	bl := blacklist.New(time.Minute)
+	bl := &mockTokenChecker{}
 
 	// Собираем структуру handlers.Services, которую ожидает httpapp.New
 	services := handlers.Services{
@@ -70,7 +80,7 @@ func setupTestApp() (*App, *MockAuth, *MockAds, *blacklist.InMemory) {
 	}
 
 	// Передаем структуру services вместо одного mockAuth
-	app := New(logger, services, bl, 0, time.Hour, "secret")
+	app := New(logger, services, bl, 0, time.Hour, time.Hour, "secret")
 
 	return app, mockAuth, mockAds, bl
 }
@@ -88,7 +98,7 @@ func TestHandleRegister(t *testing.T) {
 
 		mockAuth.On("RegisterNewUser", mock.Anything, "test@test.com", "Password123", "Test User").Return(int64(1), nil).Once()
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", user, nil).Once()
+		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token-after-reg", "fake-refresh-after-reg", user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -228,7 +238,7 @@ func TestHandleLogin(t *testing.T) {
 
 		user := models.User{ID: 1, Email: "test@test.com", Name: "Test User"}
 
-		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token", user, nil).Once()
+		mockAuth.On("Login", mock.Anything, "test@test.com", "Password123").Return("fake-token", "fake-refresh", user, nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -322,7 +332,7 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "wrong@test.com", "Password123").Return("", models.User{}, auth.ErrInvalidCredentials).Once()
+		mockAuth.On("Login", mock.Anything, "wrong@test.com", "Password123").Return("", "", models.User{}, auth.ErrInvalidCredentials).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -336,7 +346,7 @@ func TestHandleLogin(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, apiPrefix+"/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Login", mock.Anything, "err@test.com", "Password123").Return("", models.User{}, errors.New("internal")).Once()
+		mockAuth.On("Login", mock.Anything, "err@test.com", "Password123").Return("", "", models.User{}, errors.New("internal")).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -356,7 +366,7 @@ func TestHandleLogout(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(nil).Once()
+		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time"), mock.AnythingOfType("string")).Return(nil).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -390,7 +400,7 @@ func TestHandleLogout(t *testing.T) {
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
 		rr := httptest.NewRecorder()
 
-		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).Return(errors.New("err")).Once()
+		mockAuth.On("Logout", mock.Anything, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time"), mock.AnythingOfType("string")).Return(errors.New("err")).Once()
 
 		app.router.ServeHTTP(rr, req)
 
@@ -428,7 +438,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	mockAds.On("GetAll", mock.Anything).Return(testAds, nil).Once()
+	mockAds.On("GetAllAds", mock.Anything).Return(testAds, nil).Once()
 
 	request, _ := http.NewRequest("GET", apiPrefix+"/ads", nil)
 	rr := httptest.NewRecorder()
@@ -447,7 +457,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 // prvоерка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	app, _, mockAds, _ := setupTestApp()
-	_ = mockAds // POST не дойдёт до вызова GetAll
+	_ = mockAds // POST не дойдёт до вызова GetAllAds
 
 	// создаём POST запрос к эндпоинту
 	request, err := http.NewRequest("POST", apiPrefix+"/ads", nil)
@@ -470,7 +480,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 // проверка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	app, _, mockAds, _ := setupTestApp()
-	mockAds.On("GetAll", mock.Anything).Return([]models.Ad{}, nil).Once()
+	mockAds.On("GetAllAds", mock.Anything).Return([]models.Ad{}, nil).Once()
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("GET", apiPrefix+"/ads", nil)
@@ -505,7 +515,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 // тестируем неверный метод
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	app, _, mockAds, _ := setupTestApp()
-	_ = mockAds // DELETE не дойдёт до вызова GetAll
+	_ = mockAds // DELETE не дойдёт до вызова GetAllAds
 
 	// создаём запрос к эндпоинту
 	request, err := http.NewRequest("DELETE", apiPrefix+"/ads", nil)

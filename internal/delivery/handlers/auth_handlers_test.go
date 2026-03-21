@@ -21,17 +21,18 @@ import (
 // ──────────────────────── Mocks ────────────────────────
 
 type mockAuthService struct {
-	LoginFunc                   func(ctx context.Context, email, password string) (string, models.User, error)
+	LoginFunc                   func(ctx context.Context, email, password string) (string, string, models.User, error)
 	ValidateTokenAndGetUserFunc func(ctx context.Context, tokenString string) (models.User, error)
 	RegisterNewUserFunc         func(ctx context.Context, email, password, name string) (int64, error)
-	LogoutFunc                  func(ctx context.Context, jti string, exp time.Time) error
+	LogoutFunc                  func(ctx context.Context, jti string, exp time.Time, refreshToken string) error
+	RefreshFunc                 func(ctx context.Context, token string) (string, string, error)
 }
 
-func (m *mockAuthService) Login(ctx context.Context, email, password string) (string, models.User, error) {
+func (m *mockAuthService) Login(ctx context.Context, email, password string) (string, string, models.User, error) {
 	if m.LoginFunc != nil {
 		return m.LoginFunc(ctx, email, password)
 	}
-	return "", models.User{}, nil
+	return "", "", models.User{}, nil
 }
 func (m *mockAuthService) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
 	if m.ValidateTokenAndGetUserFunc != nil {
@@ -45,23 +46,26 @@ func (m *mockAuthService) RegisterNewUser(ctx context.Context, email, password, 
 	}
 	return 0, nil
 }
-func (m *mockAuthService) Logout(ctx context.Context, jti string, exp time.Time) error {
+func (m *mockAuthService) Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error {
 	if m.LogoutFunc != nil {
-		return m.LogoutFunc(ctx, jti, exp)
+		return m.LogoutFunc(ctx, jti, exp, refreshToken)
 	}
 	return nil
 }
 
-type mockTokenRevoker struct{}
-
-func (m *mockTokenRevoker) Add(_ string, _ time.Time) {}
+func (m *mockAuthService) Refresh(ctx context.Context, token string) (string, string, error) {
+	if m.RefreshFunc != nil {
+		return m.RefreshFunc(ctx, token)
+	}
+	return "", "", nil
+}
 
 // ──────────────────────── Helpers ──────────────────────
 
 func newTestAuthHandlers(authSvc Auth) *AuthHandlers {
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	services := Services{Auth: authSvc}
-	return NewAuthHandlers(log, services, &mockTokenRevoker{}, time.Hour, "test-secret")
+	return NewAuthHandlers(log, services, time.Hour, time.Hour, "test-secret")
 }
 
 func testUser() models.User {
@@ -129,8 +133,8 @@ func TestHandleLogin_WithInvalidCookie(t *testing.T) {
 func TestHandleLogin_Success(t *testing.T) {
 	user := testUser()
 	authSvc := &mockAuthService{
-		LoginFunc: func(_ context.Context, _, _ string) (string, models.User, error) {
-			return "some-jwt-token", user, nil
+		LoginFunc: func(_ context.Context, _, _ string) (string, string, models.User, error) {
+			return "some-jwt-token", "some-refresh-token", user, nil
 		},
 	}
 	h := newTestAuthHandlers(authSvc)
@@ -184,8 +188,8 @@ func TestHandleLogin_MissingFields(t *testing.T) {
 // TestHandleLogin_InvalidCredentials — неверный пароль → 401
 func TestHandleLogin_InvalidCredentials(t *testing.T) {
 	authSvc := &mockAuthService{
-		LoginFunc: func(_ context.Context, _, _ string) (string, models.User, error) {
-			return "", models.User{}, auth.ErrInvalidCredentials
+		LoginFunc: func(_ context.Context, _, _ string) (string, string, models.User, error) {
+			return "", "", models.User{}, auth.ErrInvalidCredentials
 		},
 	}
 	h := newTestAuthHandlers(authSvc)
@@ -204,8 +208,8 @@ func TestHandleLogin_InvalidCredentials(t *testing.T) {
 // TestHandleLogin_InternalError — ошибка сервиса → 500
 func TestHandleLogin_InternalError(t *testing.T) {
 	authSvc := &mockAuthService{
-		LoginFunc: func(_ context.Context, _, _ string) (string, models.User, error) {
-			return "", models.User{}, errors.New("db down")
+		LoginFunc: func(_ context.Context, _, _ string) (string, string, models.User, error) {
+			return "", "", models.User{}, errors.New("db down")
 		},
 	}
 	h := newTestAuthHandlers(authSvc)
@@ -230,8 +234,8 @@ func TestHandleRegister_Success(t *testing.T) {
 		RegisterNewUserFunc: func(_ context.Context, _, _, _ string) (int64, error) {
 			return user.ID, nil
 		},
-		LoginFunc: func(_ context.Context, _, _ string) (string, models.User, error) {
-			return "some-jwt-token", user, nil
+		LoginFunc: func(_ context.Context, _, _ string) (string, string, models.User, error) {
+			return "some-jwt-token", "some-refresh-token", user, nil
 		},
 	}
 	h := newTestAuthHandlers(authSvc)
@@ -328,8 +332,8 @@ func TestHandleRegister_AutoLoginFailed(t *testing.T) {
 		RegisterNewUserFunc: func(_ context.Context, _, _, _ string) (int64, error) {
 			return 1, nil
 		},
-		LoginFunc: func(_ context.Context, _, _ string) (string, models.User, error) {
-			return "", models.User{}, errors.New("autologin failed")
+		LoginFunc: func(_ context.Context, _, _ string) (string, string, models.User, error) {
+			return "", "", models.User{}, errors.New("autologin failed")
 		},
 	}
 	h := newTestAuthHandlers(authSvc)
@@ -351,7 +355,7 @@ func TestHandleRegister_AutoLoginFailed(t *testing.T) {
 func TestHandleLogout_Success(t *testing.T) {
 	called := false
 	authSvc := &mockAuthService{
-		LogoutFunc: func(_ context.Context, jti string, _ time.Time) error {
+		LogoutFunc: func(_ context.Context, jti string, _ time.Time, _ string) error {
 			called = true
 			return nil
 		},
@@ -390,7 +394,7 @@ func TestHandleLogout_NoJtiInContext(t *testing.T) {
 // TestHandleLogout_ServiceError — ошибка сервиса при выходе → 500
 func TestHandleLogout_ServiceError(t *testing.T) {
 	authSvc := &mockAuthService{
-		LogoutFunc: func(_ context.Context, _ string, _ time.Time) error {
+		LogoutFunc: func(_ context.Context, _ string, _ time.Time, _ string) error {
 			return errors.New("revoke failed")
 		},
 	}

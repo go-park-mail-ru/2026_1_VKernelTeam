@@ -65,6 +65,34 @@ func (m *mockTokenRevoker) Add(jti string, exp time.Time) {
 	}
 }
 
+// Mock для RefreshStorage
+type mockRefreshStorage struct {
+	SaveRefreshFunc   func(ctx context.Context, token string, userID int64, ttl time.Duration) error
+	GetRefreshFunc    func(ctx context.Context, token string) (int64, error)
+	DeleteRefreshFunc func(ctx context.Context, token string) error
+}
+
+func (m *mockRefreshStorage) SaveRefresh(ctx context.Context, token string, userID int64, ttl time.Duration) error {
+	if m.SaveRefreshFunc != nil {
+		return m.SaveRefreshFunc(ctx, token, userID, ttl)
+	}
+	return nil
+}
+
+func (m *mockRefreshStorage) GetRefresh(ctx context.Context, token string) (int64, error) {
+	if m.GetRefreshFunc != nil {
+		return m.GetRefreshFunc(ctx, token)
+	}
+	return 0, nil
+}
+
+func (m *mockRefreshStorage) DeleteRefresh(ctx context.Context, token string) error {
+	if m.DeleteRefreshFunc != nil {
+		return m.DeleteRefreshFunc(ctx, token)
+	}
+	return nil
+}
+
 // Константа для тестов
 const testSecret = "test-secret-key"
 
@@ -87,7 +115,7 @@ func TestRegisterNewUser_Success(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	uid, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123", "Test User")
 	if err != nil {
@@ -112,7 +140,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123", "Existing User")
 	if err == nil {
@@ -145,9 +173,9 @@ func TestLogin_Success(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
-	token, _, err := auth.Login(context.Background(), "test@example.com", password)
+	token, _, _, err := auth.Login(context.Background(), "test@example.com", password)
 	if err != nil {
 		t.Fatalf("Login failed: %v", err)
 	}
@@ -178,9 +206,9 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
-	_, _, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
+	_, _, _, err := auth.Login(context.Background(), "test@example.com", "wrongpassword")
 	if err == nil {
 		t.Fatalf("expected error for invalid credentials")
 	}
@@ -199,9 +227,9 @@ func TestLogin_UserNotFound(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
-	_, _, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
+	_, _, _, err := auth.Login(context.Background(), "nonexistent@example.com", "password123")
 	if err == nil {
 		t.Fatalf("expected error for non-existent user")
 	}
@@ -219,7 +247,7 @@ func TestIsAdmin_True(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -244,7 +272,7 @@ func TestIsAdmin_False(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	isAdmin, err := auth.IsAdmin(context.Background(), 1)
 	if err != nil {
@@ -268,7 +296,7 @@ func TestIsAdmin_Error(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 1)
 	if err == nil {
@@ -290,7 +318,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123", "Test User")
 	if err == nil {
@@ -311,9 +339,9 @@ func TestLogin_UserProviderError(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
-	_, _, err := auth.Login(context.Background(), "user@example.com", "pwd")
+	_, _, _, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
 		t.Fatalf("expected error when user provider fails")
 	}
@@ -331,7 +359,7 @@ func TestIsAdmin_GenericError(t *testing.T) {
 
 	tokenRevoker := &mockTokenRevoker{}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
 	_, err := auth.IsAdmin(context.Background(), 123)
 	if err == nil {
@@ -348,9 +376,9 @@ func TestLogout_Success(t *testing.T) {
 		AddFunc: func(jti string, exp time.Time) {},
 	}
 
-	auth := New(log, storageMock, tokenRevoker, time.Hour, testSecret)
+	auth := New(log, storageMock, tokenRevoker, &mockRefreshStorage{}, time.Hour, time.Hour, testSecret)
 
-	err := auth.Logout(context.Background(), "my-jti", time.Now().Add(time.Hour))
+	err := auth.Logout(context.Background(), "my-jti", time.Now().Add(time.Hour), "my-refresh")
 	if err != nil {
 		t.Fatalf("expected nil error on logout")
 	}

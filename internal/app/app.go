@@ -10,15 +10,15 @@ import (
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 type App struct {
-	HTTPServer *httpapp.App
-	Blacklist  *blacklist.InMemory
-	pgStorage  *db.Storage
+	HTTPServer   *httpapp.App
+	RedisStorage *redis.Storage
+	pgStorage    *db.Storage
 }
 
 // New собирает все зависимости и возвращает готовое приложение.
@@ -33,11 +33,11 @@ func New(
 		panic(err)
 	}
 
-	// инициализируем чёрный список
-	tokenBlacklist := blacklist.New(cfg.CleanupInterval)
+	// инициализируем redis
+	redisStorage := redis.New(cfg.RedisAddr)
 
 	// создаём сервис Auth
-	authService := auth.New(log, storage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
+	authService := auth.New(log, storage, redisStorage, redisStorage, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	// pgStorage реализует интерфейс handlers.Ads (метод GetAll)
 	services := handlers.Services{
@@ -46,18 +46,18 @@ func New(
 	}
 
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, services, tokenBlacklist, cfg.HTTP.Port, cfg.TokenTTL, cfg.TokenSecret)
+	httpApp := httpapp.New(log, services, redisStorage, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	return &App{
-		HTTPServer: httpApp,
-		Blacklist:  tokenBlacklist,
-		pgStorage:  storage,
+		HTTPServer:   httpApp,
+		RedisStorage: redisStorage,
+		pgStorage:    storage,
 	}
 }
 
 // Stop корректно завершает работу всех компонентов приложения
 func (a *App) Stop() {
-	a.Blacklist.Stop()
+	a.RedisStorage.Close()
 	a.HTTPServer.Stop()
 	a.pgStorage.Close()
 }

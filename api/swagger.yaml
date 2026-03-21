@@ -160,6 +160,29 @@ paths:
       summary: Выход пользователя
       tags:
       - auth
+  /auth/refresh:
+    post:
+      description: Получает новый access и rottates refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: tokens refreshed
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: missing or invalid refresh token
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Обновление токенов
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:
