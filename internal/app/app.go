@@ -11,13 +11,15 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
+	redisCache "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/cache/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 type App struct {
 	HTTPServer   *httpapp.App
-	RedisStorage *redis.Storage
+	RedisCache   *redisCache.RedisCache
 	pgStorage    *db.Storage
 }
 
@@ -34,10 +36,12 @@ func New(
 	}
 
 	// инициализируем redis
-	redisStorage := redis.New(cfg.RedisAddr)
+	rc := redisCache.New(cfg.RedisAddr)
+	bl := blacklist.New(rc)
+	ref := refresh.New(rc)
 
 	// создаём сервис Auth
-	authService := auth.New(log, storage, redisStorage, redisStorage, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
+	authService := auth.New(log, storage, bl, ref, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	// pgStorage реализует интерфейс handlers.Ads (метод GetAll)
 	services := handlers.Services{
@@ -46,18 +50,17 @@ func New(
 	}
 
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, services, redisStorage, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
+	httpApp := httpapp.New(log, services, bl, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	return &App{
 		HTTPServer:   httpApp,
-		RedisStorage: redisStorage,
+		RedisCache:   rc,
 		pgStorage:    storage,
 	}
 }
 
-// Stop корректно завершает работу всех компонентов приложения
 func (a *App) Stop() {
-	a.RedisStorage.Close()
+	a.RedisCache.Close()
 	a.HTTPServer.Stop()
 	a.pgStorage.Close()
 }
