@@ -14,7 +14,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 
 	// TODO: заменить на интерфейс, чтобы не зависеть от конкретной реализации хранилища
-	pg "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgresql"
+	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
@@ -80,7 +80,7 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, model
 
 	user, err := a.userStorage.User(ctx, email)
 	if err != nil {
-		if errors.Is(err, pg.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			log.Error("user not found")
 			return "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
 		}
@@ -129,7 +129,7 @@ func (a *Auth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) 
 	userID := int64(uidRaw)
 	user, err := a.userStorage.UserByID(ctx, userID)
 	if err != nil {
-		if errors.Is(err, pg.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			log.Info("user not found", slog.Int64("user_id", userID))
 			return models.User{}, fmt.Errorf("user not found: %w", err)
 		}
@@ -176,7 +176,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password, name string
 
 	id, err := a.userStorage.SaveUser(ctx, email, passHash, name)
 	if err != nil {
-		if errors.Is(err, pg.ErrUserExists) {
+		if errors.Is(err, db.ErrUserExists) {
 			log.Error("user already exists")
 			return 0, fmt.Errorf("%s: %w", op, ErrUserAlreadyExists)
 		}
@@ -200,7 +200,7 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 
 	isAdmin, err := a.userStorage.IsAdmin(ctx, userID)
 	if err != nil {
-		if errors.Is(err, pg.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			return false, fmt.Errorf("%s: %w", op, err)
 		}
 		log.Error("failed to check if user is admin")

@@ -11,14 +11,14 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
-	pg "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgresql"
+	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 type App struct {
 	HTTPServer *httpapp.App
 	Blacklist  *blacklist.InMemory
-	pgStorage  *pg.Storage
+	pgStorage  *db.Storage
 }
 
 // New собирает все зависимости и возвращает готовое приложение.
@@ -27,7 +27,7 @@ func New(
 	log *slog.Logger,
 	cfg *config.Config,
 ) *App {
-	pgStorage, err := pg.New(ctx, cfg.DatabaseDSN)
+	storage, err := db.New(ctx, cfg.DatabaseDSN)
 	if err != nil {
 		log.Error("failed to initialize storage", "err", err)
 		panic(err)
@@ -37,11 +37,11 @@ func New(
 	tokenBlacklist := blacklist.New(cfg.CleanupInterval)
 
 	// создаём сервис Auth
-	authService := auth.New(log, pgStorage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
+	authService := auth.New(log, storage, tokenBlacklist, cfg.TokenTTL, cfg.TokenSecret)
 
 	// pgStorage реализует интерфейс handlers.Ads (метод GetAll)
 	services := handlers.Services{
-		Ads:  pgStorage,
+		Ads:  storage,
 		Auth: authService,
 	}
 
@@ -51,7 +51,7 @@ func New(
 	return &App{
 		HTTPServer: httpApp,
 		Blacklist:  tokenBlacklist,
-		pgStorage:  pgStorage,
+		pgStorage:  storage,
 	}
 }
 
