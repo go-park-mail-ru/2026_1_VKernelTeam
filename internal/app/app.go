@@ -15,6 +15,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
 	redisCache "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/cache/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/ads"
 )
 
 type App struct {
@@ -43,9 +44,11 @@ func New(
 	// создаём сервис Auth
 	authService := auth.New(log, storage, bl, ref, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
-	// pgStorage реализует интерфейс handlers.Ads (метод GetAll)
+	// создеём сервис Ads
+	adsService := ads.New(log, storage)
+
 	services := handlers.Services{
-		Ads:  storage,
+		Ads:  adsService,
 		Auth: authService,
 	}
 
