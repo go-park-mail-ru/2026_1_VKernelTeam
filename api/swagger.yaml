@@ -1,18 +1,18 @@
 basePath: /api/v1
 definitions:
-  httpapp.ErrorResponse:
+  handlers.ErrorResponse:
     properties:
       error:
         type: string
     type: object
-  httpapp.LoginRequest:
+  handlers.LoginRequest:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  httpapp.LoginResponse:
+  handlers.LoginResponse:
     properties:
       email:
         type: string
@@ -21,7 +21,7 @@ definitions:
       user_id:
         type: integer
     type: object
-  httpapp.RegisterRequest:
+  handlers.RegisterRequest:
     properties:
       email:
         type: string
@@ -30,12 +30,7 @@ definitions:
       password:
         type: string
     type: object
-  httpapp.RegisterResponse:
-    properties:
-      user_id:
-        type: integer
-    type: object
-  httpapp.ValidationErrors:
+  handlers.ValidationErrors:
     properties:
       email:
         type: string
@@ -99,11 +94,11 @@ paths:
         "400":
           description: method not allowed
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: internal server error
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
       summary: Получить список объявлений
       tags:
       - ads
@@ -119,26 +114,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/httpapp.LoginRequest'
+          $ref: '#/definitions/handlers.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: login successful
           schema:
-            $ref: '#/definitions/httpapp.LoginResponse'
+            $ref: '#/definitions/handlers.LoginResponse'
         "400":
           description: invalid request body or missing fields
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
         "401":
           description: email/password validation errors or invalid credentials/token
           schema:
-            $ref: '#/definitions/httpapp.ValidationErrors'
+            $ref: '#/definitions/handlers.ValidationErrors'
         "500":
           description: internal server error
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
       summary: Вход пользователя
       tags:
       - auth
@@ -155,11 +150,11 @@ paths:
         "401":
           description: invalid or expired token
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
         "500":
           description: internal server error
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - CookieAuth: []
       summary: Выход пользователя
@@ -176,22 +171,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/httpapp.RegisterRequest'
+          $ref: '#/definitions/handlers.RegisterRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: user registered successfully
+          description: user registered and logged in successfully
           schema:
-            $ref: '#/definitions/httpapp.RegisterResponse'
+            $ref: '#/definitions/handlers.LoginResponse'
         "400":
           description: validation failed (email/password/name) or user already exists
           schema:
-            $ref: '#/definitions/httpapp.ValidationErrors'
+            $ref: '#/definitions/handlers.ValidationErrors'
         "500":
           description: internal server error
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
       summary: Регистрация пользователя
       tags:
       - auth

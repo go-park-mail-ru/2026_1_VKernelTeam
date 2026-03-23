@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	mock_auth "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth/mocks"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
+	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+	mock_auth "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth/mocks"
 	"github.com/golang/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -78,8 +78,8 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		t.Fatalf("expected error for existing user")
 	}
 
-	if !errors.Is(err, storage.ErrUserExists) {
-		t.Errorf("expected ErrUserExists, got %v", err)
+	if !errors.Is(err, ErrUserAlreadyExists) {
+		t.Errorf("expected ErrUserAlreadyExists, got %v", err)
 	}
 }
 
