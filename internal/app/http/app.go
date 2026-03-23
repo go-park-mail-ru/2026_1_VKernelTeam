@@ -51,53 +51,6 @@ type App struct {
 	adsHandlers  *handlers.AdsHandlers
 }
 
-// RegisterRequest представляет собой структуру для запроса на регистрацию пользователя.
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-}
-
-// RegisterResponse представляет собой структуру для ответа на запрос регистрации пользователя.
-type RegisterResponse struct {
-	UserID int64 `json:"user_id"`
-}
-
-// LoginRequest представляет собой структуру для запроса на вход в систему, содержащую email и пароль.
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
-type LoginResponse struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
-}
-
-// // IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
-// type IsAdminRequest struct {
-// 	UserID int64 `json:"user_id"`
-// }
-
-// // IsAdminResponse представляет собой структуру для ответа на запрос проверки прав администратора.
-// type IsAdminResponse struct {
-// 	IsAdmin bool `json:"is_admin"`
-// }
-
-// ErrorResponse представляет собой структуру для отправки ошибок в формате JSON.
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-// ValidationErrors представляет собой структуру для отправки ошибок валидации по полям.
-type ValidationErrors struct {
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-	Name     string `json:"name,omitempty"`
-}
-
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
