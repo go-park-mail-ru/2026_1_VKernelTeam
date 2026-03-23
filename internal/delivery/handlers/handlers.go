@@ -13,6 +13,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
+//go:generate mockgen -source=handlers.go -destination=mocks/mock_handlers.go -package=mocks
+
 // ошибки HTTP-обработчиков
 const (
 	ErrInvalidRequestBody   = "invalid request body"

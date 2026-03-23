@@ -25,7 +25,7 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	jti, ok := r.Context().Value(middleware.JtiKey).(string)
 	if !ok {
 		h.log.Error("jti not found in context")
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrInternalError)
 		return
 	}
 
