@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,7 +16,10 @@ type Client struct {
 }
 
 // New создаёт пул соединений и проверяет доступность БД.
-func New(ctx context.Context, dsn string) (*Client, error) {
+func New(dsn string) (*Client, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("postgres.New: parse config: %w", err)

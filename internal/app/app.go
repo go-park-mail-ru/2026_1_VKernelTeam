@@ -4,7 +4,6 @@
 package app
 
 import (
-	"context"
 	"log/slog"
 
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http"
@@ -26,11 +25,10 @@ type App struct {
 
 // New собирает все зависимости и возвращает готовое приложение.
 func New(
-	ctx context.Context,
 	log *slog.Logger,
 	cfg *config.Config,
 ) *App {
-	dbClient, err := db.New(ctx, cfg.DatabaseDSN)
+	dbClient, err := db.New(cfg.DatabaseDSN)
 	if err != nil {
 		log.Error("failed to initialize postgres client", "err", err)
 		panic(err)
