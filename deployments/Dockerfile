@@ -22,7 +22,7 @@ WORKDIR /app
 COPY --from=builder /app/clover .
 COPY config ./config
 COPY .env .env
-COPY docs ./docs
+COPY api ./api
 
 # Создаём пустые папки для статики и хранилища
 RUN mkdir -p /app/static /app/storage

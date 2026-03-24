@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
+	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+//go:generate mockgen -source=auth.go -destination=mocks/mock_auth.go
 
 // TokenRevoker описывает интерфейс для отзыва токенов
 type TokenRevoker interface {
@@ -46,8 +48,10 @@ type Auth struct {
 
 // ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
 // сохранёнными данными.
+// ErrUserAlreadyExists возвращается, когда пытаются создать пользователя с email, который уже существует.
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrUserAlreadyExists  = errors.New("user already exists")
 )
 
 // New создаёт новый экземпляр Auth с переданными зависимостями.
@@ -174,7 +178,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password, name string
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			log.Error("user already exists")
-			return 0, fmt.Errorf("%s: %w", op, err)
+			return 0, fmt.Errorf("%s: %w", op, ErrUserAlreadyExists)
 		}
 		log.Error("failed to save user")
 		return 0, fmt.Errorf("%s: %w", op, err)

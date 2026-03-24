@@ -6,6 +6,7 @@ require golang.org/x/crypto v0.48.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
+	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.11.1
@@ -27,7 +28,6 @@ require (
 	github.com/go-openapi/swag/typeutils v0.25.5 // indirect
 	github.com/go-openapi/swag/yamlutils v0.25.5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/swaggo/files v0.0.0-20220610200504-28940afbdbfe // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.33.0 // indirect

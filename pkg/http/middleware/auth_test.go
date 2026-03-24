@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/jwt"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
+	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

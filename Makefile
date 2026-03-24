@@ -17,7 +17,7 @@ help:
 
 # Генерация документации Swagger
 swag:
-	swag init -g cmd/server/main.go
+	swag init -g cmd/server/main.go -o ./api
 
 # Запуск приложения с локальным конфигом
 run: swag
