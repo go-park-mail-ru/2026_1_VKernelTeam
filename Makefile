@@ -16,8 +16,8 @@ help:
 
 
 migrate:
-	migrate -path ./internal/repository/postgresql/migrations \
-        -database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
+	migrate -path ./internal/repository/postgres/migrations \
+		-database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
 
 # Генерация документации Swagger
 swag:
