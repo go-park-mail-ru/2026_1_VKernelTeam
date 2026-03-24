@@ -26,7 +26,7 @@ func setupHandlers(t *testing.T) (*AuthHandlers, *AdsHandlers, *mocks.MockAuth, 
 		Ads:  mockAds,
 	}
 
-	authH := NewAuthHandlers(logger, services, bl, time.Hour, "secret")
+	authH := NewAuthHandlers(logger, services, bl, time.Hour, "test-secret")
 	adsH := NewAdsHandlers(logger, services)
 
 	return authH, adsH, mockAuth, mockAds, bl
