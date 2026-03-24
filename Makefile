@@ -73,5 +73,5 @@ vet:
 # Используется zero-downtime подход: сначала сборка, затем замена контейнеров
 deploy:
 	sudo git pull
-	docker compose up -d --build --remove-orphans
+	docker compose --env-file .env -f deployments/docker-compose.yaml up -d --build --remove-orphans
 	docker image prune -f
