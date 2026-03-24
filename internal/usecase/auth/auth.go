@@ -14,7 +14,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/google/uuid"
 
-	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/database"
+	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 

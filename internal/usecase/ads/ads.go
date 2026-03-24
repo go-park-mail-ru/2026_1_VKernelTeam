@@ -27,6 +27,7 @@ func New(
 	}
 }
 
+// GetAllAds возвращает все объявления.
 func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	const op = "ads.GetAll"
 
