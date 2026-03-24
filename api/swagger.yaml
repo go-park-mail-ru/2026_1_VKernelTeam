@@ -152,7 +152,7 @@ paths:
         "400":
           description: Missing CSRF cookie or CSRF token mismatch
           schema:
-            $ref: '#/definitions/httpapp.ErrorResponse'
+            $ref: '#/definitions/handlers.ErrorResponse'
         "401":
           description: invalid or expired token
           schema:

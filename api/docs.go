@@ -133,7 +133,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Missing CSRF cookie or CSRF token mismatch",
                         "schema": {
-                            "$ref": "#/definitions/httpapp.ErrorResponse"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
