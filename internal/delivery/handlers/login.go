@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 // HandleLogin обрабатывает запросы на вход пользователя
@@ -87,9 +88,11 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	h.setAuthCookie(w, token)
+	csrfToken := middleware.GenerateCSRFToken()
+
+	h.setAuthCookie(w, token, csrfToken)
 	h.setRefreshCookie(w, refreshToken)
-	h.respondWithUser(w, user)
+	h.respondWithUser(w, user, csrfToken)
 }
 
 // handleTokenLogin обрабатывает вход пользователя путём валидации существующего токена
@@ -101,7 +104,9 @@ func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// Устанавливаем куку с токеном
-	h.setAuthCookie(w, tokenString)
-	h.respondWithUser(w, user)
+	csrfToken := middleware.GenerateCSRFToken()
+
+	// Устанавливаем куку с токенами
+	h.setAuthCookie(w, tokenString, csrfToken)
+	h.respondWithUser(w, user, csrfToken)
 }

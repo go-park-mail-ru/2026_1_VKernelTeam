@@ -14,10 +14,13 @@ import (
 // @Description Инвалидирует текущую сессию и очищает аутентификационную куку
 // @Tags auth
 // @Success 200 {object} map[string]string "logout successful"
+// @Failure 400 {object} ErrorResponse "Missing CSRF cookie or CSRF token mismatch"
 // @Failure 401 {object} ErrorResponse "invalid or expired token"
 // @Failure 500 {object} ErrorResponse "internal server error"
 // @Router /auth/logout [post]
 // @Security CookieAuth
+// @Security CsrfCookieAuth
+// @Security CsrfHeaderAuth
 func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("logout attempt", slog.String("op", "HandleLogout"))
 
@@ -25,7 +28,7 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	jti, ok := r.Context().Value(middleware.JtiKey).(string)
 	if !ok {
 		h.log.Error("jti not found in context")
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrInternalError)
 		return
 	}
 
@@ -40,13 +43,25 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// удаляем JWT
 	http.SetCookie(w, &http.Cookie{
 		Name:  "token",
 		Value: "",
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   -1,              // удаляем куку
-		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+	})
+
+	// удаляем CSRF
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+		Expires:  time.Unix(0, 0),
 	})
 
 	http.SetCookie(w, &http.Cookie{

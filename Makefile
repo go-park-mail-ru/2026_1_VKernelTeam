@@ -25,6 +25,7 @@ swag:
 
 # Запуск приложения с локальным конфигом
 run: swag
+	docker compose --env-file .env -f deployments/docker-compose.yaml up -d db db_migrate redis
 	go run ./cmd/server/main.go --config=./config/local.json
 
 # Запуск всех тестов
@@ -37,15 +38,15 @@ test-verbose:
 
 # Проверка покрытия кода тестами
 test-coverage:
-	go test -cover ./internal/...
+	go test -cover ./internal/... ./pkg/...
 
 # Тестирование только логики аутентификации
 test-auth:
-	go test -v ./internal/services/auth/...
+	go test -v ./internal/usecase/auth/...
 
 # Тестирование только компонентов хранилища
 test-storage:
-	go test -v ./internal/storage/...
+	go test -v ./internal/repository/...
 
 # Сборка приложения в исполняемый файл
 build: swag
@@ -59,7 +60,7 @@ clean:
 
 # Запуск линтера (требуется установленный golangci-lint)
 lint:
-	golangci-lint run --fix ./...
+	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...
 
 # Форматирование кода по стандарту Go
 fmt:

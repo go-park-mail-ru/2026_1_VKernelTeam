@@ -1,106 +1,96 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
-// mockAdsService реализует интерфейс Ads для тестов
-type mockAdsService struct {
-	GetAllAdsFunc func() []models.Ad
+// Тесты для обработчика получения объявлений
+
+// Тест успешного выполнения
+func TestGetAdsHandler_Success(t *testing.T) {
+	// Получаем хендлер и мок напрямую из setupHandlers
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	testAds := []models.Ad{
+		{ID: 1, Title: "Test Ad", Price: 100},
+	}
+
+	// Настраиваем ожидание мока
+	mockAds.EXPECT().GetAllAds(gomock.Any()).Return(testAds, nil)
+
+	// Создаем запрос (путь в данном случае не важен для прямого вызова метода)
+	request := httptest.NewRequest(http.MethodGet, "/ads", nil)
+	rr := httptest.NewRecorder()
+
+	// Вызываем метод хендлера напрямую
+	adsH.HandleGetAds(rr, request)
+
+	// Проверяем результат
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var actualData []models.Ad
+	err := json.Unmarshal(rr.Body.Bytes(), &actualData)
+	assert.NoError(t, err)
+	assert.Equal(t, testAds, actualData)
 }
 
-func (m *mockAdsService) GetAllAds(_ context.Context) ([]models.Ad, error) {
-	if m.GetAllAdsFunc != nil {
-		return m.GetAllAdsFunc(), nil
-	}
-	return []models.Ad{}, nil
+// Проверка ограничения методов (обрабатываем только GET)
+func TestGetAdsHandler_OnlyGet(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	// Создаём POST запрос
+	request := httptest.NewRequest(http.MethodPost, "/ads", nil)
+	rr := httptest.NewRecorder()
+
+	// Вызываем обработчик
+	adsH.HandleGetAds(rr, request)
+
+	// Ожидаем код 400 (или 405, если логика внутри хендлера поменяется на MethodNotAllowed)
+	assert.Equal(t, http.StatusBadRequest, rr.Code, "expected status 400 for POST request")
 }
 
-func newTestAdsHandlers(adsSvc Ads) *AdsHandlers {
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	return NewAdsHandlers(log, Services{Ads: adsSvc})
+// Проверка, что сервер не падает при отсутствии объявлений
+func TestGetAdsHandler_EmptyData(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	// Возвращаем пустой слайс
+	mockAds.EXPECT().GetAllAds(gomock.Any()).Return([]models.Ad{}, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/ads", nil)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleGetAds(rr, request)
+
+	// Проверяем статус-код
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	// Получаем тело ответа
+	var actualData []models.Ad
+	err := json.Unmarshal(rr.Body.Bytes(), &actualData)
+	assert.NoError(t, err, "failed to decode JSON")
+
+	// Проверяем, что вернулся пустой массив (не nil)
+	assert.NotNil(t, actualData)
+	assert.Len(t, actualData, 0)
 }
 
-// TestHandleGetAds_Success — GET-запрос возвращает список объявлений с кодом 200
-func TestHandleGetAds_Success(t *testing.T) {
-	ads := []models.Ad{
-		{ID: 1, Title: "First Ad", Price: 1000},
-		{ID: 2, Title: "Second Ad", Price: 2000},
-	}
-	h := newTestAdsHandlers(&mockAdsService{
-		GetAllAdsFunc: func() []models.Ad { return ads },
-	})
+// Тестируем ошибку метода (дублирует логику OnlyGet, но для консистентности)
+func TestGetAdsHandler_WrongMethod(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/ads", nil)
-	w := httptest.NewRecorder()
+	// Создаём DELETE запрос
+	request := httptest.NewRequest(http.MethodDelete, "/ads", nil)
+	rr := httptest.NewRecorder()
 
-	h.HandleGetAds(w, req)
+	adsH.HandleGetAds(rr, request)
 
-	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200, got %d", resp.StatusCode)
-	}
-
-	var result []models.Ad
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-	if len(result) != len(ads) {
-		t.Errorf("expected %d ads, got %d", len(ads), len(result))
-	}
-	if result[0].ID != ads[0].ID {
-		t.Errorf("expected first ad ID %d, got %d", ads[0].ID, result[0].ID)
-	}
-}
-
-// TestHandleGetAds_EmptyList — возвращает пустой список без ошибок
-func TestHandleGetAds_EmptyList(t *testing.T) {
-	h := newTestAdsHandlers(&mockAdsService{
-		GetAllAdsFunc: func() []models.Ad { return []models.Ad{} },
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/ads", nil)
-	w := httptest.NewRecorder()
-
-	h.HandleGetAds(w, req)
-
-	if w.Result().StatusCode != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Result().StatusCode)
-	}
-}
-
-// TestHandleGetAds_MethodNotAllowed — POST-запрос возвращает 400
-func TestHandleGetAds_MethodNotAllowed(t *testing.T) {
-	h := newTestAdsHandlers(&mockAdsService{})
-
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/ads", nil)
-	w := httptest.NewRecorder()
-
-	h.HandleGetAds(w, req)
-
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Result().StatusCode)
-	}
-}
-
-// TestHandleGetAds_MethodPut — PUT-запрос также не разрешён → 400
-func TestHandleGetAds_MethodPut(t *testing.T) {
-	h := newTestAdsHandlers(&mockAdsService{})
-
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/ads", nil)
-	w := httptest.NewRecorder()
-
-	h.HandleGetAds(w, req)
-
-	if w.Result().StatusCode != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Result().StatusCode)
-	}
+	// Проверяем статус
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }

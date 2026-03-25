@@ -21,6 +21,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//go:generate mockgen -source=auth.go -destination=mocks/mock_auth.go
+
 // TokenRevoker описывает интерфейс для отзыва токенов
 type TokenRevoker interface {
 	Add(jti string, exp time.Time)

@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
 
@@ -31,7 +32,9 @@ func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setAuthCookie(w, newAccess)
+	csrfToken := middleware.GenerateCSRFToken()
+
+	h.setAuthCookie(w, newAccess, csrfToken)
 	h.setRefreshCookie(w, newRefresh)
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})

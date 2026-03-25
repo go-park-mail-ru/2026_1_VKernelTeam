@@ -6,9 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 // HandleRegister обрабатывает запросы на регистрацию новых пользователей
@@ -73,7 +74,9 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setAuthCookie(w, token)
+	csrfToken := middleware.GenerateCSRFToken()
+	h.setAuthCookie(w, token, csrfToken)
+
 	h.setRefreshCookie(w, refreshToken)
-	h.respondWithUser(w, user)
+	h.respondWithUser(w, user, csrfToken)
 }
