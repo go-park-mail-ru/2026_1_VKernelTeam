@@ -95,9 +95,10 @@ type LoginRequest struct {
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему
 type LoginResponse struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
+	UserID    int64  `json:"user_id"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	CsrfToken string `json:"csrf_token"`
 }
 
 // ErrorResponse представляет собой структуру для отправки ошибок в формате JSON
@@ -113,11 +114,24 @@ type ValidationErrors struct {
 }
 
 // setAuthCookie устанавливает cookie с токеном
-func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string) {
+func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
+	// JWT-токен
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		HttpOnly: true,
+		Name:  "token",
+		Value: token,
+		// Domain: "clover-go.ru", // Убран хардкод домена для работы на localhost
+		HttpOnly: true, // JS не увидит куку
+		// Secure:   true,                      // передача только по HTTPS
+		Path:     "/",                       // доступна везде
+		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
+		MaxAge:   int(h.tokenTTL.Seconds()), // время жизни
+	})
+
+	// CSRF-токен
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		HttpOnly: false, // JS должен иметь доступ
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(h.tokenTTL.Seconds()),
@@ -125,10 +139,11 @@ func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string) {
 }
 
 // respondWithUser отправляет успешный ответ с данными пользователя
-func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) {
+func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User, csrfToken string) {
 	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Name:      user.Name,
+		CsrfToken: csrfToken,
 	})
 }

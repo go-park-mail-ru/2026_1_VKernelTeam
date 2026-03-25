@@ -41,6 +41,23 @@ func TestHandleRegister(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
+		cookies := rr.Result().Cookies()
+		var hasToken, hasCsrf bool
+		for _, c := range cookies {
+			if c.Name == "token" {
+				hasToken = true
+				assert.Equal(t, "fake-token-after-reg", c.Value)
+			}
+			if c.Name == "csrf_token" {
+				hasCsrf = true
+				assert.NotEmpty(t, c.Value)
+			}
+		}
+		assert.True(t, hasToken, "кука 'token' не найдена")
+		assert.True(t, hasCsrf, "кука 'csrf_token' не найдена")
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
 		var resp LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
@@ -184,6 +201,23 @@ func TestHandleLogin(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
+		cookies := rr.Result().Cookies()
+		var hasToken, hasCsrf bool
+		for _, c := range cookies {
+			if c.Name == "token" {
+				hasToken = true
+				assert.Equal(t, "fake-token", c.Value)
+			}
+			if c.Name == "csrf_token" {
+				hasCsrf = true
+				assert.NotEmpty(t, c.Value)
+			}
+		}
+		assert.True(t, hasToken, "кука 'token' не найдена")
+		assert.True(t, hasCsrf, "кука 'csrf_token' не найдена")
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
 		var resp LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
@@ -305,9 +339,15 @@ func TestHandleLogout(t *testing.T) {
 	user := models.User{ID: 1, Email: "test@test.com"}
 	validToken, _ := ssntjwt.NewToken(user, time.Hour, "secret")
 
+	const testCsrf = "test-csrf-token-123"
+
 	t.Run("ValidRequest", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
+
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: testCsrf})
+		req.Header.Set("X-CSRF-Token", testCsrf)
+
 		ctx := context.WithValue(req.Context(), middleware.JtiKey, "some-test-jti")
 		req = req.WithContext(ctx)
 
@@ -336,6 +376,10 @@ func TestHandleLogout(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 		invalidToken, _ := ssntjwt.NewToken(user, time.Hour, "wrong-secret")
 		req.AddCookie(&http.Cookie{Name: "token", Value: invalidToken})
+
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: testCsrf})
+		req.Header.Set("X-CSRF-Token", testCsrf)
+
 		rr := httptest.NewRecorder()
 
 		authH.HandleLogout(rr, req)
@@ -346,6 +390,10 @@ func TestHandleLogout(t *testing.T) {
 	t.Run("AuthLogoutError", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
 		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
+
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: testCsrf})
+		req.Header.Set("X-CSRF-Token", testCsrf)
+
 		ctx := context.WithValue(req.Context(), middleware.JtiKey, "test-jti-error")
 		req = req.WithContext(ctx)
 		rr := httptest.NewRecorder()

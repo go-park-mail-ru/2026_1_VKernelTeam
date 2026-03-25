@@ -107,6 +107,12 @@ const docTemplate = `{
                 "security": [
                     {
                         "CookieAuth": []
+                    },
+                    {
+                        "CsrfCookieAuth": []
+                    },
+                    {
+                        "CsrfHeaderAuth": []
                     }
                 ],
                 "description": "Инвалидирует текущую сессию и очищает аутентификационную куку",
@@ -122,6 +128,12 @@ const docTemplate = `{
                             "additionalProperties": {
                                 "type": "string"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing CSRF cookie or CSRF token mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
@@ -209,6 +221,9 @@ const docTemplate = `{
         "handlers.LoginResponse": {
             "type": "object",
             "properties": {
+                "csrf_token": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -301,9 +316,22 @@ const docTemplate = `{
     },
     "securityDefinitions": {
         "CookieAuth": {
+            "description": "JWT session token",
             "type": "apiKey",
             "name": "token",
             "in": "cookie"
+        },
+        "CsrfCookieAuth": {
+            "description": "CSRF token stored in cookies",
+            "type": "apiKey",
+            "name": "csrf_token",
+            "in": "cookie"
+        },
+        "CsrfHeaderAuth": {
+            "description": "CSRF token required in header",
+            "type": "apiKey",
+            "name": "X-CSRF-Token",
+            "in": "header"
         }
     }
 }`

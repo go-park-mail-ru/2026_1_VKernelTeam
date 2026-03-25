@@ -75,11 +75,12 @@ func New(
 
 	app.setupRoutes()
 
-	handlerWithCORS := middleware.CORSMiddleware(app.router)
+	handlerWithCSRF := middleware.CSRFMiddleware(app.router)
+	finalHandler := middleware.CORSMiddleware(handlerWithCSRF)
 
 	app.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
-		Handler:      handlerWithCORS,          // используем наш маршрутизатор с CORS
+		Handler:      finalHandler,             // передаем итоговую цепочку
 		ReadTimeout:  15 * time.Second,         // ограничиваем время чтения запроса
 		WriteTimeout: 15 * time.Second,         // ограничиваем время записи ответа
 		IdleTimeout:  60 * time.Second,         // время жизни соединения
