@@ -20,9 +20,9 @@ import (
 // @Produce json
 // @Param input body LoginRequest true "Login credentials"
 // @Success 200 {object} LoginResponse "login successful"
-// @Failure 400 {object} ErrorResponse "invalid request body or missing fields"
-// @Failure 401 {object} ValidationErrors "email/password validation errors or invalid credentials/token"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 400 {object} ErrorResponse "invalid request body: Неверный формат тела запроса"
+// @Failure 401 {object} ErrorResponse "invalid credentials / invalid or expired token / email/password is required (ValidationErrors): Ошибка аутентификации или невалидный токен"
+// @Failure 500 {object} ErrorResponse "failed to login: Ошибка сервера при входе"
 // @Router /auth/login [post]
 func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// сначала ищем токен в куке

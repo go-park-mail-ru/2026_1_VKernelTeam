@@ -14,9 +14,9 @@ import (
 // @Description Инвалидирует текущую сессию и очищает аутентификационную куку
 // @Tags auth
 // @Success 200 {object} map[string]string "logout successful"
-// @Failure 400 {object} ErrorResponse "Missing CSRF cookie or CSRF token mismatch"
-// @Failure 401 {object} ErrorResponse "invalid or expired token"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 400 {object} ErrorResponse "Missing CSRF cookie / CSRF token mismatch: Ошибка CSRF"
+// @Failure 401 {object} ErrorResponse "missing token cookie / invalid token / token has been revoked: Ошибка авторизации (Middleware) или internal error: Отсутствует jti"
+// @Failure 500 {object} ErrorResponse "failed to logout: Ошибка сервера при выходе"
 // @Router /auth/logout [post]
 // @Security CookieAuth
 // @Security CsrfCookieAuth

@@ -12,8 +12,8 @@ import (
 // @Tags ads
 // @Produce json
 // @Success 200 {array} models.Ad "список объявлений успешно получен"
-// @Failure 400 {object} ErrorResponse "method not allowed"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 400 {object} ErrorResponse "Method not allowed: Метод не поддерживается (ожидается GET)"
+// @Failure 500 {object} ErrorResponse "internal error: Ошибка сервера при получении объявлений"
 // @Router /ads [get]
 func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы

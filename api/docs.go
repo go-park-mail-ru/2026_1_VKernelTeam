@@ -36,13 +36,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "method not allowed",
+                        "description": "Method not allowed: Метод не поддерживается (ожидается GET)",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal server error",
+                        "description": "internal error: Ошибка сервера при получении объявлений",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -82,19 +82,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid request body or missing fields",
+                        "description": "invalid request body: Неверный формат тела запроса",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "email/password validation errors or invalid credentials/token",
+                        "description": "invalid credentials / invalid or expired token / email/password is required (ValidationErrors): Ошибка аутентификации или невалидный токен",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ValidationErrors"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal server error",
+                        "description": "failed to login: Ошибка сервера при входе",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -131,19 +131,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing CSRF cookie or CSRF token mismatch",
+                        "description": "Missing CSRF cookie / CSRF token mismatch: Ошибка CSRF",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "invalid or expired token",
+                        "description": "missing token cookie / invalid token / token has been revoked: Ошибка авторизации (Middleware) или internal error: Отсутствует jti",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal server error",
+                        "description": "failed to logout: Ошибка сервера при выходе",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -172,13 +172,13 @@ const docTemplate = `{
                         }
                     },
                     "401": {
-                        "description": "missing or invalid refresh token",
+                        "description": "refresh token required / invalid refresh token: Ошибка refresh токена",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal server error",
+                        "description": "internal error: Ошибка сервера при обновлении токенов",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -218,13 +218,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "validation failed (email/password/name) or user already exists",
+                        "description": "invalid request body / user already exists / validation failed (ValidationErrors): Ошибка формата запроса, дубликат пользователя или ошибка валидации",
                         "schema": {
-                            "$ref": "#/definitions/handlers.ValidationErrors"
+                            "$ref": "#/definitions/handlers.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal server error",
+                        "description": "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе",
                         "schema": {
                             "$ref": "#/definitions/handlers.ErrorResponse"
                         }
@@ -271,20 +271,6 @@ const docTemplate = `{
             }
         },
         "handlers.RegisterRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "handlers.ValidationErrors": {
             "type": "object",
             "properties": {
                 "email": {

@@ -20,8 +20,8 @@ import (
 // @Produce json
 // @Param input body RegisterRequest true "Registration data"
 // @Success 200 {object} LoginResponse "user registered and logged in successfully"
-// @Failure 400 {object} ValidationErrors "validation failed (email/password/name) or user already exists"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 400 {object} ErrorResponse "invalid request body / user already exists / validation failed (ValidationErrors): Ошибка формата запроса, дубликат пользователя или ошибка валидации"
+// @Failure 500 {object} ErrorResponse "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе"
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest

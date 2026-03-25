@@ -14,8 +14,8 @@ import (
 // @Tags auth
 // @Produce json
 // @Success 200 {object} map[string]string "tokens refreshed"
-// @Failure 401 {object} ErrorResponse "missing or invalid refresh token"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 401 {object} ErrorResponse "refresh token required / invalid refresh token: Ошибка refresh токена"
+// @Failure 500 {object} ErrorResponse "internal error: Ошибка сервера при обновлении токенов"
 // @Router /auth/refresh [post]
 func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
