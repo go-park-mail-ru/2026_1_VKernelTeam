@@ -45,8 +45,8 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// удаляем JWT
 	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: "",
+		Name:     "token",
+		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   -1,
