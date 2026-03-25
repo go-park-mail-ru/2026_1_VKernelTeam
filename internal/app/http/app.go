@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
@@ -20,18 +21,6 @@ import (
 const (
 	opRun  = "httpapp.Run"
 	opStop = "httpapp.Stop"
-)
-
-// ошибки HTTP-обработчиков
-var (
-	ErrInvalidRequestBody   = "invalid request body"
-	ErrUserAlreadyExists    = "user already exists"
-	ErrFailedToRegisterUser = "failed to register user"
-	ErrAutoLoginFailed      = "registered, but failed to login"
-	ErrFailedToLogin        = "failed to login"
-	ErrInternalError        = "internal error"
-	ErrFailedToLogout       = "failed to logout"
-	ErrMethodNotAllowed     = "Method not allowed"
 )
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -88,17 +77,15 @@ func New(
 	return app
 }
 
-const apiPrefix = "/api/v1"
-
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.authHandlers.HandleRegister)
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.authHandlers.HandleLogin)
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/refresh", a.authHandlers.HandleRefresh)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/register", a.authHandlers.HandleRegister)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/refresh", a.authHandlers.HandleRefresh)
 
 	// Защищенная ручка (оборачиваем в Middleware)
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
-	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
+	a.router.Handle("POST "+api.ApiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
@@ -110,7 +97,7 @@ func (a *App) setupRoutes() {
 	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик объявлений
-	a.router.HandleFunc("GET "+apiPrefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

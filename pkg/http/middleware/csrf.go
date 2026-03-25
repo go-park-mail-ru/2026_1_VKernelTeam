@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
-)
 
-const apiPrefix = "/api/v1"
+	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
+)
 
 // CSRF защищает от атак, проверяя наличие токена в заголовке и куках
 func CSRFMiddleware(next http.Handler) http.Handler {
@@ -17,10 +17,10 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 		if r.Method == http.MethodGet ||
 			r.Method == http.MethodOptions ||
 			r.Method == http.MethodHead ||
-			path == apiPrefix+"/auth/login" ||
-			path == apiPrefix+"/auth/register" ||
-			path == apiPrefix+"/auth/refresh" ||
-			path == apiPrefix+"/auth/logout" {
+			path == api.ApiPrefix+"/auth/login" ||
+			path == api.ApiPrefix+"/auth/register" ||
+			path == api.ApiPrefix+"/auth/refresh" ||
+			path == api.ApiPrefix+"/auth/logout" {
 			next.ServeHTTP(w, r)
 			return
 		}
