@@ -19,7 +19,7 @@ import (
 )
 
 func TestHandleRegister(t *testing.T) {
-	authH, _, mockAuth, _, _ := setupHandlers(t)
+	authH, _, mockAuth, _ := setupHandlers(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: "Test User"}
@@ -35,7 +35,7 @@ func TestHandleRegister(t *testing.T) {
 
 		mockAuth.EXPECT().
 			Login(gomock.Any(), "test@test.com", "Password123").
-			Return("fake-token-after-reg", user, nil)
+			Return("fake-token-after-reg", "fake-refresh", user, nil)
 
 		authH.HandleRegister(rr, req)
 
@@ -183,7 +183,7 @@ func TestHandleRegister(t *testing.T) {
 }
 
 func TestHandleLogin(t *testing.T) {
-	authH, _, mockAuth, _, _ := setupHandlers(t)
+	authH, _, mockAuth, _ := setupHandlers(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
 		reqBody := LoginRequest{Email: "test@test.com", Password: "Password123"}
@@ -195,7 +195,7 @@ func TestHandleLogin(t *testing.T) {
 
 		mockAuth.EXPECT().
 			Login(gomock.Any(), "test@test.com", "Password123").
-			Return("fake-token", user, nil)
+			Return("fake-token", "fake-refresh", user, nil)
 
 		authH.HandleLogin(rr, req)
 
@@ -310,7 +310,7 @@ func TestHandleLogin(t *testing.T) {
 
 		mockAuth.EXPECT().
 			Login(gomock.Any(), "wrong@test.com", "Password123").
-			Return("", models.User{}, auth.ErrInvalidCredentials)
+			Return("", "", models.User{}, auth.ErrInvalidCredentials)
 
 		authH.HandleLogin(rr, req)
 
@@ -325,7 +325,7 @@ func TestHandleLogin(t *testing.T) {
 
 		mockAuth.EXPECT().
 			Login(gomock.Any(), "err@test.com", "Password123").
-			Return("", models.User{}, errors.New("internal"))
+			Return("", "", models.User{}, errors.New("internal"))
 
 		authH.HandleLogin(rr, req)
 
@@ -334,7 +334,7 @@ func TestHandleLogin(t *testing.T) {
 }
 
 func TestHandleLogout(t *testing.T) {
-	authH, _, mockAuth, _, _ := setupHandlers(t)
+	authH, _, mockAuth, _ := setupHandlers(t)
 
 	user := models.User{ID: 1, Email: "test@test.com"}
 	validToken, _ := ssntjwt.NewToken(user, time.Hour, "secret")
@@ -354,7 +354,7 @@ func TestHandleLogout(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		mockAuth.EXPECT().
-			Logout(gomock.Any(), "some-test-jti", gomock.Any()).
+			Logout(gomock.Any(), "some-test-jti", gomock.Any(), gomock.Any()).
 			Return(nil)
 
 		authH.HandleLogout(rr, req)
@@ -399,8 +399,8 @@ func TestHandleLogout(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		mockAuth.EXPECT().
-			Logout(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(time.Time{})).
-			Return(errors.New("err"))
+			Logout(gomock.Any(), gomock.Any(), gomock.AssignableToTypeOf(time.Time{}), gomock.Any()).
+			Return(errors.New("err")).AnyTimes()
 
 		authH.HandleLogout(rr, req)
 

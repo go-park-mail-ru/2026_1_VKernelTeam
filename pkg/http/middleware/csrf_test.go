@@ -40,13 +40,13 @@ func TestCSRFMiddleware(t *testing.T) {
 		{
 			name:           "Deny POST without cookie",
 			method:         http.MethodPost,
-			path:           "/api/v1/auth/logout",
+			path:           "/api/v1/protected",
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Deny POST with mismatching tokens",
 			method:         http.MethodPost,
-			path:           "/api/v1/auth/logout",
+			path:           "/api/v1/protected",
 			cookieToken:    "token1",
 			headerToken:    "token2",
 			expectedStatus: http.StatusBadRequest,
@@ -54,9 +54,21 @@ func TestCSRFMiddleware(t *testing.T) {
 		{
 			name:           "Allow POST with matching tokens",
 			method:         http.MethodPost,
-			path:           "/api/v1/auth/logout",
+			path:           "/api/v1/protected",
 			cookieToken:    "matching_token",
 			headerToken:    "matching_token",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Allow Logout without token",
+			method:         http.MethodPost,
+			path:           "/api/v1/auth/logout",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Allow Refresh without token",
+			method:         http.MethodPost,
+			path:           "/api/v1/auth/refresh",
 			expectedStatus: http.StatusOK,
 		},
 	}

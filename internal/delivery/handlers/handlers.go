@@ -9,8 +9,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
-
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 )
 
 //go:generate mockgen -source=handlers.go -destination=mocks/mock_handlers.go -package=mocks
@@ -35,24 +33,25 @@ type Services struct {
 
 // Ads описывает методы сервиса объявлений
 type Ads interface {
-	GetAll() []models.Ad
+	GetAllAds(ctx context.Context) ([]models.Ad, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации
 type Auth interface {
-	Login(ctx context.Context, email string, password string) (string, models.User, error)
+	Login(ctx context.Context, email string, password string) (string, string, models.User, error)
 	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
-	Logout(ctx context.Context, jti string, exp time.Time) error
+	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
 type AuthHandlers struct {
-	log       *slog.Logger
-	services  Services
-	blacklist auth.TokenRevoker
-	tokenTTL  time.Duration
-	secret    string
+	log        *slog.Logger
+	services   Services
+	tokenTTL   time.Duration
+	refreshTTL time.Duration
+	secret     string
 }
 
 // AdsHandlers содержит обработчики для объявлений
@@ -62,13 +61,13 @@ type AdsHandlers struct {
 }
 
 // NewAuthHandlers создает новый экземпляр AuthHandlers
-func NewAuthHandlers(log *slog.Logger, services Services, bl auth.TokenRevoker, tokenTTL time.Duration, secret string) *AuthHandlers {
+func NewAuthHandlers(log *slog.Logger, services Services, tokenTTL time.Duration, refreshTTL time.Duration, secret string) *AuthHandlers {
 	return &AuthHandlers{
-		log:       log,
-		services:  services,
-		blacklist: bl,
-		tokenTTL:  tokenTTL,
-		secret:    secret,
+		log:        log,
+		services:   services,
+		tokenTTL:   tokenTTL,
+		refreshTTL: refreshTTL,
+		secret:     secret,
 	}
 }
 
@@ -135,6 +134,18 @@ func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfTo
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(h.tokenTTL.Seconds()),
+	})
+}
+
+// setRefreshCookie устанавливает cookie с refresh-токеном
+func (h *AuthHandlers) setRefreshCookie(w http.ResponseWriter, refreshToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(h.refreshTTL.Seconds()),
 	})
 }
 

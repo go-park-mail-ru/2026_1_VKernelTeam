@@ -48,6 +48,72 @@ func (mr *MockTokenRevokerMockRecorder) Add(jti, exp interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockTokenRevoker)(nil).Add), jti, exp)
 }
 
+// MockRefreshStorage is a mock of RefreshStorage interface.
+type MockRefreshStorage struct {
+	ctrl     *gomock.Controller
+	recorder *MockRefreshStorageMockRecorder
+}
+
+// MockRefreshStorageMockRecorder is the mock recorder for MockRefreshStorage.
+type MockRefreshStorageMockRecorder struct {
+	mock *MockRefreshStorage
+}
+
+// NewMockRefreshStorage creates a new mock instance.
+func NewMockRefreshStorage(ctrl *gomock.Controller) *MockRefreshStorage {
+	mock := &MockRefreshStorage{ctrl: ctrl}
+	mock.recorder = &MockRefreshStorageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRefreshStorage) EXPECT() *MockRefreshStorageMockRecorder {
+	return m.recorder
+}
+
+// DeleteRefresh mocks base method.
+func (m *MockRefreshStorage) DeleteRefresh(ctx context.Context, token string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRefresh", ctx, token)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRefresh indicates an expected call of DeleteRefresh.
+func (mr *MockRefreshStorageMockRecorder) DeleteRefresh(ctx, token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRefresh", reflect.TypeOf((*MockRefreshStorage)(nil).DeleteRefresh), ctx, token)
+}
+
+// GetRefresh mocks base method.
+func (m *MockRefreshStorage) GetRefresh(ctx context.Context, token string) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRefresh", ctx, token)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRefresh indicates an expected call of GetRefresh.
+func (mr *MockRefreshStorageMockRecorder) GetRefresh(ctx, token interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefresh", reflect.TypeOf((*MockRefreshStorage)(nil).GetRefresh), ctx, token)
+}
+
+// SaveRefresh mocks base method.
+func (m *MockRefreshStorage) SaveRefresh(ctx context.Context, token string, userID int64, ttl time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveRefresh", ctx, token, userID, ttl)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveRefresh indicates an expected call of SaveRefresh.
+func (mr *MockRefreshStorageMockRecorder) SaveRefresh(ctx, token, userID, ttl interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveRefresh", reflect.TypeOf((*MockRefreshStorage)(nil).SaveRefresh), ctx, token, userID, ttl)
+}
+
 // MockUserProviderSaver is a mock of UserProviderSaver interface.
 type MockUserProviderSaver struct {
 	ctrl     *gomock.Controller

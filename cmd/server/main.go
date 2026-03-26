@@ -38,7 +38,6 @@ func main() {
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	// convert string to time.Duration
 
 	application := app.New(log, cfg)
 	go application.HTTPServer.MustRun()

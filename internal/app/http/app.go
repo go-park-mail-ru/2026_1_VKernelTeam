@@ -3,6 +3,8 @@
 // прав администратора, а также простую структуру сервера.
 package httpapp
 
+//go:generate mockgen -source=app.go -destination=mocks/mock_app.go
+
 import (
 	"context"
 	"fmt"
@@ -10,9 +12,9 @@ import (
 	"net/http"
 	"time"
 
+	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
 	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
@@ -24,17 +26,30 @@ const (
 	opStop = "httpapp.Stop"
 )
 
-// ошибки HTTP-обработчиков
-var (
-	ErrInvalidRequestBody   = "invalid request body"
-	ErrUserAlreadyExists    = "user already exists"
-	ErrFailedToRegisterUser = "failed to register user"
-	ErrAutoLoginFailed      = "registered, but failed to login"
-	ErrFailedToLogin        = "failed to login"
-	ErrInternalError        = "internal error"
-	ErrFailedToLogout       = "failed to logout"
-	ErrMethodNotAllowed     = "Method not allowed"
-)
+// Auth описывает минимальный набор методов сервиса аутентификации
+type Auth interface {
+	Login(ctx context.Context, email string, password string) (string, string, models.User, error)
+	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
+	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
+	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+}
+
+// Ads описывает методы сервиса объявлений
+type Ads interface {
+	GetAllAds(ctx context.Context) ([]models.Ad, error)
+}
+
+// TokenChecker интерфейс для проверки отозванных токенов
+type TokenChecker interface {
+	Check(jti string) bool
+}
+
+// Services объединяет все бизнес-сервисы приложения
+type Services struct {
+	Ads  Ads
+	Auth Auth
+}
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
@@ -43,8 +58,8 @@ type App struct {
 	router       *http.ServeMux
 	port         int
 	srv          *http.Server
-	services     handlers.Services
-	blacklist    auth.TokenRevoker
+	services     Services
+	blacklist    TokenChecker
 	tokenTTL     time.Duration
 	secret       string
 	authHandlers *handlers.AuthHandlers
@@ -54,10 +69,11 @@ type App struct {
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
-	services handlers.Services,
-	bl auth.TokenRevoker,
+	services Services,
+	bl TokenChecker,
 	port int,
 	tokenTTL time.Duration,
+	refreshTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
@@ -70,8 +86,14 @@ func New(
 		secret:    secret,
 	}
 
-	app.authHandlers = handlers.NewAuthHandlers(log, services, bl, tokenTTL, secret)
-	app.adsHandlers = handlers.NewAdsHandlers(log, services)
+	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+	}, tokenTTL, refreshTTL, secret)
+	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+	})
 
 	app.setupRoutes()
 
@@ -89,16 +111,15 @@ func New(
 	return app
 }
 
-const apiPrefix = "/api/v1"
-
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.authHandlers.HandleRegister)
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/register", a.authHandlers.HandleRegister)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/refresh", a.authHandlers.HandleRefresh)
 
 	// Защищенная ручка (оборачиваем в Middleware)
-	authMW := middleware.AuthMiddleware(a.log, a.blacklist.(*blacklist.InMemory), a.secret)
-	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
+	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
+	a.router.Handle("POST "+api.ApiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
@@ -110,7 +131,7 @@ func (a *App) setupRoutes() {
 	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// регистрируем обработчик объявлений
-	a.router.HandleFunc("GET "+apiPrefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

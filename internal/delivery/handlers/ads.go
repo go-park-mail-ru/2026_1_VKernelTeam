@@ -12,8 +12,8 @@ import (
 // @Tags ads
 // @Produce json
 // @Success 200 {array} models.Ad "список объявлений успешно получен"
-// @Failure 400 {object} ErrorResponse "method not allowed"
-// @Failure 500 {object} ErrorResponse "internal server error"
+// @Failure 400 {object} ErrorResponse "Method not allowed: Метод не поддерживается (ожидается GET)"
+// @Failure 500 {object} ErrorResponse "internal error: Ошибка сервера при получении объявлений"
 // @Router /ads [get]
 func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 	// обрабатываем только GET запросы
@@ -23,7 +23,11 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// копируем список объявлений без гонки данных
-	adsList := h.services.Ads.GetAll()
+	adsList, err := h.services.Ads.GetAllAds(r.Context())
+	if err != nil {
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
 
 	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)

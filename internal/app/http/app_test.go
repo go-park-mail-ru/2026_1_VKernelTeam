@@ -6,14 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers/mocks"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTestApp(t *testing.T) (*App, *mocks.MockAuth, *mocks.MockAds, *blacklist.InMemory) {
+type dummyTokenChecker struct{}
+
+func (d dummyTokenChecker) Check(jti string) bool { return false }
+
+func setupTestApp(t *testing.T) (*App, *mocks.MockAuth, *mocks.MockAds) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	ctrl := gomock.NewController(t)
@@ -22,20 +24,18 @@ func setupTestApp(t *testing.T) (*App, *mocks.MockAuth, *mocks.MockAds, *blackli
 	mockAuth := mocks.NewMockAuth(ctrl)
 	mockAds := mocks.NewMockAds(ctrl)
 
-	bl := blacklist.New(time.Minute)
-
-	services := handlers.Services{
+	services := Services{
 		Auth: mockAuth,
 		Ads:  mockAds,
 	}
 
-	app := New(logger, services, bl, 0, time.Hour, "secret")
+	app := New(logger, services, dummyTokenChecker{}, 0, time.Hour, time.Hour, "secret")
 
-	return app, mockAuth, mockAds, bl
+	return app, mockAuth, mockAds
 }
 
 func TestAppServerEndpoints(t *testing.T) {
-	app, _, _, _ := setupTestApp(t)
+	app, _, _ := setupTestApp(t)
 
 	// Тестируем нормальную остановку
 	go func() {
@@ -46,7 +46,7 @@ func TestAppServerEndpoints(t *testing.T) {
 	err := app.Run()
 	assert.NoError(t, err)
 
-	app2, _, _, _ := setupTestApp(t)
+	app2, _, _ := setupTestApp(t)
 	assert.Panics(t, func() {
 		app2.srv.Addr = ":-1" // Заведомо некорректный адрес для паники
 		app2.MustRun()

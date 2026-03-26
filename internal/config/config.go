@@ -16,7 +16,9 @@ import (
 // не десериализуем в эту структуру напрямую. Поля уже имеют нужный тип.
 type Config struct {
 	Env             string
-	StoragePath     string
+	DatabaseDSN     string
+	RedisAddr       string
+	RefreshTTL      time.Duration
 	TokenTTL        time.Duration
 	HTTP            HTTPConfig
 	CleanupInterval time.Duration
@@ -54,7 +56,7 @@ func MustLoadConfig() *Config {
 	// Анонимная прокси-структура, которая в точности JSON.
 	var rawConfig struct {
 		Env             string     `json:"env"`
-		StoragePath     string     `json:"storage_path"`
+		RefreshTTL      string     `json:"refresh_ttl"`
 		TokenTTL        string     `json:"token_ttl"`
 		HTTP            HTTPConfig `json:"http"`
 		CleanupInterval string     `json:"cleanup_interval"`
@@ -69,11 +71,23 @@ func MustLoadConfig() *Config {
 		panic("TOKEN_SECRET is not set in environment or .env file")
 	}
 
+	dsn := os.Getenv("DATABASE_DSN")
+	if dsn == "" {
+		panic("DATABASE_DSN is not set in environment or .env file")
+	}
+
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		panic("REDIS_ADDR is not set in environment or .env file")
+	}
+
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
 	return &Config{
 		Env:             rawConfig.Env,
-		StoragePath:     rawConfig.StoragePath,
+		DatabaseDSN:     dsn,
+		RedisAddr:       redisAddr,
+		RefreshTTL:      parseDuration(rawConfig.RefreshTTL, "refresh_ttl"),
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),

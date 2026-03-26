@@ -12,7 +12,9 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	storage "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository"
+	"github.com/google/uuid"
+
+	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	jwtlib "github.com/golang-jwt/jwt/v5"
 
@@ -24,6 +26,13 @@ import (
 // TokenRevoker описывает интерфейс для отзыва токенов
 type TokenRevoker interface {
 	Add(jti string, exp time.Time)
+}
+
+// RefreshStorage интерфейс для работы с refresh токенами
+type RefreshStorage interface {
+	SaveRefresh(ctx context.Context, token string, userID int64, ttl time.Duration) error
+	GetRefresh(ctx context.Context, token string) (int64, error)
+	DeleteRefresh(ctx context.Context, token string) error
 }
 
 // UserProviderSaver предоставляет методы сохранения пользователя в хранилище
@@ -39,11 +48,13 @@ type UserProviderSaver interface {
 // провайдеров пользователей и приложений, а также TTL для генерируемых
 // токенов.
 type Auth struct {
-	log          *slog.Logger
-	userStorage  UserProviderSaver
-	tokenRevoker TokenRevoker
-	tokenTTL     time.Duration
-	secret       string
+	log            *slog.Logger
+	userStorage    UserProviderSaver
+	tokenRevoker   TokenRevoker
+	refreshStorage RefreshStorage
+	tokenTTL       time.Duration
+	refreshTTL     time.Duration
+	secret         string
 }
 
 // ErrInvalidCredentials возвращается, когда email/пароль не совпадают с
@@ -59,48 +70,59 @@ func New(
 	log *slog.Logger,
 	userStorage UserProviderSaver,
 	tokenRevoker TokenRevoker,
+	refreshStorage RefreshStorage,
 	tokenTTL time.Duration,
+	refreshTTL time.Duration,
 	secret string,
 ) *Auth {
 	return &Auth{
-		log:          log,
-		userStorage:  userStorage,
-		tokenRevoker: tokenRevoker,
-		tokenTTL:     tokenTTL,
-		secret:       secret,
+		log:            log,
+		userStorage:    userStorage,
+		tokenRevoker:   tokenRevoker,
+		refreshStorage: refreshStorage,
+		tokenTTL:       tokenTTL,
+		refreshTTL:     refreshTTL,
+		secret:         secret,
 	}
 }
 
 // Login аутентифицирует пользователя по email и паролю и возвращает JWT-токен. В случае
 // ошибок возвращается описанная ошибка.
-func (a *Auth) Login(ctx context.Context, email, password string) (string, models.User, error) {
+func (a *Auth) Login(ctx context.Context, email, password string) (string, string, models.User, error) {
 
 	log := a.log.With(slog.String("email", email))
 	log.Info("logging in user")
 
 	user, err := a.userStorage.User(ctx, email)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			log.Error("user not found")
-			return "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
+			return "", "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
 		}
 		log.Error("failed to get user")
-		return "", models.User{}, fmt.Errorf("%w", err)
+		return "", "", models.User{}, fmt.Errorf("%w", err)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
 		log.Info("invalid credentials")
-		return "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
+		return "", "", models.User{}, fmt.Errorf("%w", ErrInvalidCredentials)
 	}
 
 	token, err := jwt.NewToken(user, a.tokenTTL, a.secret)
 	if err != nil {
 		log.Error("failed to generate token")
-		return "", models.User{}, fmt.Errorf("%w", err)
+		return "", "", models.User{}, fmt.Errorf("%w", err)
+	}
+
+	refreshToken := uuid.New().String()
+	err = a.refreshStorage.SaveRefresh(ctx, refreshToken, user.ID, a.refreshTTL)
+	if err != nil {
+		log.Error("failed to save refresh token")
+		return "", "", models.User{}, fmt.Errorf("%w", err)
 	}
 
 	log.Info("user logged in")
-	return token, user, nil
+	return token, refreshToken, user, nil
 }
 
 // ValidateTokenAndGetUser проверяет валидность JWT-токена и возвращает данные пользователя
@@ -129,7 +151,7 @@ func (a *Auth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) 
 	userID := int64(uidRaw)
 	user, err := a.userStorage.UserByID(ctx, userID)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			log.Info("user not found", slog.Int64("user_id", userID))
 			return models.User{}, fmt.Errorf("user not found: %w", err)
 		}
@@ -140,7 +162,49 @@ func (a *Auth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) 
 	log.Info("token validated successfully", slog.Int64("user_id", userID))
 	return user, nil
 }
-func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time) error {
+
+// Refresh обновляет access-токен по refresh-токену
+func (a *Auth) Refresh(ctx context.Context, refreshToken string) (string, string, error) {
+	const op = "auth.Refresh"
+	log := a.log.With(slog.String("op", op))
+
+	// 1. Получить userID
+	userID, err := a.refreshStorage.GetRefresh(ctx, refreshToken)
+	if err != nil {
+		log.Info("invalid refresh token", slog.String("error", err.Error()))
+		return "", "", fmt.Errorf("invalid refresh token: %w", err)
+	}
+
+	// 2. Удалить старый
+	_ = a.refreshStorage.DeleteRefresh(ctx, refreshToken)
+
+	// Получаем пользователя, чтобы создать новый access-токен
+	user, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		log.Error("failed to get user by id", slog.String("error", err.Error()))
+		return "", "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	// 3. Создать новый access
+	newAccess, err := jwt.NewToken(user, a.tokenTTL, a.secret)
+	if err != nil {
+		log.Error("failed to generate access token")
+		return "", "", fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	// 4. Создать и сохранить новый refresh
+	newRefresh := uuid.New().String()
+	err = a.refreshStorage.SaveRefresh(ctx, newRefresh, userID, a.refreshTTL)
+	if err != nil {
+		log.Error("failed to save new refresh token")
+		return "", "", fmt.Errorf("failed to save refresh token: %w", err)
+	}
+
+	log.Info("tokens refreshed successfully", slog.Int64("user_id", userID))
+	return newAccess, newRefresh, nil
+}
+
+func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error {
 	const op = "auth.Logout"
 
 	log := a.log.With(
@@ -152,7 +216,12 @@ func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time) error {
 	// добавляем токен в хранилище отозванных
 	a.tokenRevoker.Add(jti, exp)
 
-	log.Info("token successfully revoked")
+	// удаляем refresh-токен, если он передан
+	if refreshToken != "" {
+		_ = a.refreshStorage.DeleteRefresh(ctx, refreshToken)
+	}
+
+	log.Info("token successfully revoked and refresh deleted")
 	return nil
 }
 
@@ -176,7 +245,7 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password, name string
 
 	id, err := a.userStorage.SaveUser(ctx, email, passHash, name)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserExists) {
+		if errors.Is(err, db.ErrUserExists) {
 			log.Error("user already exists")
 			return 0, fmt.Errorf("%s: %w", op, ErrUserAlreadyExists)
 		}
@@ -200,7 +269,7 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 
 	isAdmin, err := a.userStorage.IsAdmin(ctx, userID)
 	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
+		if errors.Is(err, db.ErrUserNotFound) {
 			return false, fmt.Errorf("%s: %w", op, err)
 		}
 		log.Error("failed to check if user is admin")

@@ -15,12 +15,17 @@ help:
 	@echo "  deploy            - Обновить код и перезапустить контейнеры на сервере"
 
 
+migrate:
+	migrate -path ./internal/repository/postgres/migrations \
+		-database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
+
 # Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go -o ./api
 
 # Запуск приложения с локальным конфигом
 run: swag
+	docker compose --env-file .env -f deployments/docker-compose.yaml up -d db db_migrate redis
 	go run ./cmd/server/main.go --config=./config/local.json
 
 # Запуск всех тестов
@@ -69,5 +74,5 @@ vet:
 # Используется zero-downtime подход: сначала сборка, затем замена контейнеров
 deploy:
 	sudo git pull
-	docker compose up -d --build --remove-orphans
+	docker compose --env-file .env -f deployments/docker-compose.yaml up -d --build --remove-orphans
 	docker image prune -f

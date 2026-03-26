@@ -9,18 +9,29 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	blacklist "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+type mockTokenChecker struct {
+	revoked map[string]bool
+}
+
+func (m *mockTokenChecker) Check(jti string) bool {
+	return m.revoked[jti]
+}
+
+func (m *mockTokenChecker) Add(jti string, _ time.Time) {
+	m.revoked[jti] = true
+}
+
 func TestAuthMiddleware(t *testing.T) {
 	// инициализируем логгер, который ничего не выводит (Discard), чтобы не спамить в консоль тестов
 	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	secret := "test-secret"
-	bl := blacklist.New(time.Minute)
+	bl := &mockTokenChecker{revoked: make(map[string]bool)}
 
 	mw := AuthMiddleware(log, bl, secret)
 
