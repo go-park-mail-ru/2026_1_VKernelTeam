@@ -8,7 +8,6 @@ import (
 
 	httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
@@ -50,7 +49,7 @@ func New(
 	// создеём сервис Ads
 	adsService := ads.New(log, adRepo)
 
-	services := handlers.Services{
+	services := httpapp.Services{
 		Ads:  adsService,
 		Auth: authService,
 	}

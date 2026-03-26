@@ -21,7 +21,7 @@ services:
         condition: service_started
       db_migrate:
         condition: service_completed_successfully
-      
+
   db:
     image: postgres:17-alpine
     container_name: postgres_clover
@@ -33,7 +33,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U postgres -d clover"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
     volumes:
       - pgdata:/var/lib/postgresql/data
 

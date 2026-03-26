@@ -3,6 +3,8 @@
 // прав администратора, а также простую структуру сервера.
 package httpapp
 
+//go:generate mockgen -source=app.go -destination=mocks/mock_app.go
+
 import (
 	"context"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 
 	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
 	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
@@ -23,6 +26,31 @@ const (
 	opStop = "httpapp.Stop"
 )
 
+// Auth описывает минимальный набор методов сервиса аутентификации
+type Auth interface {
+	Login(ctx context.Context, email string, password string) (string, string, models.User, error)
+	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
+	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
+	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+}
+
+// Ads описывает методы сервиса объявлений
+type Ads interface {
+	GetAllAds(ctx context.Context) ([]models.Ad, error)
+}
+
+// TokenChecker интерфейс для проверки отозванных токенов
+type TokenChecker interface {
+	Check(jti string) bool
+}
+
+// Services объединяет все бизнес-сервисы приложения
+type Services struct {
+	Ads  Ads
+	Auth Auth
+}
+
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
@@ -30,8 +58,8 @@ type App struct {
 	router       *http.ServeMux
 	port         int
 	srv          *http.Server
-	services     handlers.Services
-	blacklist    middleware.TokenChecker
+	services     Services
+	blacklist    TokenChecker
 	tokenTTL     time.Duration
 	secret       string
 	authHandlers *handlers.AuthHandlers
@@ -41,8 +69,8 @@ type App struct {
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
-	services handlers.Services,
-	bl middleware.TokenChecker,
+	services Services,
+	bl TokenChecker,
 	port int,
 	tokenTTL time.Duration,
 	refreshTTL time.Duration,
@@ -58,8 +86,14 @@ func New(
 		secret:    secret,
 	}
 
-	app.authHandlers = handlers.NewAuthHandlers(log, services, tokenTTL, refreshTTL, secret)
-	app.adsHandlers = handlers.NewAdsHandlers(log, services)
+	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+	}, tokenTTL, refreshTTL, secret)
+	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+	})
 
 	app.setupRoutes()
 

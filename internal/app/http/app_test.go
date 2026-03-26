@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +24,7 @@ func setupTestApp(t *testing.T) (*App, *mocks.MockAuth, *mocks.MockAds) {
 	mockAuth := mocks.NewMockAuth(ctrl)
 	mockAds := mocks.NewMockAds(ctrl)
 
-	services := handlers.Services{
+	services := Services{
 		Auth: mockAuth,
 		Ads:  mockAds,
 	}
