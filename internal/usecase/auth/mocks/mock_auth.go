@@ -167,6 +167,21 @@ func (mr *MockUserProviderSaverMockRecorder) SaveUser(ctx, email, passHash, name
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveUser", reflect.TypeOf((*MockUserProviderSaver)(nil).SaveUser), ctx, email, passHash, name)
 }
 
+// UpdateUser mocks base method.
+func (m *MockUserProviderSaver) UpdateUser(ctx context.Context, userID int64, name string) (models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateUser", ctx, userID, name)
+	ret0, _ := ret[0].(models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateUser indicates an expected call of UpdateUser.
+func (mr *MockUserProviderSaverMockRecorder) UpdateUser(ctx, userID, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockUserProviderSaver)(nil).UpdateUser), ctx, userID, name)
+}
+
 // User mocks base method.
 func (m *MockUserProviderSaver) User(ctx context.Context, email string) (models.User, error) {
 	m.ctrl.T.Helper()

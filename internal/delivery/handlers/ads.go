@@ -32,3 +32,8 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)
 }
+
+// TODO
+func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}

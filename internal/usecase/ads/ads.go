@@ -9,6 +9,7 @@ import (
 
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 type Ads struct {
@@ -43,4 +44,9 @@ func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	log.Info("got all ads")
 	return ads, nil
 
+}
+
+// TODO
+func (a *Ads) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
+	return []models.Ad{}, nil
 }

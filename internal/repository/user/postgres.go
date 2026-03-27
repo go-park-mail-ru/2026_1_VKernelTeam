@@ -106,3 +106,8 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 
 	return u, nil
 }
+
+// TODO
+func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string) (models.User, error) {
+	return models.User{}, nil
+}

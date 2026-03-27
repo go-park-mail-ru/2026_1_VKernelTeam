@@ -86,3 +86,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 
 	return ads, nil
 }
+
+// TODO
+func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
+	return []models.Ad{}, nil
+}

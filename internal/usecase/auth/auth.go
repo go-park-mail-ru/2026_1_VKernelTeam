@@ -42,6 +42,7 @@ type UserProviderSaver interface {
 	User(ctx context.Context, email string) (models.User, error)
 	UserByID(ctx context.Context, userID int64) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	UpdateUser(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // Auth представляет собой сервис аутентификации. Он использует логгер,
@@ -277,4 +278,19 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	}
 	log.Info("user is admin", slog.Bool("is_admin", isAdmin))
 	return isAdmin, nil
+}
+
+// TODO
+func (a *Auth) GetProfile(ctx context.Context, userID int64) (models.User, error) {
+	return models.User{}, nil
+}
+
+// TODO
+func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error) {
+	return models.User{}, nil
+}
+
+// TODO
+func (a *Auth) GetPublicProfile(ctx context.Context, userID int64) (models.User, error) {
+	return models.User{}, nil
 }
