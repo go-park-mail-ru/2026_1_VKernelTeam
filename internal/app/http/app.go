@@ -14,6 +14,7 @@ import (
 
 	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
@@ -38,6 +39,7 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -93,7 +95,7 @@ func New(
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
-	})
+	}, tokenTTL)
 
 	app.setupRoutes()
 
@@ -132,6 +134,11 @@ func (a *App) setupRoutes() {
 
 	// регистрируем обработчик объявлений
 	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.Handle("POST "+api.ApiPrefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
+	// a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
+	// a.router.HandleFunc("PUT "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleUpdateAdByID)
+	// a.router.HandleFunc("DELETE "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleDeleteAd)
+	// a.router.HandleFunc("POST "+api.ApiPrefix+"/ads/{id}/close", a.adsHandlers.HandleCloseAdByID)
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

@@ -14,6 +14,19 @@ var (
 	ErrPasswordContainsForbidden = errors.New("password contains forbidden characters")
 	ErrNameEmpty                 = errors.New("name cannot be empty")
 	ErrNameInvalid               = errors.New("name contains invalid characters")
+	ErrAdTitleEmpty              = errors.New("title cannot be empty")
+	ErrAdTitleTooShort           = errors.New("title must be at least 5 characters long")
+	ErrAdTitleTooLong            = errors.New("title must be at most 150 characters long")
+	ErrAdDescriptionEmpty        = errors.New("description cannot be empty")
+	ErrAdDescriptionTooShort     = errors.New("description must be at least 10 characters long")
+	ErrAdDescriptionTooLong      = errors.New("description must be at most 5000 characters long")
+	ErrAdPriceNegative           = errors.New("price cannot be negative")
+	ErrCategoryIDInvalid         = errors.New("category ID must be a positive integer")
+	ErrUserIDInvalid             = errors.New("user ID must be a positive integer")
+	ErrAdStatusInvalid           = errors.New("invalid ad status")
+)
+
+var (
 
 	// Только латиница, цифры и _
 	reStrict = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
@@ -59,6 +72,9 @@ func ValidatePassword(password string) error {
 	return nil
 }
 
+//    title text NOT NULL CHECK (length(title) BETWEEN 5 AND 150),
+//    description text NOT NULL CHECK (length(description) BETWEEN 10 AND 5000),
+
 // ValidateName проверяет валидность имени: не пустое и содержит только буквы (латиница и кириллица), пробелы, апострофы, дефисы
 func ValidateName(name string) error {
 	if name == "" {
@@ -66,6 +82,67 @@ func ValidateName(name string) error {
 	}
 	if !nameRegex.MatchString(name) {
 		return ErrNameInvalid
+	}
+	return nil
+}
+
+func ValidateAdTitle(title string) error {
+	if title == "" {
+		return ErrAdTitleEmpty
+	}
+	titleLen := len([]rune(title))
+	if titleLen < 5 {
+		return ErrAdTitleTooShort
+	}
+	if titleLen > 150 {
+		return ErrAdTitleTooLong
+	}
+	return nil
+}
+
+func ValidateAdDescription(description string) error {
+	if description == "" {
+		return ErrAdDescriptionEmpty
+	}
+	descLen := len([]rune(description))
+	if descLen < 10 {
+		return ErrAdDescriptionTooShort
+	}
+	if descLen > 5000 {
+		return ErrAdDescriptionTooLong
+	}
+	return nil
+}
+
+func ValidateAdPrice(price int64) error {
+	if price < 0 {
+		return ErrAdPriceNegative
+	}
+	return nil
+}
+
+func ValidateCategoryID(categoryID int64) error {
+	if categoryID <= 0 {
+		return ErrCategoryIDInvalid
+	}
+	return nil
+}
+
+func ValidateUserID(userID int64) error {
+	if userID <= 0 {
+		return ErrUserIDInvalid
+	}
+	return nil
+}
+
+func ValidateAdStatus(status string) error {
+	allowedStatuses := map[string]bool{
+		"draft":   true,
+		"active":  true,
+	}
+
+	if !allowedStatuses[status] {
+		return ErrAdStatusInvalid
 	}
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	dto "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -134,6 +135,21 @@ func NewMockAds(ctrl *gomock.Controller) *MockAds {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAds) EXPECT() *MockAdsMockRecorder {
 	return m.recorder
+}
+
+// CreateAd mocks base method.
+func (m *MockAds) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAd", ctx, req)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAd indicates an expected call of CreateAd.
+func (mr *MockAdsMockRecorder) CreateAd(ctx, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAd", reflect.TypeOf((*MockAds)(nil).CreateAd), ctx, req)
 }
 
 // GetAllAds mocks base method.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -85,4 +86,28 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	}
 
 	return ads, nil
+}
+
+// CreateAd создает новое объявление и возвращает его ID.
+func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
+	const query = `
+		INSERT INTO product (seller_id, category_id, title, description, price, status)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+
+	var adID int64
+	err := s.pool.QueryRow(ctx, query,
+		req.UserID,
+		req.CategoryID,
+		req.Title,
+		req.Description,
+		req.Price,
+		req.Status,
+	).Scan(&adID)
+	if err != nil {
+		return 0, fmt.Errorf("CreateAd: insert: %w", err)
+	}
+
+	return adID, nil
 }
