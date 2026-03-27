@@ -20,10 +20,10 @@ import (
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body RegisterRequest true "Registration data"
-// @Success 200 {object} LoginResponse "user registered and logged in successfully"
-// @Failure 400 {object} ErrorResponse "invalid request body / user already exists / validation failed (ValidationErrors): Ошибка формата запроса, дубликат пользователя или ошибка валидации"
-// @Failure 500 {object} ErrorResponse "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе"
+// @Param input body dto.RegisterRequest true "Registration data"
+// @Success 200 {object} dto.LoginResponse "user registered and logged in successfully"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body / user already exists / validation failed (ValidationErrors): Ошибка формата запроса, дубликат пользователя или ошибка валидации"
+// @Failure 500 {object} dto.ErrorResponse "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе"
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
@@ -89,11 +89,11 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param input body LoginRequest true "Login credentials"
-// @Success 200 {object} LoginResponse "login successful"
-// @Failure 400 {object} ErrorResponse "invalid request body: Неверный формат тела запроса"
-// @Failure 401 {object} ErrorResponse "invalid credentials / invalid or expired token / email/password is required (ValidationErrors): Ошибка аутентификации или невалидный токен"
-// @Failure 500 {object} ErrorResponse "failed to login: Ошибка сервера при входе"
+// @Param input body dto.LoginRequest true "Login credentials"
+// @Success 200 {object} dto.LoginResponse "login successful"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body: Неверный формат тела запроса"
+// @Failure 401 {object} dto.ErrorResponse "invalid credentials / invalid or expired token / email/password is required (ValidationErrors): Ошибка аутентификации или невалидный токен"
+// @Failure 500 {object} dto.ErrorResponse "failed to login: Ошибка сервера при входе"
 // @Router /auth/login [post]
 func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// сначала ищем токен в куке
@@ -187,9 +187,9 @@ func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, 
 // @Description Инвалидирует текущую сессию и очищает аутентификационную куку
 // @Tags auth
 // @Success 200 {object} map[string]string "logout successful"
-// @Failure 400 {object} ErrorResponse "Missing CSRF cookie / CSRF token mismatch: Ошибка CSRF"
-// @Failure 401 {object} ErrorResponse "missing token cookie / invalid token / token has been revoked: Ошибка авторизации (Middleware) или internal error: Отсутствует jti"
-// @Failure 500 {object} ErrorResponse "failed to logout: Ошибка сервера при выходе"
+// @Failure 400 {object} dto.ErrorResponse "Missing CSRF cookie / CSRF token mismatch: Ошибка CSRF"
+// @Failure 401 {object} dto.ErrorResponse "missing token cookie / invalid token / token has been revoked: Ошибка авторизации (Middleware) или internal error: Отсутствует jti"
+// @Failure 500 {object} dto.ErrorResponse "failed to logout: Ошибка сервера при выходе"
 // @Router /auth/logout [post]
 // @Security CookieAuth
 // @Security CsrfCookieAuth
@@ -255,8 +255,8 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Produce json
 // @Success 200 {object} map[string]string "tokens refreshed"
-// @Failure 401 {object} ErrorResponse "refresh token required / invalid refresh token: Ошибка refresh токена"
-// @Failure 500 {object} ErrorResponse "internal error: Ошибка сервера при обновлении токенов"
+// @Failure 401 {object} dto.ErrorResponse "refresh token required / invalid refresh token: Ошибка refresh токена"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при обновлении токенов"
 // @Router /auth/refresh [post]
 func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
