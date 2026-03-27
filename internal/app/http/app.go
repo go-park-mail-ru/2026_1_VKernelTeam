@@ -39,6 +39,7 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 }
 
@@ -135,7 +136,7 @@ func (a *App) setupRoutes() {
 	// регистрируем обработчик объявлений
 	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
 	a.router.Handle("POST "+api.ApiPrefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
-	// a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
+	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
 	// a.router.HandleFunc("PUT "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleUpdateAdByID)
 	// a.router.HandleFunc("DELETE "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleDeleteAd)
 	// a.router.HandleFunc("POST "+api.ApiPrefix+"/ads/{id}/close", a.adsHandlers.HandleCloseAdByID)

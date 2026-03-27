@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
+	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
@@ -35,6 +38,38 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 
 	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)
+}
+
+// HandleGetAdByID обрабатывает запрос на получение объявления по ID
+// @Summary Получить объявление по ID
+// @Description Возвращает объявление по заданному ID
+// @Tags ads
+// @Produce json
+// @Param id path int true "ID объявления"
+// @Success 200 {object} models.Ad "объявление успешно получено"
+// @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID объявления"
+// @Failure 404 {object} dto.ErrorResponse "ad not found: Объявление не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при получении объявления"
+// @Router /ads/{id} [get]
+func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidAdID)
+		return
+	}
+
+	adItem, err := h.services.Ads.GetAdByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ad.ErrAdNotFound) {
+			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			return
+		}
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, adItem)
 }
 
 func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
@@ -93,9 +128,3 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	responser.RespondWithJSON(w, http.StatusOK, map[string]int64{"ad_id": adID})
 }
 
-// a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
-// a.router.HandleFunc("POST "+api.ApiPrefix+"/ads", a.adsHandlers.HandleCreateAd)
-// a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
-// a.router.HandleFunc("PUT "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleUpdateAdByID)
-// a.router.HandleFunc("DELETE "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleDeleteAd)
-// a.router.HandleFunc("POST "+api.ApiPrefix+"/ads/{id}/close", a.adsHandlers.HandleCloseAdByID)

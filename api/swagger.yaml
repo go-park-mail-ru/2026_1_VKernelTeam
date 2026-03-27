@@ -95,6 +95,37 @@ paths:
       summary: Получить список объявлений
       tags:
       - ads
+  /ads/{id}:
+    get:
+      description: Возвращает объявление по заданному ID
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявление успешно получено
+          schema:
+            $ref: '#/definitions/models.Ad'
+        "400":
+          description: 'invalid ad id: Некорректный ID объявления'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'ad not found: Объявление не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера при получении объявления'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Получить объявление по ID
+      tags:
+      - ads
   /auth/login:
     post:
       consumes:

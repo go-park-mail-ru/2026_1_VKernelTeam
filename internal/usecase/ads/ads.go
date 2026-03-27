@@ -10,6 +10,7 @@ import (
 
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 }
 
@@ -68,4 +69,24 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 	
 	log.Info("ad created successfully", "ad_id", adID)
 	return adID, nil
+}
+
+// GetAdByID возвращает объявление по ID.
+func (a *Ads) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
+	const op = "ads.GetAdByID"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("id", id),
+	)
+	log.Info("getting ad by id")
+
+	ad, err := a.adsStorage.GetAdByID(ctx, id)
+	if err != nil {
+		log.Error("failed to get ad by id", "error", err)
+		return models.Ad{}, err
+	}
+
+	log.Info("got ad by id")
+	return ad, nil
 }

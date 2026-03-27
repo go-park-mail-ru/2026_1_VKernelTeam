@@ -52,6 +52,21 @@ func (mr *MockAdsMockRecorder) CreateAd(ctx, req interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAd", reflect.TypeOf((*MockAds)(nil).CreateAd), ctx, req)
 }
 
+// GetAdByID mocks base method.
+func (m *MockAds) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdByID", ctx, id)
+	ret0, _ := ret[0].(models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdByID indicates an expected call of GetAdByID.
+func (mr *MockAdsMockRecorder) GetAdByID(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdByID", reflect.TypeOf((*MockAds)(nil).GetAdByID), ctx, id)
+}
+
 // GetAllAds mocks base method.
 func (m *MockAds) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
