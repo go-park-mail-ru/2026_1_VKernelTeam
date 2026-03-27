@@ -36,6 +36,21 @@ func (m *MockAds) EXPECT() *MockAdsMockRecorder {
 	return m.recorder
 }
 
+// GetAdsByUserID mocks base method.
+func (m *MockAds) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdsByUserID", ctx, userID)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdsByUserID indicates an expected call of GetAdsByUserID.
+func (mr *MockAdsMockRecorder) GetAdsByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdsByUserID", reflect.TypeOf((*MockAds)(nil).GetAdsByUserID), ctx, userID)
+}
+
 // GetAllAds mocks base method.
 func (m *MockAds) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	m.ctrl.T.Helper()

@@ -218,6 +218,41 @@ paths:
       summary: Регистрация пользователя
       tags:
       - auth
+  /users/{id}/ads:
+    get:
+      description: Возвращает список всех объявлений продавца по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявления успешно получены
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Ad'
+              type: array
+            type: object
+        "400":
+          description: некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить объявления пользователя
+      tags:
+      - ads
 securityDefinitions:
   CookieAuth:
     description: JWT session token
