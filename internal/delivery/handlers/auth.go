@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
@@ -25,14 +26,14 @@ import (
 // @Failure 500 {object} ErrorResponse "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе"
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
+	var req dto.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	// Собираем все ошибки валидации
-	validationErrors := ValidationErrors{}
+	validationErrors := dto.ValidationErrors{}
 	if err := validator.ValidateEmail(req.Email); err != nil {
 		validationErrors.Email = err.Error()
 	}
@@ -103,14 +104,14 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// иначе - вход по email/пароль из тела
-	var req LoginRequest
+	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
 	if req.Email == "" || req.Password == "" {
-		validationErrors := ValidationErrors{}
+		validationErrors := dto.ValidationErrors{}
 		if req.Email == "" {
 			validationErrors.Email = "email is required"
 		}
@@ -126,7 +127,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 // handleCredentialsLogin обрабатывает вход пользователя по email и паролю
 func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Request, email, password string) {
-	validationErrors := ValidationErrors{}
+	validationErrors := dto.ValidationErrors{}
 	if err := validator.ValidateEmail(email); err != nil {
 		validationErrors.Email = err.Error()
 	}

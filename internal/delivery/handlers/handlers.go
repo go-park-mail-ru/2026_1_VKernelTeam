@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
@@ -79,39 +80,6 @@ func NewAdsHandlers(log *slog.Logger, services Services) *AdsHandlers {
 	}
 }
 
-// RegisterRequest представляет собой структуру для запроса на регистрацию пользователя
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-}
-
-// LoginRequest представляет собой структуру для запроса на вход в систему
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// LoginResponse представляет собой структуру для ответа на запрос входа в систему
-type LoginResponse struct {
-	UserID    int64  `json:"user_id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	CsrfToken string `json:"csrf_token"`
-}
-
-// ErrorResponse представляет собой структуру для отправки ошибок в формате JSON
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-// ValidationErrors представляет собой структуру для отправки ошибок валидации по полям
-type ValidationErrors struct {
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-	Name     string `json:"name,omitempty"`
-}
-
 // setAuthCookie устанавливает cookie с токеном
 func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
 	// JWT-токен
@@ -151,7 +119,7 @@ func (h *AuthHandlers) setRefreshCookie(w http.ResponseWriter, refreshToken stri
 
 // respondWithUser отправляет успешный ответ с данными пользователя
 func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User, csrfToken string) {
-	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
+	responser.RespondWithJSON(w, http.StatusOK, dto.LoginResponse{
 		UserID:    user.ID,
 		Email:     user.Email,
 		Name:      user.Name,

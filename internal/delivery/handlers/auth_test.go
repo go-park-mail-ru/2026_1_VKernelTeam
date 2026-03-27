@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
@@ -22,7 +23,7 @@ func TestHandleRegister(t *testing.T) {
 	authH, _, mockAuth, _ := setupHandlers(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: "Test User"}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Password: "Password123", Name: "Test User"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -58,7 +59,7 @@ func TestHandleRegister(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
-		var resp LoginResponse
+		var resp dto.LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(1), resp.UserID)
@@ -75,7 +76,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("EmptyEmail", func(t *testing.T) {
-		reqBody := RegisterRequest{Password: "Password123"}
+		reqBody := dto.RegisterRequest{Password: "Password123"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -86,7 +87,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "invalid-email", Password: "Password123", Name: "Test"}
+		reqBody := dto.RegisterRequest{Email: "invalid-email", Password: "Password123", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -97,7 +98,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("EmptyPassword", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Name: "Test"}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -108,7 +109,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("ShortPassword", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Short1", Name: "Test"}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Password: "Short1", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -119,7 +120,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("PasswordNoDigit", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password", Name: "Test"}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Password: "Password", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -130,7 +131,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("PasswordNoLetter", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "1234567890", Name: "Test"}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Password: "1234567890", Name: "Test"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -141,7 +142,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("UserExists", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "exist@test.com", Password: "Password123", Name: "Exist"}
+		reqBody := dto.RegisterRequest{Email: "exist@test.com", Password: "Password123", Name: "Exist"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -156,7 +157,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("InternalError", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "err@test.com", Password: "Password123", Name: "Err"}
+		reqBody := dto.RegisterRequest{Email: "err@test.com", Password: "Password123", Name: "Err"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -171,7 +172,7 @@ func TestHandleRegister(t *testing.T) {
 	})
 
 	t.Run("EmptyName", func(t *testing.T) {
-		reqBody := RegisterRequest{Email: "test@test.com", Password: "Password123", Name: ""}
+		reqBody := dto.RegisterRequest{Email: "test@test.com", Password: "Password123", Name: ""}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -186,7 +187,7 @@ func TestHandleLogin(t *testing.T) {
 	authH, _, mockAuth, _ := setupHandlers(t)
 
 	t.Run("ValidRequest", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "test@test.com", Password: "Password123"}
+		reqBody := dto.LoginRequest{Email: "test@test.com", Password: "Password123"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -218,7 +219,7 @@ func TestHandleLogin(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
-		var resp LoginResponse
+		var resp dto.LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
 		assert.Equal(t, user.ID, resp.UserID)
@@ -240,7 +241,7 @@ func TestHandleLogin(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
-		var resp LoginResponse
+		var resp dto.LoginResponse
 		err := json.Unmarshal(rr.Body.Bytes(), &resp)
 		assert.NoError(t, err)
 		assert.Equal(t, user.ID, resp.UserID)
@@ -248,7 +249,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("InvalidEmail", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "not-an-email", Password: "Password123"}
+		reqBody := dto.LoginRequest{Email: "not-an-email", Password: "Password123"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -259,7 +260,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("EmptyPassword", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "test@test.com"}
+		reqBody := dto.LoginRequest{Email: "test@test.com"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -270,7 +271,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("ShortPassword", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "test@test.com", Password: "Short"}
+		reqBody := dto.LoginRequest{Email: "test@test.com", Password: "Short"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -281,7 +282,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("PasswordNoDigit", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "test@test.com", Password: "PasswordNoNum"}
+		reqBody := dto.LoginRequest{Email: "test@test.com", Password: "PasswordNoNum"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -292,7 +293,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("PasswordNoLetter", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "test@test.com", Password: "1234567890"}
+		reqBody := dto.LoginRequest{Email: "test@test.com", Password: "1234567890"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -303,7 +304,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("InvalidCredentials", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "wrong@test.com", Password: "Password123"}
+		reqBody := dto.LoginRequest{Email: "wrong@test.com", Password: "Password123"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
@@ -318,7 +319,7 @@ func TestHandleLogin(t *testing.T) {
 	})
 
 	t.Run("InternalError", func(t *testing.T) {
-		reqBody := LoginRequest{Email: "err@test.com", Password: "Password123"}
+		reqBody := dto.LoginRequest{Email: "err@test.com", Password: "Password123"}
 		bodyBytes, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer(bodyBytes))
 		rr := httptest.NewRecorder()
