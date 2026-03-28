@@ -323,6 +323,47 @@
                 }
             }
         },
+        "/users/{id}": {
+            "get": {
+                "description": "Возвращает только общедоступную информацию: имя, рейтинг, кол-во объявлений. Не требует авторизации.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Получить публичный профиль",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "публичный профиль успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PublicUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid user id / user not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{id}/ads": {
             "get": {
                 "description": "Возвращает список всех объявлений продавца по его ID",
@@ -407,6 +448,32 @@
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PublicUserResponse": {
+            "type": "object",
+            "properties": {
+                "ads_count": {
+                    "type": "integer"
+                },
+                "avatar_path": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "number"
+                },
+                "reviews_count": {
                     "type": "integer"
                 }
             }

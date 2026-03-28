@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 // RegisterRequest представляет собой структуру для запроса на регистрацию пользователя
 type RegisterRequest struct {
 	Email    string `json:"email"`
@@ -23,4 +25,15 @@ type LoginResponse struct {
 // UpdateProfileRequest представляет собой структуру для запроса на обновленеи профиля
 type UpdateProfileRequest struct {
 	Name string `json:"name" validate:"required,min=3,max=50"`
+}
+
+// PublicUserResponse представляет собой структуру для ответа на запрос профиля пользователя
+type PublicUserResponse struct {
+	ID           int64     `json:"id"`
+	Name         string    `json:"name"`
+	AvatarPath   string    `json:"avatar_path"`
+	Rating       float64   `json:"rating"`
+	ReviewsCount int       `json:"reviews_count"`
+	AdsCount     int       `json:"ads_count"`
+	CreatedAt    time.Time `json:"created_at"`
 }

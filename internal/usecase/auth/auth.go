@@ -326,8 +326,3 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 	log.Info("user profile updated successfully")
 	return user, nil
 }
-
-// TODO
-func (a *Auth) GetPublicProfile(ctx context.Context, userID int64) (models.User, error) {
-	return models.User{}, nil
-}

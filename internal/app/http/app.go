@@ -35,7 +35,6 @@ type Auth interface {
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
 	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
-	GetPublicProfile(ctx context.Context, userID int64) (models.User, error)
 }
 
 // Ads описывает методы сервиса объявлений

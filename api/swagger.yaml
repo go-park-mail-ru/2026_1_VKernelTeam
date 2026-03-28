@@ -21,6 +21,23 @@ definitions:
       user_id:
         type: integer
     type: object
+  dto.PublicUserResponse:
+    properties:
+      ads_count:
+        type: integer
+      avatar_path:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      rating:
+        type: number
+      reviews_count:
+        type: integer
+    type: object
   dto.RegisterRequest:
     properties:
       email:
@@ -311,6 +328,34 @@ paths:
       - CookieAuth: []
       - CsrfHeaderAuth: []
       summary: Обновить профиль
+      tags:
+      - auth
+  /users/{id}:
+    get:
+      description: 'Возвращает только общедоступную информацию: имя, рейтинг, кол-во
+        объявлений. Не требует авторизации.'
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: публичный профиль успешно получен
+          schema:
+            $ref: '#/definitions/dto.PublicUserResponse'
+        "400":
+          description: invalid user id / user not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Получить публичный профиль
       tags:
       - auth
   /users/{id}/ads:
