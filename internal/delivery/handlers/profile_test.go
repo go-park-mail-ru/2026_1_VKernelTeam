@@ -9,12 +9,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
+
+const prefix = api.ApiPrefix
 
 func TestHandleGetProfile(t *testing.T) {
 	authH, _, mockAuth, _ := setupHandlers(t)
@@ -165,7 +168,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 			Rating: 4.8,
 		}
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/"+idStr, nil)
+		req, _ := http.NewRequest(http.MethodGet, prefix+"/users/"+idStr, nil)
 		req.SetPathValue("id", idStr)
 
 		rr := httptest.NewRecorder()
@@ -186,7 +189,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 	})
 
 	t.Run("InvalidID", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/not-an-int", nil)
+		req, _ := http.NewRequest(http.MethodGet, prefix+"/users/not-an-int", nil)
 		req.SetPathValue("id", "not-an-int")
 		rr := httptest.NewRecorder()
 
@@ -197,7 +200,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 
 	t.Run("UserNotFound", func(t *testing.T) {
 		userID := int64(404)
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/404", nil)
+		req, _ := http.NewRequest(http.MethodGet, prefix+"/users/404", nil)
 		req.SetPathValue("id", "404")
 		rr := httptest.NewRecorder()
 
