@@ -15,8 +15,7 @@ type LoginRequest struct {
 
 // LoginResponse представляет собой структуру для ответа на запрос входа в систему
 type LoginResponse struct {
-	UserID    int64  `json:"user_id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	CsrfToken string `json:"csrf_token"`
+	UserID int64  `json:"user_id"`
+	Email  string `json:"email"`
+	Name   string `json:"name"`
 }

@@ -118,11 +118,10 @@ func (h *AuthHandlers) setRefreshCookie(w http.ResponseWriter, refreshToken stri
 }
 
 // respondWithUser отправляет успешный ответ с данными пользователя
-func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User, csrfToken string) {
+func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) {
 	responser.RespondWithJSON(w, http.StatusOK, dto.LoginResponse{
-		UserID:    user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		CsrfToken: csrfToken,
+		UserID: user.ID,
+		Email:  user.Email,
+		Name:   user.Name,
 	})
 }
