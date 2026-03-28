@@ -87,7 +87,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	return ads, nil
 }
 
-// TODO
+// GetAdsByUserID возвращает список всех объявлений пользователя по его ID.
 func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
 	const query = `
 		SELECT
