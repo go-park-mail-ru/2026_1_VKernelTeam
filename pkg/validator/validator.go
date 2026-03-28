@@ -137,8 +137,11 @@ func ValidateUserID(userID int64) error {
 
 func ValidateAdStatus(status string) error {
 	allowedStatuses := map[string]bool{
-		"draft":   true,
-		"active":  true,
+		"draft":    true,
+		"active":   true,
+		"reserved": true,
+		"sold":     true,
+		"archived": true,
 	}
 
 	if !allowedStatuses[status] {

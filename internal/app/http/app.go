@@ -41,6 +41,9 @@ type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -137,9 +140,9 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
 	a.router.Handle("POST "+api.ApiPrefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
 	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
-	// a.router.HandleFunc("PUT "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleUpdateAdByID)
-	// a.router.HandleFunc("DELETE "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleDeleteAd)
-	// a.router.HandleFunc("POST "+api.ApiPrefix+"/ads/{id}/close", a.adsHandlers.HandleCloseAdByID)
+	a.router.Handle("PUT "+api.ApiPrefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
+	a.router.Handle("DELETE "+api.ApiPrefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
+	a.router.Handle("POST "+api.ApiPrefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

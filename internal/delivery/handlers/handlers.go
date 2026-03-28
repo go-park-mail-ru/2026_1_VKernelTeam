@@ -26,6 +26,7 @@ const (
 	ErrMethodNotAllowed     = "Method not allowed"
 	ErrAdNotFound           = "ad not found"
 	ErrInvalidAdID          = "invalid ad id"
+	ErrForbidden            = "forbidden"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
@@ -39,6 +40,9 @@ type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации

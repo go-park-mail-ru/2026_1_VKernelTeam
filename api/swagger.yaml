@@ -32,6 +32,19 @@ definitions:
       password:
         type: string
     type: object
+  dto.UpdateAdRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        type: string
+      price:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   models.Ad:
     properties:
       category_id:
@@ -96,6 +109,44 @@ paths:
       tags:
       - ads
   /ads/{id}:
+    delete:
+      description: Мягкое удаление объявления. Доступно только владельцу.
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявление успешно удалено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid ad id: Некорректный ID'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'ad not found: Объявление не найдено или не принадлежит пользователю'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить объявление
+      tags:
+      - ads
     get:
       description: Возвращает объявление по заданному ID
       parameters:
@@ -124,6 +175,93 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Получить объявление по ID
+      tags:
+      - ads
+    put:
+      consumes:
+      - application/json
+      description: Обновляет объявление по заданному ID. Доступно только владельцу
+        объявления.
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateAdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявление успешно обновлено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid ad id / invalid request body / ошибки валидации
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'ad not found: Объявление не найдено или не принадлежит пользователю'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Обновить объявление
+      tags:
+      - ads
+  /ads/{id}/close:
+    post:
+      description: Устанавливает статус объявления в 'archived'. Доступно только владельцу.
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявление успешно архивировано
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid ad id: Некорректный ID'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'ad not found: Объявление не найдено, уже архивировано или
+            не принадлежит пользователю'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Закрыть объявление
       tags:
       - ads
   /auth/login:

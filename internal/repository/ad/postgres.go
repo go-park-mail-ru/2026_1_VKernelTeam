@@ -13,7 +13,8 @@ import (
 
 // Sentinel-ошибки
 var (
-	ErrAdNotFound = errors.New("ad not found")
+	ErrAdNotFound  = errors.New("ad not found")
+	ErrAdForbidden = errors.New("forbidden: not the owner")
 )
 
 // AdStorage отвечает за операции с объявлениями.
@@ -171,4 +172,85 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 	}
 
 	return adID, nil
+}
+
+// UpdateAd обновляет объявление. Проверяет принадлежность объявления пользователю.
+func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
+	const query = `
+		UPDATE product
+		SET category_id = $1,
+		    title       = $2,
+		    description = $3,
+		    price       = $4,
+		    status      = $5,
+		    updated_at  = NOW()
+		WHERE id = $6
+		  AND seller_id = $7
+		  AND deleted_at IS NULL
+	`
+
+	result, err := s.pool.Exec(ctx, query,
+		req.CategoryID,
+		req.Title,
+		req.Description,
+		req.Price,
+		req.Status,
+		req.ID,
+		req.UserID,
+	)
+	if err != nil {
+		return fmt.Errorf("UpdateAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
+}
+
+// DeleteAd выполняет мягкое удаление объявления (устанавливает deleted_at).
+func (s *AdStorage) DeleteAd(ctx context.Context, id int64, userID int64) error {
+	const query = `
+		UPDATE product
+		SET deleted_at = NOW()
+		WHERE id = $1
+		  AND seller_id = $2
+		  AND deleted_at IS NULL
+	`
+
+	result, err := s.pool.Exec(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("DeleteAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
+}
+
+// CloseAd закрывает объявление (устанавливает статус 'archived').
+func (s *AdStorage) CloseAd(ctx context.Context, id int64, userID int64) error {
+	const query = `
+		UPDATE product
+		SET status     = 'archived',
+		    updated_at = NOW()
+		WHERE id = $1
+		  AND seller_id = $2
+		  AND deleted_at IS NULL
+		  AND status != 'archived'
+	`
+
+	result, err := s.pool.Exec(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("CloseAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
 }

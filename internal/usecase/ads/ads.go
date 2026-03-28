@@ -12,6 +12,9 @@ type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
 }
 
 type Ads struct {
@@ -89,4 +92,67 @@ func (a *Ads) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
 
 	log.Info("got ad by id")
 	return ad, nil
+}
+
+// UpdateAd обновляет объявление.
+func (a *Ads) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
+	const op = "ads.UpdateAd"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("ad_id", req.ID),
+		slog.Int64("user_id", req.UserID),
+	)
+	log.Info("updating ad")
+
+	err := a.adsStorage.UpdateAd(ctx, req)
+	if err != nil {
+		log.Error("failed to update ad", "error", err)
+		return err
+	}
+
+	log.Info("ad updated successfully")
+	return nil
+}
+
+// DeleteAd удаляет объявление (мягкое удаление).
+func (a *Ads) DeleteAd(ctx context.Context, id int64, userID int64) error {
+	const op = "ads.DeleteAd"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("ad_id", id),
+		slog.Int64("user_id", userID),
+	)
+	log.Info("deleting ad")
+
+	err := a.adsStorage.DeleteAd(ctx, id, userID)
+	if err != nil {
+		log.Error("failed to delete ad", "error", err)
+		return err
+	}
+
+	log.Info("ad deleted successfully")
+	return nil
+}
+
+// CloseAd закрывает объявление.
+func (a *Ads) CloseAd(ctx context.Context, id int64, userID int64) error {
+	const op = "ads.CloseAd"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("ad_id", id),
+		slog.Int64("user_id", userID),
+	)
+	log.Info("closing ad")
+
+	err := a.adsStorage.CloseAd(ctx, id, userID)
+	if err != nil {
+		log.Error("failed to close ad", "error", err)
+		return err
+	}
+
+	log.Info("ad archived successfully")
+	return nil
 }
