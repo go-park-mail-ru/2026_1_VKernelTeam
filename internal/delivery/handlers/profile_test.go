@@ -67,7 +67,7 @@ func TestHandleGetProfile(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		mockAuth.EXPECT().
-			GetProfile(ctx, userID).
+			GetProfile(gomock.Any(), userID).
 			Return(models.User{}, errors.New(ErrInternalError))
 
 		authH.HandleGetProfile(rr, req)
@@ -100,10 +100,10 @@ func TestHandleUpdateProfile(t *testing.T) {
 		}
 
 		mockAuth.EXPECT().
-			GetProfile(gomock.Any(), userID).
+			UpdateProfile(gomock.Any(), userID, newName).
 			Return(updatedUser, nil)
 
-		authH.HandleGetProfile(rr, req)
+		authH.HandleUpdateProfile(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -151,4 +151,67 @@ func TestHandleUpdateProfile(t *testing.T) {
 
 		assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	})
+}
+
+func TestHandleGetPublicProfile(t *testing.T) {
+	authH, _, mockAuth, _ := setupHandlers(t)
+
+	t.Run("Success", func(t *testing.T) {
+		userID := int64(100)
+		idStr := "100"
+		user := models.User{
+			ID:     userID,
+			Name:   "Public User",
+			Rating: 4.8,
+		}
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/"+idStr, nil)
+		req.SetPathValue("id", idStr)
+
+		rr := httptest.NewRecorder()
+
+		mockAuth.EXPECT().
+			GetProfile(gomock.Any(), userID).
+			Return(user, nil)
+
+		authH.HandleGetPublicProfile(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var resp dto.PublicUserResponse
+		err := json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, user.ID, resp.ID)
+		assert.Equal(t, user.Name, resp.Name)
+	})
+
+	t.Run("InvalidID", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/not-an-int", nil)
+		req.SetPathValue("id", "not-an-int")
+		rr := httptest.NewRecorder()
+
+		authH.HandleGetPublicProfile(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+
+	t.Run("UserNotFound", func(t *testing.T) {
+		userID := int64(404)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/404", nil)
+		req.SetPathValue("id", "404")
+		rr := httptest.NewRecorder()
+
+		mockAuth.EXPECT().
+			GetProfile(gomock.Any(), userID).
+			Return(models.User{}, errors.New(ErrInvalidRequestBody))
+
+		authH.HandleGetPublicProfile(rr, req)
+
+		assert.Equal(t, http.StatusInternalServerError, rr.Code)
+	})
+}
+
+// TODO
+func TestHandleUploadAvatar(t *testing.T) {
+
 }
