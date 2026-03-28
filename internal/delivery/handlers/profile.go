@@ -1,10 +1,42 @@
 package handlers
 
-import "net/http"
+import (
+	"log/slog"
+	"net/http"
 
-// TODO
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+)
+
+// HandleGetProfile возвращает профиль текущего авторизованного пользователя
+// @Summary Получить профиль пользователя
+// @Description Возвращает данные профиля на основе userID из контекста (JWT)
+// @Tags auth
+// @Produce json
+// @Success 200 {object} models.User "профиль успешно получен"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: внутренняя ошибка сервера"
+// @Security CookieAuth
+// @Router /profile [get]
 func (h *AuthHandlers) HandleGetProfile(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	const op = "handlers.HandleGetProfile"
+
+	// извлекаем userID из контекста (туда его положил authMW)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok {
+		h.log.Error("user id not found in context", slog.String("op", op))
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	user, err := h.services.Auth.GetProfile(r.Context(), userID)
+	if err != nil {
+		h.log.Error("failed to get profile", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, user)
 }
 
 // TODO

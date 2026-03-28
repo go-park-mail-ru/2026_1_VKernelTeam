@@ -88,15 +88,31 @@ func (s *UserStorage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 // UserByID возвращает пользователя по его ID.
 func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, error) {
 	const query = `
-		SELECT id, first_name, email, password_hash, created_at, updated_at
-		FROM "user"
-		WHERE id = $1`
+		SELECT
+            u.id, u.first_name, u.email, u.password_hash,
+            COALESCE(u.avatar_path, '') as avatar_path,
+            u.rating, u.created_at, u.updated_at,
+            (SELECT COUNT(*) FROM review WHERE receiver_id = u.id) as reviews_count,
+            (SELECT COUNT(*) FROM product WHERE seller_id = u.id AND deleted_at IS NULL) as ads_count,
+            (SELECT COUNT(*) FROM favorite WHERE user_id = u.id) as favorites_count,
+            (SELECT SUM(quantity) FROM cart_item WHERE user_id = u.id) as cart_count,
+            (SELECT COUNT(*) FROM message WHERE chat_id IN (
+                SELECT id FROM chat WHERE buyer_id = u.id OR seller_id = u.id
+            ) AND sender_id != u.id AND is_read = false) as unread_count
+        FROM "user" u
+        WHERE u.id = $1
+	`
 
 	var u models.User
+	var cartCount *int
+
 	err := s.pool.QueryRow(ctx, query, userID).Scan(
 		&u.ID, &u.Name, &u.Email, &u.PassHash,
-		&u.CreatedAt, &u.UpdatedAt,
+		&u.AvatarPath, &u.Rating, &u.CreatedAt, &u.UpdatedAt,
+		&u.ReviewsCount, &u.AdsCount, &u.FavoritesCount,
+		&cartCount, &u.MessagesCount,
 	)
+
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return models.User{}, ErrUserNotFound

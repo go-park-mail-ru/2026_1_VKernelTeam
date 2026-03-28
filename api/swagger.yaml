@@ -63,6 +63,33 @@ definitions:
       views_count:
         type: integer
     type: object
+  models.User:
+    properties:
+      ads_count:
+        type: integer
+      avatar_path:
+        type: string
+      cart_count:
+        type: integer
+      created_at:
+        type: string
+      email:
+        type: string
+      favorites_count:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      rating:
+        type: number
+      reviews_count:
+        type: integer
+      unread_messages_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
 host: clover-go.ru
 info:
   contact: {}
@@ -214,6 +241,29 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Регистрация пользователя
+      tags:
+      - auth
+  /profile:
+    get:
+      description: Возвращает данные профиля на основе userID из контекста (JWT)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: профиль успешно получен
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить профиль пользователя
       tags:
       - auth
   /users/{id}/ads:

@@ -280,9 +280,27 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	return isAdmin, nil
 }
 
-// TODO
+// GetProfile возвращает профиль пользователя по его ID.
 func (a *Auth) GetProfile(ctx context.Context, userID int64) (models.User, error) {
-	return models.User{}, nil
+	const op = "auth.GetProfile"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+	log.Info("getting user profile by ID")
+
+	profile, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: %w", op, err)
+		}
+		log.Error("failed to get user profile by ID")
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("got user profile by ID")
+
+	return profile, nil
 }
 
 // TODO
