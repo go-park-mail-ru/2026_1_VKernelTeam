@@ -1,6 +1,6 @@
 {
   "env": "local",
-  "token_ttl": "1m",
+  "token_ttl": "15m",
   "refresh_ttl": "168h",
   "http": {
     "port": 8000

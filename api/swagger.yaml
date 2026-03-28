@@ -14,8 +14,6 @@ definitions:
     type: object
   dto.LoginResponse:
     properties:
-      csrf_token:
-        type: string
       email:
         type: string
       name:
