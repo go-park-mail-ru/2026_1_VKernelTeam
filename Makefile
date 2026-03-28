@@ -69,7 +69,7 @@ deploy:
 
 migrate:
 	migrate -path ./internal/repository/postgres/migrations \
-		-database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
+		-database "$(DATABASE_URL)" up
 
 lint:
 	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...

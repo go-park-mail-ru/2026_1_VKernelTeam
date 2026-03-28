@@ -246,6 +246,10 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
 			return
 		}
+		if errors.Is(err, ad.ErrAdForbidden) {
+			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
+			return
+		}
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -286,6 +290,10 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 	if err := h.services.Ads.CloseAd(r.Context(), id, userID); err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
 			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			return
+		}
+		if errors.Is(err, ad.ErrAdForbidden) {
+			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
 			return
 		}
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)

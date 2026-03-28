@@ -66,10 +66,10 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 
 	adID, err := a.adsStorage.CreateAd(ctx, req)
 	if err != nil {
-		log.Error("failed to create ad")
+		log.Error("failed to create ad", "error", err)
 		return 0, err
 	}
-	
+
 	log.Info("ad created successfully", "ad_id", adID)
 	return adID, nil
 }
