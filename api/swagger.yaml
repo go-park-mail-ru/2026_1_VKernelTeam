@@ -30,6 +30,15 @@ definitions:
       password:
         type: string
     type: object
+  dto.UpdateProfileRequest:
+    properties:
+      name:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
   models.Ad:
     properties:
       category_id:
@@ -264,6 +273,44 @@ paths:
       security:
       - CookieAuth: []
       summary: Получить профиль пользователя
+      tags:
+      - auth
+  /profile/update:
+    post:
+      consumes:
+      - application/json
+      description: Обновляет имя пользователя. Требует действующую сессию и валидный
+        CSRF-токен.
+      parameters:
+      - description: Новые данные профиля
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: профиль успешно обновлен
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: invalid request body / Missing CSRF cookie / CSRF token mismatch
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: missing token cookie / invalid token / token has been revoked
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - CsrfHeaderAuth: []
+      summary: Обновить профиль
       tags:
       - auth
   /users/{id}/ads:

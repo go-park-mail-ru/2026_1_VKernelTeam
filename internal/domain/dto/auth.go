@@ -19,3 +19,8 @@ type LoginResponse struct {
 	Email  string `json:"email"`
 	Name   string `json:"name"`
 }
+
+// UpdateProfileRequest представляет собой структуру для запроса на обновленеи профиля
+type UpdateProfileRequest struct {
+	Name string `json:"name" validate:"required,min=3,max=50"`
+}

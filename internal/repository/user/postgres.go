@@ -123,7 +123,26 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 	return u, nil
 }
 
-// TODO
+// UpdateUser обновляет данные пользователя в БД и возвращает обновленную модель.
 func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string) (models.User, error) {
-	return models.User{}, nil
+	const query = `
+		UPDATE "user"
+		SET first_name = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+		RETURNING id, first_name, email, password_hash, created_at, updated_at
+	`
+
+	var u models.User
+	err := s.pool.QueryRow(ctx, query, name, userID).Scan(
+		&u.ID, &u.Name, &u.Email, &u.PassHash,
+		&u.CreatedAt, &u.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.User{}, ErrUserNotFound
+		}
+		return models.User{}, fmt.Errorf("UpdateUser: %w", err)
+	}
+
+	return u, nil
 }

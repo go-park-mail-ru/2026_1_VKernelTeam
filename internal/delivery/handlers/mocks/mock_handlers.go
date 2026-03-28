@@ -166,6 +166,21 @@ func (mr *MockAuthMockRecorder) RegisterNewUser(ctx, email, password, name inter
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterNewUser", reflect.TypeOf((*MockAuth)(nil).RegisterNewUser), ctx, email, password, name)
 }
 
+// UpdateProfile mocks base method.
+func (m *MockAuth) UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateProfile", ctx, userID, name)
+	ret0, _ := ret[0].(models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateProfile indicates an expected call of UpdateProfile.
+func (mr *MockAuthMockRecorder) UpdateProfile(ctx, userID, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockAuth)(nil).UpdateProfile), ctx, userID, name)
+}
+
 // ValidateTokenAndGetUser mocks base method.
 func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error) {
 	m.ctrl.T.Helper()

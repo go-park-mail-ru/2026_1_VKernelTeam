@@ -303,9 +303,28 @@ func (a *Auth) GetProfile(ctx context.Context, userID int64) (models.User, error
 	return profile, nil
 }
 
-// TODO
+// UpdateProfile обновляет данные профиля пользователя.
 func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error) {
-	return models.User{}, nil
+	const op = "auth.UpdateProfile"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+
+	log.Info("updating user profile")
+
+	user, err := a.userStorage.UpdateUser(ctx, userID, name)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: %w", op, err)
+		}
+		log.Error("failed to update user profile", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("user profile updated successfully")
+	return user, nil
 }
 
 // TODO

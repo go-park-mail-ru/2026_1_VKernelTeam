@@ -49,6 +49,7 @@ type Auth interface {
 	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
+	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
