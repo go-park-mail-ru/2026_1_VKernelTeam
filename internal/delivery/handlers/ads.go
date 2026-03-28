@@ -102,30 +102,9 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	// Устанавливаем UserID из токена, а не из тела запроса
 	req.UserID = userID
 
-	// Собираем все ошибки валидации
-	validationErrors := dto.ValidationErrors{}
-	if err := validator.ValidateCategoryID(req.CategoryID); err != nil {
-		validationErrors.CategoryID = err.Error()
-	}
-	if err := validator.ValidateAdTitle(req.Title); err != nil {
-		validationErrors.Title = err.Error()
-	}
-	if err := validator.ValidateAdDescription(req.Description); err != nil {
-		validationErrors.Description = err.Error()
-	}
-	if err := validator.ValidateAdPrice(req.Price); err != nil {
-		validationErrors.Price = err.Error()
-	}
-	if err := validator.ValidateAdStatus(req.Status); err != nil {
-		validationErrors.Status = err.Error()
-	}
-
-	if err := validator.ValidateAdLocation(req.Location); err != nil {
-		validationErrors.Location = err.Error()
-	}
-
-	// Если есть хотя бы одна ошибка валидации, возвращаем их все
-	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" || validationErrors.Location != "" {
+	// Валидируем запрос
+	validationErrors := validator.ValidateCreateAdRequest(&req)
+	if validationErrors.HasErrors() {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
@@ -187,28 +166,9 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	req.ID = id
 	req.UserID = userID
 
-	// Собираем ошибки валидации
-	validationErrors := dto.ValidationErrors{}
-	if err := validator.ValidateCategoryID(req.CategoryID); err != nil {
-		validationErrors.CategoryID = err.Error()
-	}
-	if err := validator.ValidateAdTitle(req.Title); err != nil {
-		validationErrors.Title = err.Error()
-	}
-	if err := validator.ValidateAdDescription(req.Description); err != nil {
-		validationErrors.Description = err.Error()
-	}
-	if err := validator.ValidateAdPrice(req.Price); err != nil {
-		validationErrors.Price = err.Error()
-	}
-	if err := validator.ValidateAdStatus(req.Status); err != nil {
-		validationErrors.Status = err.Error()
-	}
-	if err := validator.ValidateAdLocation(req.Location); err != nil {
-		validationErrors.Location = err.Error()
-	}
-
-	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" || validationErrors.Location != "" {
+	// Валидируем запрос
+	validationErrors := validator.ValidateUpdateAdRequest(&req)
+	if validationErrors.HasErrors() {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}

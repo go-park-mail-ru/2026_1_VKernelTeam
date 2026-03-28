@@ -3,6 +3,9 @@ package validator
 import (
 	"errors"
 	"regexp"
+
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
 // ошибки валидации
@@ -41,6 +44,14 @@ var (
 	emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
 	// регулярное выражение для имени: буквы (латиница и кириллица), пробелы, апострофы, дефисы
 	nameRegex = regexp.MustCompile(`^[\p{L}\s'-]+$`)
+
+	allowedAdStatuses = map[string]bool{
+		models.AdStatusDraft:    true,
+		models.AdStatusActive:   true,
+		models.AdStatusReserved: true,
+		models.AdStatusSold:     true,
+		models.AdStatusArchived: true,
+	}
 )
 
 // ValidateEmail проверяет валидность email
@@ -139,18 +150,74 @@ func ValidateUserID(userID int64) error {
 }
 
 func ValidateAdStatus(status string) error {
-	allowedStatuses := map[string]bool{
-		"draft":    true,
-		"active":   true,
-		"reserved": true,
-		"sold":     true,
-		"archived": true,
-	}
-
-	if !allowedStatuses[status] {
+	if !allowedAdStatuses[status] {
 		return ErrAdStatusInvalid
 	}
 	return nil
+}
+
+// ValidateCreateAdRequest консолидирует валидацию для запроса на создание объявления
+func ValidateCreateAdRequest(req *dto.CreateAdRequest) *dto.ValidationErrors {
+	errs := dto.ValidationErrors{}
+
+	if err := ValidateCategoryID(req.CategoryID); err != nil {
+		errs.CategoryID = err.Error()
+	}
+	if err := ValidateAdTitle(req.Title); err != nil {
+		errs.Title = err.Error()
+	}
+	if err := ValidateAdDescription(req.Description); err != nil {
+		errs.Description = err.Error()
+	}
+	if err := ValidateAdPrice(req.Price); err != nil {
+		errs.Price = err.Error()
+	}
+	if err := ValidateAdStatus(req.Status); err != nil {
+		errs.Status = err.Error()
+	}
+	if err := ValidateAdLocation(req.Location); err != nil {
+		errs.Location = err.Error()
+	}
+
+	return &errs
+}
+
+// ValidateUpdateAdRequest консолидирует валидацию для запроса на обновление объявления
+func ValidateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
+	errs := dto.ValidationErrors{}
+
+	if req.CategoryID != 0 {
+		if err := ValidateCategoryID(req.CategoryID); err != nil {
+			errs.CategoryID = err.Error()
+		}
+	}
+	if req.Title != "" {
+		if err := ValidateAdTitle(req.Title); err != nil {
+			errs.Title = err.Error()
+		}
+	}
+	if req.Description != "" {
+		if err := ValidateAdDescription(req.Description); err != nil {
+			errs.Description = err.Error()
+		}
+	}
+	if req.Price != 0 || req.Price < 0 {
+		if err := ValidateAdPrice(req.Price); err != nil {
+			errs.Price = err.Error()
+		}
+	}
+	if req.Status != "" {
+		if err := ValidateAdStatus(req.Status); err != nil {
+			errs.Status = err.Error()
+		}
+	}
+	if req.Location != "" {
+		if err := ValidateAdLocation(req.Location); err != nil {
+			errs.Location = err.Error()
+		}
+	}
+
+	return &errs
 }
 
 func ValidateAdLocation(location string) error {

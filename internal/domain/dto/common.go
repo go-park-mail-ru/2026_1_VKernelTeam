@@ -19,3 +19,10 @@ type ValidationErrors struct {
 	Location    string   `json:"location,omitempty"`
 	Photos      []string `json:"photos,omitempty"`
 }
+
+// HasErrors проверяет, есть ли ошибки валидации
+func (v *ValidationErrors) HasErrors() bool {
+	return v.Email != "" || v.Password != "" || v.Name != "" || v.UserID != "" ||
+		v.CategoryID != "" || v.Title != "" || v.Description != "" || v.Price != "" ||
+		v.Status != "" || v.Location != "" || len(v.Photos) > 0
+}
