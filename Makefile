@@ -76,3 +76,10 @@ deploy:
 	sudo git pull
 	docker compose --env-file .env -f deployments/docker-compose.yaml up -d --build --remove-orphans
 	docker image prune -f
+
+# Полный перезапуск: стоп, генерация доки и чистый старт
+restart: stop swag run
+
+# Остановить только приложение, если оно в докере (или просто прибраться)
+stop:
+	docker compose -f deployments/docker-compose.yaml stop
