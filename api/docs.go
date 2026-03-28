@@ -48,6 +48,65 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Создает новое объявление. Доступно только авторизованным пользователям.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "Создать объявление",
+                "parameters": [
+                    {
+                        "description": "Данные объявления (title, description, price, category_id, status, location)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateAdRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ID созданного объявления",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int64"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body / ошибки валидации",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/ads/{id}": {
@@ -122,7 +181,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные для обновления",
+                        "description": "Данные для обновления (title, description, price, category_id, status, location)",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -466,6 +525,35 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.CreateAdRequest": {
+            "type": "object",
+            "properties": {
+                "category_id": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -523,6 +611,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "location": {
                     "type": "string"
                 },
                 "price": {

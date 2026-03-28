@@ -16,5 +16,6 @@ type ValidationErrors struct {
 	Description string   `json:"description,omitempty"`
 	Price       string   `json:"price,omitempty"`
 	Status      string   `json:"status,omitempty"`
+	Location    string   `json:"location,omitempty"`
 	Photos      []string `json:"photos,omitempty"`
 }

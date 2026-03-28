@@ -1,5 +1,24 @@
 basePath: /api/v1
 definitions:
+  dto.CreateAdRequest:
+    properties:
+      category_id:
+        type: integer
+      description:
+        type: string
+      location:
+        type: string
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   dto.ErrorResponse:
     properties:
       error:
@@ -37,6 +56,8 @@ definitions:
       category_id:
         type: integer
       description:
+        type: string
+      location:
         type: string
       price:
         type: integer
@@ -106,6 +127,45 @@ paths:
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Получить список объявлений
+      tags:
+      - ads
+    post:
+      consumes:
+      - application/json
+      description: Создает новое объявление. Доступно только авторизованным пользователям.
+      parameters:
+      - description: Данные объявления (title, description, price, category_id, status,
+          location)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateAdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ID созданного объявления
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+        "400":
+          description: invalid request body / ошибки валидации
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать объявление
       tags:
       - ads
   /ads/{id}:
@@ -188,7 +248,8 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Данные для обновления
+      - description: Данные для обновления (title, description, price, category_id,
+          status, location)
         in: body
         name: body
         required: true

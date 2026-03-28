@@ -72,6 +72,19 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 	responser.RespondWithJSON(w, http.StatusOK, adItem)
 }
 
+// HandleCreateAd обрабатывает запрос на создание нового объявления
+// @Summary Создать объявление
+// @Description Создает новое объявление. Доступно только авторизованным пользователям.
+// @Tags ads
+// @Accept json
+// @Produce json
+// @Param body body dto.CreateAdRequest true "Данные объявления (title, description, price, category_id, status, location)"
+// @Success 200 {object} map[string]int64 "ID созданного объявления"
+// @Failure 400 {object} dto.ErrorResponse "invalid request body / ошибки валидации"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /ads [post]
 func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	// Извлекаем UserID из JWT-контекста (установлен AuthMiddleware)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
@@ -107,8 +120,12 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		validationErrors.Status = err.Error()
 	}
 
+	if err := validator.ValidateAdLocation(req.Location); err != nil {
+		validationErrors.Location = err.Error()
+	}
+
 	// Если есть хотя бы одна ошибка валидации, возвращаем их все
-	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" {
+	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" || validationErrors.Location != "" {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
@@ -135,7 +152,7 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID объявления"
-// @Param body body dto.UpdateAdRequest true "Данные для обновления"
+// @Param body body dto.UpdateAdRequest true "Данные для обновления (title, description, price, category_id, status, location)"
 // @Success 200 {object} map[string]string "объявление успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id / invalid request body / ошибки валидации"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
@@ -187,8 +204,11 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	if err := validator.ValidateAdStatus(req.Status); err != nil {
 		validationErrors.Status = err.Error()
 	}
+	if err := validator.ValidateAdLocation(req.Location); err != nil {
+		validationErrors.Location = err.Error()
+	}
 
-	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" {
+	if validationErrors.CategoryID != "" || validationErrors.Title != "" || validationErrors.Description != "" || validationErrors.Price != "" || validationErrors.Status != "" || validationErrors.Location != "" {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}

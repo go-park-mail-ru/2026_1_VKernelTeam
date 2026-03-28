@@ -37,6 +37,7 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 			p.description,
 			p.price,
 			p.status,
+			p.location,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -64,6 +65,7 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		&ad.Description,
 		&ad.Price,
 		&ad.Status,
+		&ad.Location,
 		&ad.CreatedAt,
 		&ad.UpdatedAt,
 		&photos,
@@ -91,6 +93,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			p.description,
 			p.price,
 			p.status,
+			p.location,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -127,6 +130,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&ad.Description,
 			&ad.Price,
 			&ad.Status,
+			&ad.Location,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
@@ -153,8 +157,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 // CreateAd создает новое объявление и возвращает его ID.
 func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
 	const query = `
-		INSERT INTO product (seller_id, category_id, title, description, price, status)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO product (seller_id, category_id, title, description, price, status, location)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
 
@@ -166,6 +170,7 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 		req.Description,
 		req.Price,
 		req.Status,
+		req.Location,
 	).Scan(&adID)
 	if err != nil {
 		return 0, fmt.Errorf("CreateAd: insert: %w", err)
@@ -183,9 +188,10 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 		    description = $3,
 		    price       = $4,
 		    status      = $5,
+		    location    = $6,
 		    updated_at  = NOW()
-		WHERE id = $6
-		  AND seller_id = $7
+		WHERE id = $7
+		  AND seller_id = $8
 		  AND deleted_at IS NULL
 	`
 
@@ -195,6 +201,7 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 		req.Description,
 		req.Price,
 		req.Status,
+		req.Location,
 		req.ID,
 		req.UserID,
 	)

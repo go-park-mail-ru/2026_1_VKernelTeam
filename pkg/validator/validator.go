@@ -24,6 +24,9 @@ var (
 	ErrCategoryIDInvalid         = errors.New("category ID must be a positive integer")
 	ErrUserIDInvalid             = errors.New("user ID must be a positive integer")
 	ErrAdStatusInvalid           = errors.New("invalid ad status")
+	ErrAdLocationEmpty           = errors.New("location cannot be empty")
+	ErrAdLocationTooShort        = errors.New("location must be at least 2 characters long")
+	ErrAdLocationTooLong         = errors.New("location must be at most 100 characters long")
 )
 
 var (
@@ -146,6 +149,20 @@ func ValidateAdStatus(status string) error {
 
 	if !allowedStatuses[status] {
 		return ErrAdStatusInvalid
+	}
+	return nil
+}
+
+func ValidateAdLocation(location string) error {
+	if location == "" {
+		return ErrAdLocationEmpty
+	}
+	locLen := len([]rune(location))
+	if locLen < 2 {
+		return ErrAdLocationTooShort
+	}
+	if locLen > 100 {
+		return ErrAdLocationTooLong
 	}
 	return nil
 }

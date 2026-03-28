@@ -9,6 +9,7 @@ type CreateAdRequest struct {
 	Price       int64    `json:"price"`
 	Status      string   `json:"status"`
 	Photos      []string `json:"photos"`
+	Location    string   `json:"location"`
 }
 
 // UpdateAdRequest представляет собой структуру для запроса на обновление объявления
@@ -20,4 +21,5 @@ type UpdateAdRequest struct {
 	Description string `json:"description,omitempty"`
 	Price       int64  `json:"price,omitempty"`
 	Status      string `json:"status,omitempty"`
+	Location    string `json:"location,omitempty"`
 }
