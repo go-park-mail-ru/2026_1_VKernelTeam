@@ -33,13 +33,28 @@ definitions:
     type: object
   dto.LoginResponse:
     properties:
-      csrf_token:
-        type: string
       email:
         type: string
       name:
         type: string
       user_id:
+        type: integer
+    type: object
+  dto.PublicUserResponse:
+    properties:
+      ads_count:
+        type: integer
+      avatar_path:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      rating:
+        type: number
+      reviews_count:
         type: integer
     type: object
   dto.RegisterRequest:
@@ -65,6 +80,15 @@ definitions:
         type: string
       title:
         type: string
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      name:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - name
     type: object
   models.Ad:
     properties:
@@ -98,6 +122,33 @@ definitions:
         type: string
       views_count:
         type: integer
+    type: object
+  models.User:
+    properties:
+      ads_count:
+        type: integer
+      avatar_path:
+        type: string
+      cart_count:
+        type: integer
+      created_at:
+        type: string
+      email:
+        type: string
+      favorites_count:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      rating:
+        type: number
+      reviews_count:
+        type: integer
+      unread_messages_count:
+        type: integer
+      updated_at:
+        type: string
     type: object
 host: clover-go.ru
 info:
@@ -446,6 +497,130 @@ paths:
       summary: Регистрация пользователя
       tags:
       - auth
+  /profile:
+    get:
+      description: Возвращает данные профиля на основе userID из контекста (JWT)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: профиль успешно получен
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить профиль пользователя
+      tags:
+      - auth
+  /profile/update:
+    post:
+      consumes:
+      - application/json
+      description: Обновляет имя пользователя. Требует действующую сессию и валидный
+        CSRF-токен.
+      parameters:
+      - description: Новые данные профиля
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: профиль успешно обновлен
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: invalid request body / Missing CSRF cookie / CSRF token mismatch
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: missing token cookie / invalid token / token has been revoked
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - CsrfHeaderAuth: []
+      summary: Обновить профиль
+      tags:
+      - auth
+  /users/{id}:
+    get:
+      description: 'Возвращает только общедоступную информацию: имя, рейтинг, кол-во
+        объявлений. Не требует авторизации.'
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: публичный профиль успешно получен
+          schema:
+            $ref: '#/definitions/dto.PublicUserResponse'
+        "400":
+          description: invalid user id / user not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Получить публичный профиль
+      tags:
+      - auth
+  /users/{id}/ads:
+    get:
+      description: Возвращает список всех объявлений продавца по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: объявления успешно получены
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Ad'
+              type: array
+            type: object
+        "400":
+          description: некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить объявления пользователя
+      tags:
+      - ads
 securityDefinitions:
   CookieAuth:
     description: JWT session token

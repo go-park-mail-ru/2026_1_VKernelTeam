@@ -2,6 +2,7 @@ package ads
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
@@ -15,6 +16,7 @@ type AdsProvider interface {
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 type Ads struct {
@@ -35,7 +37,7 @@ func New(
 
 // GetAllAds возвращает все объявления.
 func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
-	const op = "ads.GetAll"
+	const op = "usecase.ads.GetAll"
 
 	log := a.log.With(
 		slog.String("op", op),
@@ -155,4 +157,24 @@ func (a *Ads) CloseAd(ctx context.Context, id int64, userID int64) error {
 
 	log.Info("ad archived successfully")
 	return nil
+}
+
+// GetAdsByUserID возвращает все объявления пользователя по его ID.
+func (a *Ads) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
+	const op = "usecase.ads.GetAdsByUserID"
+
+	log := a.log.With(
+		slog.String("op", op),
+	)
+	log.Info("getting all ads by user ID")
+
+	// вызов метода репозитория
+	ads, err := a.adsStorage.GetAdsByUserID(ctx, userID)
+	if err != nil {
+		log.Error("failed to get all ads by user ID")
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("got all ads by user ID")
+
+	return ads, nil
 }

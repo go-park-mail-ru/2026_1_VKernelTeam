@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http/mocks"
+	mock_httpapp "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http/mocks"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )

@@ -34,6 +34,8 @@ type Auth interface {
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+	GetProfile(ctx context.Context, userID int64) (models.User, error)
+	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -44,6 +46,7 @@ type Ads interface {
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -119,13 +122,39 @@ func New(
 
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/register", a.authHandlers.HandleRegister)
-	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/login", a.authHandlers.HandleLogin)
-	a.router.HandleFunc("POST "+api.ApiPrefix+"/auth/refresh", a.authHandlers.HandleRefresh)
+	prefix := api.ApiPrefix
 
-	// Защищенная ручка (оборачиваем в Middleware)
+	// Публичные ручки
+	a.router.HandleFunc("POST "+prefix+"/auth/register", a.authHandlers.HandleRegister)
+	a.router.HandleFunc("POST "+prefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+prefix+"/auth/refresh", a.authHandlers.HandleRefresh)
+
+	// Обработчии объявлений
+	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
+
+	// Публичный профиль продавца и его объявления
+	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)
+	a.router.HandleFunc("GET "+prefix+"/users/{id}/ads", a.adsHandlers.HandleGetUserAds)
+
+	// Защищенные ручки (нужен JWT)
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
-	a.router.Handle("POST "+api.ApiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
+
+	// Обработчики объявлений
+	a.router.Handle("POST "+prefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
+	a.router.Handle("PUT "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
+	a.router.Handle("DELETE "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
+	a.router.Handle("POST "+prefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
+
+	// Выход
+	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
+
+	// Личный профиль
+	a.router.Handle("GET "+prefix+"/profile", authMW(http.HandlerFunc(a.authHandlers.HandleGetProfile)))
+	a.router.Handle("PATCH "+prefix+"/profile", authMW(http.HandlerFunc(a.authHandlers.HandleUpdateProfile)))
+
+	// Аватар
+	a.router.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(a.authHandlers.HandleUploadAvatar)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
@@ -135,14 +164,6 @@ func (a *App) setupRoutes() {
 	fs := http.FileServer(http.Dir("static"))
 	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
 	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	// регистрируем обработчик объявлений
-	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads", a.adsHandlers.HandleGetAds)
-	a.router.Handle("POST "+api.ApiPrefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
-	a.router.HandleFunc("GET "+api.ApiPrefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
-	a.router.Handle("PUT "+api.ApiPrefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
-	a.router.Handle("DELETE "+api.ApiPrefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
-	a.router.Handle("POST "+api.ApiPrefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.

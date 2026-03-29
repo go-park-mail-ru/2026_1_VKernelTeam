@@ -27,6 +27,9 @@ const (
 	ErrAdNotFound           = "ad not found"
 	ErrInvalidAdID          = "invalid ad id"
 	ErrForbidden            = "forbidden"
+	ErrInvalidUserID        = "invalid user id"
+	ErrFailedToGetUserAds   = "failed to get user ads"
+	ErrUnauthorized         = "unauthorized"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
@@ -43,6 +46,7 @@ type Ads interface {
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации
@@ -52,6 +56,8 @@ type Auth interface {
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+	GetProfile(ctx context.Context, userID int64) (models.User, error)
+	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
@@ -133,11 +139,10 @@ func (h *AuthHandlers) setRefreshCookie(w http.ResponseWriter, refreshToken stri
 }
 
 // respondWithUser отправляет успешный ответ с данными пользователя
-func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User, csrfToken string) {
+func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) {
 	responser.RespondWithJSON(w, http.StatusOK, dto.LoginResponse{
-		UserID:    user.ID,
-		Email:     user.Email,
-		Name:      user.Name,
-		CsrfToken: csrfToken,
+		UserID: user.ID,
+		Email:  user.Email,
+		Name:   user.Name,
 	})
 }

@@ -80,7 +80,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	h.setAuthCookie(w, token, csrfToken)
 
 	h.setRefreshCookie(w, refreshToken)
-	h.respondWithUser(w, user, csrfToken)
+	h.respondWithUser(w, user)
 }
 
 // HandleLogin обрабатывает запросы на вход пользователя
@@ -163,7 +163,7 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 
 	h.setAuthCookie(w, token, csrfToken)
 	h.setRefreshCookie(w, refreshToken)
-	h.respondWithUser(w, user, csrfToken)
+	h.respondWithUser(w, user)
 }
 
 // handleTokenLogin обрабатывает вход пользователя путём валидации существующего токена
@@ -179,7 +179,7 @@ func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, 
 
 	// Устанавливаем куку с токенами
 	h.setAuthCookie(w, tokenString, csrfToken)
-	h.respondWithUser(w, user, csrfToken)
+	h.respondWithUser(w, user)
 }
 
 // HandleLogout обрабатывает запросы на выход из системы, добавляя jti токена в черный список.

@@ -94,3 +94,70 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	// Проверяем статус
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
+
+func TestHandleGetUserAds_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(42)
+	testAds := []models.Ad{
+		{ID: 1, SellerID: userID, Title: "User's Ad", Price: 500},
+	}
+
+	mockAds.EXPECT().
+		GetAdsByUserID(gomock.Any(), userID).
+		Return(testAds, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/42/ads", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var response struct {
+		Ads []models.Ad `json:"ads"`
+	}
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, testAds, response.Ads)
+}
+
+func TestHandleGetUserAds_InvalidID(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/abc/ads", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetUserAds_ServiceError(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(42)
+
+	mockAds.EXPECT().
+		GetAdsByUserID(gomock.Any(), userID).
+		Return(nil, assert.AnError)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/42/ads", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}
