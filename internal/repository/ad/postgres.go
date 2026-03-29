@@ -93,7 +93,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			p.description,
 			p.price,
 			p.status,
-			p.location,
+			COALESCE(p.location, '') AS location,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
