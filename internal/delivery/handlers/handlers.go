@@ -24,6 +24,9 @@ const (
 	ErrInternalError        = "internal error"
 	ErrFailedToLogout       = "failed to logout"
 	ErrMethodNotAllowed     = "Method not allowed"
+	ErrAdNotFound           = "ad not found"
+	ErrInvalidAdID          = "invalid ad id"
+	ErrForbidden            = "forbidden"
 	ErrInvalidUserID        = "invalid user id"
 	ErrFailedToGetUserAds   = "failed to get user ads"
 	ErrUnauthorized         = "unauthorized"
@@ -38,6 +41,11 @@ type Services struct {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
+	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
@@ -65,6 +73,7 @@ type AuthHandlers struct {
 type AdsHandlers struct {
 	log      *slog.Logger
 	services Services
+	tokenTTL time.Duration
 }
 
 // NewAuthHandlers создает новый экземпляр AuthHandlers
@@ -79,36 +88,42 @@ func NewAuthHandlers(log *slog.Logger, services Services, tokenTTL time.Duration
 }
 
 // NewAdsHandlers создает новый экземпляр AdsHandlers
-func NewAdsHandlers(log *slog.Logger, services Services) *AdsHandlers {
+func NewAdsHandlers(log *slog.Logger, services Services, tokenTTL time.Duration) *AdsHandlers {
 	return &AdsHandlers{
 		log:      log,
 		services: services,
+		tokenTTL: tokenTTL,
 	}
 }
 
-// setAuthCookie устанавливает cookie с токеном
-func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
-	// JWT-токен
+// setTokenCookie устанавливает cookie с JWT-токеном
+func setTokenCookie(w http.ResponseWriter, token string, tokenTTL time.Duration) {
 	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: token,
-		// Domain: "clover-go.ru", // Убран хардкод домена для работы на localhost
-		HttpOnly: true, // JS не увидит куку
-		// Secure:   true,                      // передача только по HTTPS
-		Path:     "/",                       // доступна везде
-		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
-		MaxAge:   int(h.tokenTTL.Seconds()), // время жизни
+		Name:     "token",
+		Value:    token,
+		HttpOnly: true,
+		Path:     "/",
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(tokenTTL.Seconds()),
 	})
+}
 
-	// CSRF-токен
+// setCsrfCookie устанавливает cookie с CSRF-токеном
+func setCsrfCookie(w http.ResponseWriter, csrfToken string, tokenTTL time.Duration) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "csrf_token",
 		Value:    csrfToken,
-		HttpOnly: false, // JS должен иметь доступ
+		HttpOnly: false,
 		Path:     "/",
 		SameSite: http.SameSiteLaxMode,
-		MaxAge:   int(h.tokenTTL.Seconds()),
+		MaxAge:   int(tokenTTL.Seconds()),
 	})
+}
+
+// setAuthCookie устанавливает cookie с JWT-токеном и CSRF-токеном
+func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
+	setTokenCookie(w, token, h.tokenTTL)
+	setCsrfCookie(w, csrfToken, h.tokenTTL)
 }
 
 // setRefreshCookie устанавливает cookie с refresh-токеном

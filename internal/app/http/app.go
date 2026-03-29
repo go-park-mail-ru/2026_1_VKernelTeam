@@ -14,6 +14,7 @@ import (
 
 	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
@@ -40,6 +41,11 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
+	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
@@ -96,7 +102,7 @@ func New(
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
-	})
+	}, tokenTTL)
 
 	app.setupRoutes()
 
@@ -123,8 +129,9 @@ func (a *App) setupRoutes() {
 	a.router.HandleFunc("POST "+prefix+"/auth/login", a.authHandlers.HandleLogin)
 	a.router.HandleFunc("POST "+prefix+"/auth/refresh", a.authHandlers.HandleRefresh)
 
-	// Обработчик объявлений
+	// Обработчии объявлений
 	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
 
 	// Публичный профиль продавца и его объявления
 	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)
@@ -132,6 +139,12 @@ func (a *App) setupRoutes() {
 
 	// Защищенные ручки (нужен JWT)
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
+
+	// Обработчики объявлений
+	a.router.Handle("POST "+prefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
+	a.router.Handle("PUT "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
+	a.router.Handle("DELETE "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
+	a.router.Handle("POST "+prefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

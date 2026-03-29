@@ -2,10 +2,19 @@ package ad
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Sentinel-ошибки
+var (
+	ErrAdNotFound  = errors.New("ad not found")
+	ErrAdForbidden = errors.New("forbidden: not the owner")
 )
 
 // AdStorage отвечает за операции с объявлениями.
@@ -15,6 +24,62 @@ type AdStorage struct {
 
 func NewAdStorage(pool *pgxpool.Pool) *AdStorage {
 	return &AdStorage{pool: pool}
+}
+
+// GetAdByID возвращает объявление по ID. Возвращает ErrAdNotFound, если оно не найдено.
+func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
+	const query = `
+		SELECT
+			p.id,
+			p.seller_id,
+			p.category_id,
+			p.title,
+			p.description,
+			p.price,
+			p.status,
+			p.location,
+			p.created_at,
+			p.updated_at,
+			COALESCE(
+				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
+				'{}'
+			) AS photos,
+			COUNT(DISTINCT pv.id)        AS views_count,
+			COUNT(DISTINCT f.product_id) AS favorites_count
+		FROM product p
+		LEFT JOIN product_image pi ON pi.product_id = p.id
+		LEFT JOIN product_view  pv ON pv.product_id = p.id
+		LEFT JOIN favorite       f ON f.product_id  = p.id
+		WHERE p.id = $1
+		  AND p.deleted_at IS NULL
+		GROUP BY p.id
+	`
+
+	var ad models.Ad
+	var photos []string
+	err := s.pool.QueryRow(ctx, query, id).Scan(
+		&ad.ID,
+		&ad.SellerID,
+		&ad.CategoryID,
+		&ad.Title,
+		&ad.Description,
+		&ad.Price,
+		&ad.Status,
+		&ad.Location,
+		&ad.CreatedAt,
+		&ad.UpdatedAt,
+		&photos,
+		&ad.ViewsCount,
+		&ad.FavoritesCount,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Ad{}, ErrAdNotFound
+		}
+		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
+	}
+	ad.Photos = photos
+	return ad, nil
 }
 
 // GetAllAds возвращает список активных объявлений.
@@ -28,6 +93,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			p.description,
 			p.price,
 			p.status,
+			COALESCE(p.location, '') AS location,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -64,6 +130,7 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&ad.Description,
 			&ad.Price,
 			&ad.Status,
+			&ad.Location,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
@@ -85,6 +152,114 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	}
 
 	return ads, nil
+}
+
+// CreateAd создает новое объявление и возвращает его ID.
+func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
+	const query = `
+		INSERT INTO product (seller_id, category_id, title, description, price, status, location)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`
+
+	var adID int64
+	err := s.pool.QueryRow(ctx, query,
+		req.UserID,
+		req.CategoryID,
+		req.Title,
+		req.Description,
+		req.Price,
+		req.Status,
+		req.Location,
+	).Scan(&adID)
+	if err != nil {
+		return 0, fmt.Errorf("CreateAd: insert: %w", err)
+	}
+
+	return adID, nil
+}
+
+// UpdateAd обновляет объявление. Проверяет принадлежность объявления пользователю.
+func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
+	const query = `
+		UPDATE product
+		SET category_id = $1,
+		    title       = $2,
+		    description = $3,
+		    price       = $4,
+		    status      = $5,
+		    location    = $6,
+		    updated_at  = NOW()
+		WHERE id = $7
+		  AND seller_id = $8
+		  AND deleted_at IS NULL
+	`
+
+	result, err := s.pool.Exec(ctx, query,
+		req.CategoryID,
+		req.Title,
+		req.Description,
+		req.Price,
+		req.Status,
+		req.Location,
+		req.ID,
+		req.UserID,
+	)
+	if err != nil {
+		return fmt.Errorf("UpdateAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
+}
+
+// DeleteAd выполняет мягкое удаление объявления (устанавливает deleted_at).
+func (s *AdStorage) DeleteAd(ctx context.Context, id int64, userID int64) error {
+	const query = `
+		UPDATE product
+		SET deleted_at = NOW()
+		WHERE id = $1
+		  AND seller_id = $2
+		  AND deleted_at IS NULL
+	`
+
+	result, err := s.pool.Exec(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("DeleteAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
+}
+
+// CloseAd закрывает объявление (устанавливает статус 'archived').
+func (s *AdStorage) CloseAd(ctx context.Context, id int64, userID int64) error {
+	const query = `
+		UPDATE product
+		SET status     = 'archived',
+		    updated_at = NOW()
+		WHERE id = $1
+		  AND seller_id = $2
+		  AND deleted_at IS NULL
+		  AND status != 'archived'
+	`
+
+	result, err := s.pool.Exec(ctx, query, id, userID)
+	if err != nil {
+		return fmt.Errorf("CloseAd: exec: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return ErrAdNotFound
+	}
+
+	return nil
 }
 
 // GetAdsByUserID возвращает список всех объявлений пользователя по его ID.

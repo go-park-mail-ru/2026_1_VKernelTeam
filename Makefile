@@ -1,85 +1,86 @@
-.PHONY: help test test-verbose test-coverage test-auth test-storage test-watch clean
-#.DEFAULT_GOAL:=run
+.PHONY: help run deploy test test-verbose test-coverage test-auth test-storage build swag lint fmt vet clean migrate
 
 help:
 	@echo "Available targets:"
+	@echo ""
+	@echo "  Разработка (локально):"
+	@echo "  run               - Быстрый запуск локально (DB/Redis в Docker, сервер нативно с логами)"
+	@echo "  swag              - Сгенерировать Swagger-документацию"
+	@echo "  build             - Скомпилировать бинарный файл приложения"
+	@echo ""
+	@echo "  Тесты:"
 	@echo "  test              - Запустить все тесты"
 	@echo "  test-verbose      - Запустить все тесты с подробным выводом"
 	@echo "  test-coverage     - Запустить тесты и показать отчет о покрытии"
 	@echo "  test-auth         - Запустить тесты только для сервиса аутентификации"
 	@echo "  test-storage      - Запустить тесты только для слоя хранения (storage)"
+	@echo ""
+	@echo "  Деплой (только на сервере):"
+	@echo "  deploy            - Обновить код (git pull) и перезапустить все контейнеры"
+	@echo ""
+	@echo "  Утилиты:"
+	@echo "  lint              - Запустить линтер (golangci-lint)"
+	@echo "  fmt               - Отформатировать код"
+	@echo "  vet               - Запустить go vet"
 	@echo "  clean             - Удалить временные файлы и отчеты о покрытии"
-	@echo "  run               - Запустить приложение локально"
-	@echo "  build             - Скомпилировать бинарный файл приложения"
-	@echo "  swag              - Сгенерировать Swagger-документацию"
-	@echo "  deploy            - Обновить код и перезапустить контейнеры на сервере"
+	@echo "  migrate           - Применить миграции локально"
 
-
-migrate:
-	migrate -path ./internal/repository/postgres/migrations \
-		-database "postgres://postgres:qwerty@localhost:5432/clover?sslmode=disable" up
+# ─── Разработка ───────────────────────────────────────────────────────────────
 
 # Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go -o ./api
 
-# Запуск приложения с локальным конфигом
+# Быстрый локальный запуск: поднимает только зависимости в Docker, сервер — нативно
 run: swag
 	docker compose --env-file .env -f deployments/docker-compose.yaml up -d db db_migrate redis
 	go run ./cmd/server/main.go --config=./config/local.json
-
-# Запуск всех тестов
-test:
-	go test ./...
-
-# Запуск тестов с подробным выводом
-test-verbose:
-	go test -v ./...
-
-# Проверка покрытия кода тестами
-test-coverage:
-	go test -cover ./internal/... ./pkg/...
-
-# Тестирование только логики аутентификации
-test-auth:
-	go test -v ./internal/usecase/auth/...
-
-# Тестирование только компонентов хранилища
-test-storage:
-	go test -v ./internal/repository/...
 
 # Сборка приложения в исполняемый файл
 build: swag
 	go build -o bin/clover ./cmd/server/main.go
 
-# Очистка проекта от собранных файлов и отчетов
-clean:
-	go clean
-	rm -f coverage.out coverage.html
-	rm -rf bin/
+# ─── Тесты ────────────────────────────────────────────────────────────────────
 
-# Запуск линтера (требуется установленный golangci-lint)
-lint:
-	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...
+test:
+	go test ./...
 
-# Форматирование кода по стандарту Go
-fmt:
-	go fmt ./...
+test-verbose:
+	go test -v ./...
 
-# Запуск статического анализатора go vet
-vet:
-	go vet ./...
+test-coverage:
+	go test -cover ./internal/... ./pkg/...
 
-# Обновление и перезапуск на сервере
-# Используется zero-downtime подход: сначала сборка, затем замена контейнеров
+test-auth:
+	go test -v ./internal/usecase/auth/...
+
+test-storage:
+	go test -v ./internal/repository/...
+
+# ─── Деплой (только на сервере) ───────────────────────────────────────────────
+
+# Обновление кода и перезапуск всех контейнеров на сервере
 deploy:
 	sudo git pull
 	docker compose --env-file .env -f deployments/docker-compose.yaml up -d --build --remove-orphans
 	docker image prune -f
 
-# Полный перезапуск: стоп, генерация доки и чистый старт
-restart: stop swag run
+# ─── Утилиты ──────────────────────────────────────────────────────────────────
 
-# Остановить только приложение, если оно в докере (или просто прибраться)
-stop:
-	docker compose -f deployments/docker-compose.yaml stop
+migrate:
+	migrate -path ./internal/repository/postgres/migrations \
+		-database "$(DATABASE_URL)" up
+
+lint:
+	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...
+
+fmt:
+	go fmt ./...
+
+vet:
+	go vet ./...
+
+clean:
+	go clean
+	rm -f coverage.out coverage.html
+	rm -rf bin/

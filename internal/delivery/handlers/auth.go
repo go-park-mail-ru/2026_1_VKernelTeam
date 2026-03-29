@@ -192,8 +192,6 @@ func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, 
 // @Failure 500 {object} dto.ErrorResponse "failed to logout: Ошибка сервера при выходе"
 // @Router /auth/logout [post]
 // @Security CookieAuth
-// @Security CsrfCookieAuth
-// @Security CsrfHeaderAuth
 func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	h.log.Info("logout attempt", slog.String("op", "HandleLogout"))
 

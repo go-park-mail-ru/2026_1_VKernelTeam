@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	dto "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -34,6 +35,64 @@ func NewMockAds(ctrl *gomock.Controller) *MockAds {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAds) EXPECT() *MockAdsMockRecorder {
 	return m.recorder
+}
+
+// CloseAd mocks base method.
+func (m *MockAds) CloseAd(ctx context.Context, id, userID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseAd", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloseAd indicates an expected call of CloseAd.
+func (mr *MockAdsMockRecorder) CloseAd(ctx, id, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseAd", reflect.TypeOf((*MockAds)(nil).CloseAd), ctx, id, userID)
+}
+
+// CreateAd mocks base method.
+func (m *MockAds) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAd", ctx, req)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAd indicates an expected call of CreateAd.
+func (mr *MockAdsMockRecorder) CreateAd(ctx, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAd", reflect.TypeOf((*MockAds)(nil).CreateAd), ctx, req)
+}
+
+// DeleteAd mocks base method.
+func (m *MockAds) DeleteAd(ctx context.Context, id, userID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAd", ctx, id, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAd indicates an expected call of DeleteAd.
+func (mr *MockAdsMockRecorder) DeleteAd(ctx, id, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAd", reflect.TypeOf((*MockAds)(nil).DeleteAd), ctx, id, userID)
+}
+
+// GetAdByID mocks base method.
+func (m *MockAds) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAdByID", ctx, id)
+	ret0, _ := ret[0].(models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAdByID indicates an expected call of GetAdByID.
+func (mr *MockAdsMockRecorder) GetAdByID(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAdByID", reflect.TypeOf((*MockAds)(nil).GetAdByID), ctx, id)
 }
 
 // GetAdsByUserID mocks base method.
@@ -64,6 +123,20 @@ func (m *MockAds) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 func (mr *MockAdsMockRecorder) GetAllAds(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAds)(nil).GetAllAds), ctx)
+}
+
+// UpdateAd mocks base method.
+func (m *MockAds) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAd", ctx, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAd indicates an expected call of UpdateAd.
+func (mr *MockAdsMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAds)(nil).UpdateAd), ctx, req)
 }
 
 // MockAuth is a mock of Auth interface.
