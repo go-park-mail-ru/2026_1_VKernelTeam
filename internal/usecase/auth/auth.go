@@ -42,6 +42,7 @@ type UserProviderSaver interface {
 	User(ctx context.Context, email string) (models.User, error)
 	UserByID(ctx context.Context, userID int64) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
+	UpdateUser(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // Auth представляет собой сервис аутентификации. Он использует логгер,
@@ -277,4 +278,51 @@ func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	}
 	log.Info("user is admin", slog.Bool("is_admin", isAdmin))
 	return isAdmin, nil
+}
+
+// GetProfile возвращает профиль пользователя по его ID.
+func (a *Auth) GetProfile(ctx context.Context, userID int64) (models.User, error) {
+	const op = "auth.GetProfile"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+	log.Info("getting user profile by ID")
+
+	profile, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: %w", op, err)
+		}
+		log.Error("failed to get user profile by ID")
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+	log.Info("got user profile by ID")
+
+	return profile, nil
+}
+
+// UpdateProfile обновляет данные профиля пользователя.
+func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error) {
+	const op = "auth.UpdateProfile"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+
+	log.Info("updating user profile")
+
+	user, err := a.userStorage.UpdateUser(ctx, userID, name)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: %w", op, err)
+		}
+		log.Error("failed to update user profile", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("user profile updated successfully")
+	return user, nil
 }

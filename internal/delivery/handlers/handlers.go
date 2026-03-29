@@ -24,6 +24,9 @@ const (
 	ErrInternalError        = "internal error"
 	ErrFailedToLogout       = "failed to logout"
 	ErrMethodNotAllowed     = "Method not allowed"
+	ErrInvalidUserID        = "invalid user id"
+	ErrFailedToGetUserAds   = "failed to get user ads"
+	ErrUnauthorized         = "unauthorized"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
@@ -35,6 +38,7 @@ type Services struct {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации
@@ -44,6 +48,8 @@ type Auth interface {
 	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
 	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+	GetProfile(ctx context.Context, userID int64) (models.User, error)
+	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
