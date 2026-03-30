@@ -8,8 +8,16 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// PgxPool интерфейс для пула соединений (или транзакции),
+// позволяющий подменять его моком в тестах.
+type PgxPool interface {
+	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
+	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
+}
 
 // Sentinel-ошибки
 var (
@@ -19,10 +27,10 @@ var (
 
 // AdStorage отвечает за операции с объявлениями.
 type AdStorage struct {
-	pool *pgxpool.Pool
+	pool PgxPool
 }
 
-func NewAdStorage(pool *pgxpool.Pool) *AdStorage {
+func NewAdStorage(pool PgxPool) *AdStorage {
 	return &AdStorage{pool: pool}
 }
 

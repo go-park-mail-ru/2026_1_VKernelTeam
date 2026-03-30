@@ -1,5 +1,7 @@
 package ads
 
+//go:generate mockgen -source=ads.go -destination=mocks/mock_ads.go -package=mocks
+
 import (
 	"context"
 	"fmt"

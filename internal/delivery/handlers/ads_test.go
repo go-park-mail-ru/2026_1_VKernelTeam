@@ -1,12 +1,18 @@
 package handlers
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
+	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
@@ -160,4 +166,207 @@ func TestHandleGetUserAds_ServiceError(t *testing.T) {
 	mux.ServeHTTP(rr, request)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}
+
+func TestHandleGetAdByID_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	adID := int64(1)
+	testAd := models.Ad{ID: adID, Title: "Test Ad", Price: 100}
+
+	mockAds.EXPECT().
+		GetAdByID(gomock.Any(), adID).
+		Return(testAd, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
+
+	request := httptest.NewRequest(http.MethodGet, "/ads/1", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var actualData models.Ad
+	err := json.Unmarshal(rr.Body.Bytes(), &actualData)
+	assert.NoError(t, err)
+	assert.Equal(t, testAd, actualData)
+}
+
+func TestHandleGetAdByID_NotFound(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	adID := int64(1)
+
+	mockAds.EXPECT().
+		GetAdByID(gomock.Any(), adID).
+		Return(models.Ad{}, ad.ErrAdNotFound)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
+
+	request := httptest.NewRequest(http.MethodGet, "/ads/1", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetAdByID_InvalidID(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
+
+	request := httptest.NewRequest(http.MethodGet, "/ads/abc", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleCreateAd_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	reqDto := dto.CreateAdRequest{
+		Title:       "New Ad",
+		Description: "Description",
+		Price:       1000,
+		CategoryID:  1,
+		Status:      "active",
+		Location:    "Moscow",
+	}
+	reqBody, _ := json.Marshal(reqDto)
+
+	mockAds.EXPECT().
+		CreateAd(gomock.Any(), gomock.Any()).
+		Return(int64(123), nil)
+
+	request := httptest.NewRequest(http.MethodPost, "/ads", bytes.NewBuffer(reqBody))
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleCreateAd(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	
+	var response map[string]int64
+	json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.Equal(t, int64(123), response["ad_id"])
+}
+
+func TestHandleCreateAd_Unauthorized(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	request := httptest.NewRequest(http.MethodPost, "/ads", nil)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleCreateAd(rr, request)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestHandleUpdateAdByID_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	adID := int64(10)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	reqDto := dto.UpdateAdRequest{
+		Title: "Updated Title",
+	}
+	reqBody, _ := json.Marshal(reqDto)
+
+	mockAds.EXPECT().
+		UpdateAd(gomock.Any(), gomock.Any()).
+		Return(nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
+
+	request := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/ads/%d", adID), bytes.NewBuffer(reqBody))
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandleUpdateAdByID_Forbidden(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	reqDto := dto.UpdateAdRequest{Title: "Title"}
+	reqBody, _ := json.Marshal(reqDto)
+
+	mockAds.EXPECT().
+		UpdateAd(gomock.Any(), gomock.Any()).
+		Return(ad.ErrAdForbidden)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
+
+	request := httptest.NewRequest(http.MethodPut, "/ads/10", bytes.NewBuffer(reqBody))
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+}
+
+func TestHandleDeleteAd_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	adID := int64(10)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mockAds.EXPECT().
+		DeleteAd(gomock.Any(), adID, userID).
+		Return(nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /ads/{id}", adsH.HandleDeleteAd)
+
+	request := httptest.NewRequest(http.MethodDelete, "/ads/10", nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandleCloseAdByID_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	adID := int64(10)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mockAds.EXPECT().
+		CloseAd(gomock.Any(), adID, userID).
+		Return(nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /ads/{id}/close", adsH.HandleCloseAdByID)
+
+	request := httptest.NewRequest(http.MethodPost, "/ads/10/close", nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
 }
