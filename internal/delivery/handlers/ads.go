@@ -51,7 +51,7 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 // @Param id path int true "ID объявления"
 // @Success 200 {object} models.Ad "объявление успешно получено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID объявления"
-// @Failure 404 {object} dto.ErrorResponse "ad not found: Объявление не найдено"
+// @Failure 400 {object} dto.ErrorResponse "ad not found: Объявление не найдено"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при получении объявления"
 // @Router /ads/{id} [get]
 func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +65,7 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 	adItem, err := h.services.Ads.GetAdByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
-			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
 			return
 		}
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
@@ -138,7 +138,7 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]string "объявление успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id / invalid request body / ошибки валидации"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
-// @Failure 404 {object} dto.ErrorResponse "ad not found: Объявление не найдено или не принадлежит пользователю"
+// @Failure 400 {object} dto.ErrorResponse "ad not found: Объявление не найдено или не принадлежит пользователю"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
 // @Security CookieAuth
 // @Router /ads/{id} [put]
@@ -179,7 +179,7 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	// Обновляем объявление
 	if err := h.services.Ads.UpdateAd(r.Context(), &req); err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
-			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
 			return
 		}
 		if errors.Is(err, ad.ErrAdForbidden) {
@@ -206,7 +206,7 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 // @Success 200 {object} map[string]string "объявление успешно удалено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
-// @Failure 404 {object} dto.ErrorResponse "ad not found: Объявление не найдено или не принадлежит пользователю"
+// @Failure 400 {object} dto.ErrorResponse "ad not found: Объявление не найдено или не принадлежит пользователю"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
 // @Security CookieAuth
 // @Router /ads/{id} [delete]
@@ -226,7 +226,7 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.services.Ads.DeleteAd(r.Context(), id, userID); err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
-			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
 			return
 		}
 		if errors.Is(err, ad.ErrAdForbidden) {
@@ -252,7 +252,7 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]string "объявление успешно архивировано"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
-// @Failure 404 {object} dto.ErrorResponse "ad not found: Объявление не найдено, уже архивировано или не принадлежит пользователю"
+// @Failure 0 {object} dto.ErrorResponse "ad not found: Объявление не найдено, уже архивировано или не принадлежит пользователю"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
 // @Security CookieAuth
 // @Router /ads/{id}/close [post]
@@ -272,7 +272,7 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.services.Ads.CloseAd(r.Context(), id, userID); err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
-			responser.RespondWithError(w, http.StatusNotFound, ErrAdNotFound)
+			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
 			return
 		}
 		if errors.Is(err, ad.ErrAdForbidden) {
