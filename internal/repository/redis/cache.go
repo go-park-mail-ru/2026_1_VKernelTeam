@@ -16,6 +16,11 @@ type RedisCache struct {
 	pool *redis.Pool
 }
 
+// NewFromPool используется для внедрения зависимостей (например, в тестах).
+func NewFromPool(pool *redis.Pool) *RedisCache {
+	return &RedisCache{pool: pool}
+}
+
 func New(addr string) *RedisCache {
 	pool := &redis.Pool{
 		MaxIdle:     10,
@@ -56,7 +61,7 @@ func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 
 	val, err := redis.String(conn.Do("GET", key))
 	if err != nil {
-		if err == redis.ErrNil {
+		if errors.Is(err, redis.ErrNil) {
 			return "", ErrNotFound
 		}
 		return "", fmt.Errorf("redis get failed: %w", err)

@@ -136,12 +136,6 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid ad id: Некорректный ID объявления",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
                         "description": "ad not found: Объявление не найдено",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
@@ -201,19 +195,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid ad id / invalid request body / ошибки валидации",
+                        "description": "ad not found: Объявление не найдено или не принадлежит пользователю",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "ad not found: Объявление не найдено или не принадлежит пользователю",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -260,19 +248,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "invalid ad id: Некорректный ID",
+                        "description": "ad not found: Объявление не найдено или не принадлежит пользователю",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "ad not found: Объявление не найдено или не принадлежит пользователю",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -311,6 +293,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "0": {
+                        "description": "ad not found: Объявление не найдено, уже архивировано или не принадлежит пользователю",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "200": {
                         "description": "объявление успешно архивировано",
                         "schema": {
@@ -328,12 +316,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "ad not found: Объявление не найдено, уже архивировано или не принадлежит пользователю",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
