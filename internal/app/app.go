@@ -28,11 +28,19 @@ type App struct {
 func New(
 	log *slog.Logger,
 	cfg *config.Config,
+	baseDb ...*postgres.Client,
 ) *App {
-	dbClient, err := postgres.New(cfg.DatabaseDSN)
-	if err != nil {
-		log.Error("failed to initialize postgres client", "err", err)
-		panic(err)
+	var dbClient *postgres.Client
+	var err error
+
+	if len(baseDb) > 0 && baseDb[0] != nil {
+		dbClient = baseDb[0] // Используем заглушку из теста
+	} else {
+		dbClient, err = postgres.New(cfg.DatabaseDSN)
+		if err != nil {
+			log.Error("failed to initialize postgres client", "err", err)
+			panic(err)
+		}
 	}
 
 	userRepo := user.NewUserStorage(dbClient.Pool)
@@ -66,13 +74,8 @@ func New(
 
 // Stop останавливает приложение.
 func (a *App) Stop() {
-	if a.RedisCache != nil {
-		a.RedisCache.Close()
-	}
-
-	if a.HTTPServer != nil {
-		a.HTTPServer.Stop()
-	}
+	a.RedisCache.Close()
+	a.HTTPServer.Stop()
 
 	if a.dbClient != nil && a.dbClient.Pool != nil {
 		a.dbClient.Close()

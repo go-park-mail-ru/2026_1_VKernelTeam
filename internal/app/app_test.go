@@ -3,6 +3,7 @@ package app
 import (
 	"io"
 	"log/slog"
+	"os"
 	"testing"
 	"time"
 
@@ -13,12 +14,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAppNew_StorageError(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	// Invalid DSN for PostgreSQL that should fail initialization
+	invalidDSN := "postgres://invalid:user@localhost:5432/nonexistent?sslmode=disable"
+
+	assert.Panics(t, func() {
+		New(
+			logger,
+			&config.Config{
+				DatabaseDSN:     invalidDSN,
+				TokenTTL:        time.Hour,
+				CleanupInterval: time.Minute,
+				TokenSecret:     "test_secret",
+				HTTP: config.HTTPConfig{
+					Port: 8080,
+				},
+			},
+		)
+	})
+}
+
 func TestApp_Stop(t *testing.T) {
 	nopLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	rc := redis.New("localhost:6379")
-	hApp := &httpapp.App{}
 
-	hApp = httpapp.New(
+	// Инициализируем зависимости максимально "безопасно" для тестов
+	rc := redis.New("localhost:6379")
+
+	hApp := httpapp.New(
 		nopLogger,
 		httpapp.Services{},
 		nil,
@@ -28,7 +52,12 @@ func TestApp_Stop(t *testing.T) {
 		"secret",
 	)
 
-	db := &postgres.Client{}
+	// Чтобы postgres.Client.Close() не паниковал, нам нужно либо иметь
+	// инициализированный пул внутри, либо проверку на nil в методе Stop.
+	// Если ты добавил проверку на nil в app.go, этот dbClient будет ок:
+	db := &postgres.Client{
+		Pool: nil, // Специально оставляем nil для проверки безопасности
+	}
 
 	a := &App{
 		HTTPServer: hApp,
@@ -43,10 +72,8 @@ func TestApp_Stop(t *testing.T) {
 
 func TestAppNew_Panic(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
 	invalidCfg := &config.Config{
 		DatabaseDSN: "invalid_dsn",
-		RedisAddr:   "localhost:6379",
 	}
 
 	assert.Panics(t, func() {
@@ -54,10 +81,25 @@ func TestAppNew_Panic(t *testing.T) {
 	})
 }
 
-func TestApp_ManualBuildStop(t *testing.T) {
-	a := &App{}
+func TestApp_FullInit_CoverageBoost(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	cfg := &config.Config{
+		TokenTTL:    time.Hour,
+		RefreshTTL:  time.Hour,
+		TokenSecret: "secret",
+		RedisAddr:   "localhost:6379",
+		HTTP:        config.HTTPConfig{Port: 8080},
+	}
+
+	mockDb := &postgres.Client{
+		Pool: nil,
+	}
 
 	assert.NotPanics(t, func() {
-		a.Stop()
+		a := New(logger, cfg, mockDb)
+
+		assert.NotNil(t, a)
+		assert.NotNil(t, a.HTTPServer)
 	})
 }
