@@ -14,7 +14,9 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
 	mock_auth "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth/mocks"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -39,7 +41,15 @@ func TestRegisterNewUser_Success(t *testing.T) {
 	password := "password123"
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		SaveUser(gomock.Any(), email, gomock.Any(), "Test User").
@@ -68,7 +78,15 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		SaveUser(gomock.Any(), "existing@example.com", gomock.Any(), "Existing User").
@@ -99,7 +117,15 @@ func TestLogin_Success(t *testing.T) {
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		User(gomock.Any(), email).
@@ -140,7 +166,15 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		User(gomock.All(), email).
@@ -171,7 +205,15 @@ func TestLogin_UserNotFound(t *testing.T) {
 	email := "nonexistent@example.com"
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		User(gomock.Any(), email).
@@ -195,7 +237,15 @@ func TestIsAdmin_True(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		IsAdmin(gomock.Any(), int64(1)).
@@ -220,7 +270,15 @@ func TestIsAdmin_False(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		IsAdmin(gomock.Any(), int64(1)).
@@ -244,7 +302,15 @@ func TestIsAdmin_Error(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		IsAdmin(gomock.Any(), gomock.Any()).
@@ -267,7 +333,15 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		SaveUser(gomock.Any(), "test@example.com", gomock.Any(), "Test User").
@@ -290,7 +364,15 @@ func TestLogin_UserProviderError(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		User(gomock.Any(), "user@example.com").
@@ -313,7 +395,15 @@ func TestIsAdmin_GenericError(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	storageMock.EXPECT().
 		IsAdmin(gomock.Any(), int64(123)).
@@ -336,7 +426,15 @@ func TestLogout_Success(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-	auth := New(log, storageMock, tokenRevoker, refreshMock, time.Hour, time.Hour, testSecret)
+
+	auth := New(log,
+		storageMock,
+		tokenRevoker,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
 
 	jti := "my-jti"
 	exp := time.Now().Add(time.Hour)
@@ -349,4 +447,144 @@ func TestLogout_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil error on logout")
 	}
+}
+
+func TestRefresh_Success(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	oldRefresh := "old-uuid"
+	userID := int64(42)
+
+	// 1. Находим userID по токену
+	refreshMock.EXPECT().
+		GetRefresh(gomock.Any(), oldRefresh).
+		Return(userID, nil)
+
+	// 2. Удаляем старый
+	refreshMock.EXPECT().
+		DeleteRefresh(gomock.Any(), oldRefresh).
+		Return(nil)
+
+	// 3. Достаем юзера для генерации нового access
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(models.User{ID: userID}, nil)
+
+	// 4. Сохраняем новый refresh
+	refreshMock.EXPECT().
+		SaveRefresh(gomock.Any(), gomock.Any(), userID, gomock.Any()).
+		Return(nil)
+
+	access, refresh, err := auth.Refresh(context.Background(), oldRefresh)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, access)
+	assert.NotEmpty(t, refresh)
+}
+
+func TestRefresh_InvalidToken(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
+
+	auth := New(log,
+		nil,
+		nil,
+		refreshMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	refreshMock.EXPECT().
+		GetRefresh(gomock.Any(), "bad-token").
+		Return(int64(0), errors.New("not found"))
+
+	_, _, err := auth.Refresh(context.Background(), "bad-token")
+	assert.Error(t, err)
+}
+
+func TestValidateTokenAndGetUser_Success(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		nil,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	user := models.User{ID: 10, Email: "user@test.com"}
+	token, _ := jwt.NewToken(user, time.Hour, testSecret)
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), int64(10)).
+		Return(user, nil)
+
+	result, err := auth.ValidateTokenAndGetUser(context.Background(), token)
+	assert.NoError(t, err)
+	assert.Equal(t, user.ID, result.ID)
+}
+
+func TestValidateTokenAndGetUser_InvalidJWT(t *testing.T) {
+	auth := New(
+		getTestLogger(),
+		nil,
+		nil,
+		nil,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	_, err := auth.ValidateTokenAndGetUser(context.Background(), "definitely-not-a-token")
+	assert.Error(t, err)
+}
+
+func TestUpdateProfile_Success(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		nil,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	userID := int64(100)
+	newName := "New Name"
+	storageMock.EXPECT().
+		UpdateUser(gomock.Any(), userID, newName).
+		Return(models.User{ID: userID, Name: newName}, nil)
+
+	u, err := auth.UpdateProfile(context.Background(), userID, newName)
+	assert.NoError(t, err)
+	assert.Equal(t, newName, u.Name)
 }
