@@ -3,6 +3,8 @@ package validator
 import (
 	"errors"
 	"regexp"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -16,6 +18,8 @@ var (
 	ErrPasswordRequiresLetter    = errors.New("password must contain at least one latin letter")
 	ErrPasswordContainsForbidden = errors.New("password contains forbidden characters")
 	ErrNameEmpty                 = errors.New("name cannot be empty")
+	ErrNameTooShort              = errors.New("name must be at least 3 characters long")
+	ErrNameTooLong               = errors.New("name must be no more than 50 characters long")
 	ErrNameInvalid               = errors.New("name contains invalid characters")
 	ErrAdTitleEmpty              = errors.New("title cannot be empty")
 	ErrAdTitleTooShort           = errors.New("title must be at least 5 characters long")
@@ -30,20 +34,19 @@ var (
 	ErrAdLocationEmpty           = errors.New("location cannot be empty")
 	ErrAdLocationTooShort        = errors.New("location must be at least 2 characters long")
 	ErrAdLocationTooLong         = errors.New("location must be at most 100 characters long")
-)
 
-var (
-
-	// Только латиница, цифры и _
-	reStrict = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
-	// Проверка наличия хотя бы одной буквы
+	// Проверка наличия хотя бы одной буквы (латиница)
 	reHasLetter = regexp.MustCompile(`[a-zA-Z]`)
 	// Проверка наличия хотя бы одной цифры
 	reHasDigit = regexp.MustCompile(`[0-9]`)
-	// регулярное выражение для проверки email
-	emailRegex = regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$`)
-	// регулярное выражение для имени: буквы (латиница и кириллица), пробелы, апострофы, дефисы
-	nameRegex = regexp.MustCompile(`^[\p{L}\s'-]+$`)
+
+	// Регулярное выражение для проверки email.
+	// Разрешает цифры в домене первого уровня (TLD), например .123 или .xn--p1ai
+	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z0-9]{2,}$`)
+
+	// Регулярное выражение для имени: буквы (латиница и кириллица), пробелы, апострофы, дефисы.
+	// Ограничение {3,50} встроено в регулярку для дополнительной надежности.
+	nameRegex = regexp.MustCompile(`^[\p{L}\s'-]{3,50}$`)
 
 	allowedAdStatuses = map[string]bool{
 		models.AdStatusDraft:    true,
@@ -54,25 +57,26 @@ var (
 	}
 )
 
-// ValidateEmail проверяет валидность email
-func ValidateEmail(email string) error {
+// ValidateEmail проверяет валидность email, приводит его к нижнему регистру
+func ValidateEmail(email string) (string, error) {
+	email = strings.TrimSpace(email)
+	email = strings.ToLower(email)
+
 	if !emailRegex.MatchString(email) {
-		return ErrInvalidEmailFormat
+		return email, ErrInvalidEmailFormat
 	}
-	return nil
+	return email, nil
 }
 
 // ValidatePassword проверяет пароль на соответствие требованиям:
 // - минимум 8 символов
 // - содержит хотя бы одну латинскую букву
 // - содержит хотя бы одну цифру
+// - разрешает любые спецсимволы для повышения безопасности
 func ValidatePassword(password string) error {
-	if len(password) < 8 {
+	// Используем RuneCountInString для корректного подсчета символов
+	if utf8.RuneCountInString(password) < 8 {
 		return ErrPasswordTooShort
-	}
-
-	if !reStrict.MatchString(password) {
-		return ErrPasswordContainsForbidden
 	}
 
 	if !reHasLetter.MatchString(password) {
@@ -83,21 +87,33 @@ func ValidatePassword(password string) error {
 		return ErrPasswordRequiresDigit
 	}
 
+	// Сознательно не используем проверку на запрещенные символы,
+	// чтобы пользователи могли использовать сложные пароли со знаками #, $, @ и т.д.
 	return nil
 }
 
-//    title text NOT NULL CHECK (length(title) BETWEEN 5 AND 150),
-//    description text NOT NULL CHECK (length(description) BETWEEN 10 AND 5000),
+// ValidateName проверяет валидность имени: от 3 до 50 символов, буквы (латиница/кириллица), пробелы, апострофы, дефисы
+func ValidateName(name string) (string, error) {
+	name = strings.TrimSpace(name)
 
-// ValidateName проверяет валидность имени: не пустое и содержит только буквы (латиница и кириллица), пробелы, апострофы, дефисы
-func ValidateName(name string) error {
 	if name == "" {
-		return ErrNameEmpty
+		return "", ErrNameEmpty
 	}
+
+	// Считаем именно количество символов (рун), а не байтов (важно для кириллицы)
+	count := utf8.RuneCountInString(name)
+
+	if count < 3 {
+		return "", ErrNameTooShort
+	}
+	if count > 50 {
+		return "", ErrNameTooLong
+	}
+
 	if !nameRegex.MatchString(name) {
-		return ErrNameInvalid
+		return "", ErrNameInvalid
 	}
-	return nil
+	return name, nil
 }
 
 func ValidateAdTitle(title string) error {
