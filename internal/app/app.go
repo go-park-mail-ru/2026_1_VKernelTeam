@@ -66,7 +66,15 @@ func New(
 
 // Stop останавливает приложение.
 func (a *App) Stop() {
-	a.RedisCache.Close()
-	a.HTTPServer.Stop()
-	a.dbClient.Close()
+	if a.RedisCache != nil {
+		a.RedisCache.Close()
+	}
+
+	if a.HTTPServer != nil {
+		a.HTTPServer.Stop()
+	}
+
+	if a.dbClient != nil && a.dbClient.Pool != nil {
+		a.dbClient.Close()
+	}
 }
