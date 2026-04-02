@@ -26,6 +26,7 @@ var (
 	ErrAdPriceNegative           = errors.New("price cannot be negative")
 	ErrCategoryIDInvalid         = errors.New("category ID must be a positive integer")
 	ErrUserIDInvalid             = errors.New("user ID must be a positive integer")
+	ErrProductIDInvalid          = errors.New("product ID must be a positive integer")
 	ErrAdStatusInvalid           = errors.New("invalid ad status")
 	ErrAdLocationEmpty           = errors.New("location cannot be empty")
 	ErrAdLocationTooShort        = errors.New("location must be at least 2 characters long")
@@ -145,6 +146,13 @@ func ValidateCategoryID(categoryID int64) error {
 func ValidateUserID(userID int64) error {
 	if userID <= 0 {
 		return ErrUserIDInvalid
+	}
+	return nil
+}
+
+func ValidateProductID(productID int64) error {
+	if productID <= 0 {
+		return ErrProductIDInvalid
 	}
 	return nil
 }

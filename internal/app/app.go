@@ -14,8 +14,10 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/cart"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
+	cartUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/cart"
 )
 
 type App struct {
@@ -49,9 +51,14 @@ func New(
 	// создеём сервис Ads
 	adsService := ads.New(log, adRepo)
 
+	// создаём сервис корзины
+	cartRepo := cart.NewCartStorage(dbClient.Pool)
+	cartService := cartUC.New(log, cartRepo, adRepo)
+
 	services := httpapp.Services{
 		Ads:  adsService,
 		Auth: authService,
+		Cart: cartService,
 	}
 
 	// создаём HTTP-приложение

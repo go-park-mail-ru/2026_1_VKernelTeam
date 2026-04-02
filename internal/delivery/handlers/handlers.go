@@ -30,12 +30,22 @@ const (
 	ErrInvalidUserID        = "invalid user id"
 	ErrFailedToGetUserAds   = "failed to get user ads"
 	ErrUnauthorized         = "unauthorized"
+	ErrInvalidProductID     = "invalid product id"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
 type Services struct {
 	Ads  Ads
 	Auth Auth
+	Cart Cart
+}
+
+// Cart описывает методы сервиса корзины
+type Cart interface {
+	AddToCart(ctx context.Context, userID, productID int64) error
+	RemoveFromCart(ctx context.Context, userID, productID int64) error
+	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
+	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -76,6 +86,13 @@ type AdsHandlers struct {
 	tokenTTL time.Duration
 }
 
+// CartHandlers содержит обработчики для корзины
+type CartHandlers struct {
+	log      *slog.Logger
+	services Services
+	tokenTTL time.Duration
+}
+
 // NewAuthHandlers создает новый экземпляр AuthHandlers
 func NewAuthHandlers(log *slog.Logger, services Services, tokenTTL time.Duration, refreshTTL time.Duration, secret string) *AuthHandlers {
 	return &AuthHandlers{
@@ -90,6 +107,15 @@ func NewAuthHandlers(log *slog.Logger, services Services, tokenTTL time.Duration
 // NewAdsHandlers создает новый экземпляр AdsHandlers
 func NewAdsHandlers(log *slog.Logger, services Services, tokenTTL time.Duration) *AdsHandlers {
 	return &AdsHandlers{
+		log:      log,
+		services: services,
+		tokenTTL: tokenTTL,
+	}
+}
+
+// NewCartHandlers создает новый экземпляр CartHandlers
+func NewCartHandlers(log *slog.Logger, services Services, tokenTTL time.Duration) *CartHandlers {
+	return &CartHandlers{
 		log:      log,
 		services: services,
 		tokenTTL: tokenTTL,
