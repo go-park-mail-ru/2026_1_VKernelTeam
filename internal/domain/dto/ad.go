@@ -23,3 +23,8 @@ type UpdateAdRequest struct {
 	Status      string `json:"status,omitempty"`
 	Location    string `json:"location,omitempty"`
 }
+
+// FavoriteRequest представляет собой структуру для запроса на добавление объявления в избранное
+type FavoriteRequest struct {
+	AdID int64 `json:"ad_id"`
+}

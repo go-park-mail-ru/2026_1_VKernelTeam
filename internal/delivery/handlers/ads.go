@@ -325,17 +325,118 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// TODO
+// HandleAddToFavorites обрабатывает запросы на добавление объявления в избранное
+// @Summary Добавить в избранное
+// @Description Добавляет объявление в список избранного текущего пользователя
+// @Tags favorites
+// @Produce json
+// @Param id path int true "ID объявления"
+// @Success 200 {object} map[string]string "статус операции"
+// @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /ads/{id}/favorite [post]
 func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.HandleAddToFavorites"
 
+	// извлекаем userID из контекста (туда его положил authMW)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok {
+		h.log.Error("user id not found in context", slog.String("op", op))
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	// получаем ID объявления
+	idStr := r.PathValue("id")
+	adID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidAdID)
+		return
+	}
+
+	// добавляем объявление в избранное
+	if err := h.services.Ads.AddFavorite(r.Context(), userID, adID); err != nil {
+		h.log.Error("failed to add favorite", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// TODO
+// HandleDeleteFromFavorites обрабатывает запросы на удаление объявления из избранного
+// @Summary Удалить из избранного
+// @Description Удаляет объявление из списка избранного текущего пользователя
+// @Tags favorites
+// @Produce json
+// @Param id path int true "ID объявления"
+// @Success 200 {object} map[string]string "статус операции"
+// @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /ads/{id}/favorite [delete]
 func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.HandleDeleteFromFavorites"
 
+	// извлекаем userID из контекста (туда его положил authMW)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok {
+		h.log.Error("user id not found in context", slog.String("op", op))
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	// получаем ID объявления
+	idStr := r.PathValue("id")
+	adID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidAdID)
+		return
+	}
+
+	// удаляем объявление из избранного
+	if err := h.services.Ads.RemoveFavorite(r.Context(), userID, adID); err != nil {
+		h.log.Error("failed to remove favorite", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// TODO
+// HandleGetFavorites обрабатывает запросы на получение объявлений в избранном
+// @Summary Получить избранное
+// @Description Возвращает список всех объявлений, добавленных текущим пользователем в избранное
+// @Tags favorites
+// @Produce json
+// @Success 200 {object} map[string][]models.Ad "список избранных объявлений"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /profile/favorites [get]
 func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request) {
+	const op = "handlers.HandleGetFavorites"
 
+	// извлекаем userID из контекста (туда его положил authMW)
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok {
+		h.log.Error("user id not found in context", slog.String("op", op))
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	// получаем список объявлений из избранного
+	favorites, err := h.services.Ads.GetUserFavorites(r.Context(), userID)
+	if err != nil {
+		h.log.Error("failed to get favorites", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
+		"ads": favorites,
+	})
 }

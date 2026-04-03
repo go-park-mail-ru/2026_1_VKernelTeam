@@ -184,17 +184,64 @@ func (a *Ads) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, er
 	return ads, nil
 }
 
-// TODO
+// AddFavorite добавляет объявление в избранное.
 func (a *Ads) AddFavorite(ctx context.Context, userID int64, adID int64) error {
+	const op = "usecase.ads.AddFavorite"
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
+
+	log.Info("attempting to add ad to favorites")
+
+	err := a.adsStorage.AddFavorite(ctx, userID, adID)
+	if err != nil {
+		log.Error("failed to add ad to favorite", slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully added ad to favorites")
 	return nil
 }
 
-// TODO
+// RemoveFavorite удаляет объявление из избранного.
 func (a *Ads) RemoveFavorite(ctx context.Context, userID int64, adID int64) error {
+	const op = "usecase.ads.RemoveFavorite"
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
+
+	log.Info("attempting to remove ad from favorites")
+
+	err := a.adsStorage.RemoveFavorite(ctx, userID, adID)
+	if err != nil {
+		log.Error("failed to remove ad from favorite", slog.String("error", err.Error()))
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully removed ad from favorites")
 	return nil
 }
 
-// TODO
+// GetUserFavorites возвращает избранное.
 func (a *Ads) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
-	return []models.Ad{}, nil
+	const op = "usecase.ads.GetUserFavorites"
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+
+	log.Info("getting favorites ads list")
+
+	favorites, err := a.adsStorage.GetUserFavorites(ctx, userID)
+	if err != nil {
+		log.Error("failed to get favorites", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully retrieved favorites", slog.Int("count", len(favorites)))
+	return favorites, nil
 }
