@@ -8,7 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	postgres "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // Sentinel-ошибки — используются в юзкейсе для проверки через errors.Is.
@@ -17,12 +17,17 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-// UserStorage отвечает за операции с пользователями.
-type UserStorage struct {
-	pool *pgxpool.Pool
+type PgxIface interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 }
 
-func NewUserStorage(pool *pgxpool.Pool) *UserStorage {
+// UserStorage отвечает за операции с пользователями.
+type UserStorage struct {
+	pool PgxIface
+}
+
+func NewUserStorage(pool PgxIface) *UserStorage {
 	return &UserStorage{pool: pool}
 }
 

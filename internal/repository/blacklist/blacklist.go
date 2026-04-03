@@ -6,6 +6,8 @@ import (
 )
 
 // Cache определяет интерфейс для взаимодействия с кэшем, используемым для хранения черного списка JWT.
+//
+//go:generate mockgen -source=./blacklist.go -destination=./mocks/mock_cache.go -package=mocks
 type Cache interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Exists(ctx context.Context, key string) bool

@@ -140,6 +140,33 @@ definitions:
     required:
     - name
     type: object
+  dto.ValidationErrors:
+    properties:
+      category_id:
+        type: string
+      description:
+        type: string
+      email:
+        type: string
+      location:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
   models.Ad:
     properties:
       category_id:
@@ -522,9 +549,7 @@ paths:
           schema:
             $ref: '#/definitions/dto.LoginResponse'
         "400":
-          description: 'invalid request body / user already exists / validation failed
-            (ValidationErrors): Ошибка формата запроса, дубликат пользователя или
-            ошибка валидации'
+          description: User already exists
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "500":

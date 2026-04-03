@@ -48,14 +48,23 @@ test:
 test-verbose:
 	go test -v ./...
 
-test-coverage:
-	go test -cover ./internal/... ./pkg/...
-
 test-auth:
 	go test -v ./internal/usecase/auth/...
 
-test-storage:
-	go test -v ./internal/repository/...
+test-coverage:
+	@go test -coverprofile=coverage.tmp ./internal/... ./pkg/... > /dev/null
+	@grep -v -E "mocks|domain" coverage.tmp > coverage.out
+	@go test -cover ./internal/... ./pkg/... | grep -v -E "mocks|domain" | awk '{ \
+		if ($$1 == "ok") { \
+			printf "%-100s %s\n", $$2, $$(NF-2) " " $$(NF-1) " " $$NF; \
+		} else { \
+			print $$0; \
+		} \
+	}'
+	@echo "--------------------------------------------------------------------------------------------------------------------------"
+	@go tool cover -func=coverage.out | grep total | awk '{printf "%-100s %s\n", "TOTAL PROJECT COVERAGE:", $$3}'
+	@echo "--------------------------------------------------------------------------------------------------------------------------"
+	@rm coverage.tmp coverage.out
 
 # ─── Деплой (только на сервере) ───────────────────────────────────────────────
 

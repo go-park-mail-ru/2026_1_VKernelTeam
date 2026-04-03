@@ -23,6 +23,8 @@ import (
 // @Param input body dto.RegisterRequest true "Registration data"
 // @Success 200 {object} dto.LoginResponse "user registered and logged in successfully"
 // @Failure 400 {object} dto.ErrorResponse "invalid request body / user already exists / validation failed (ValidationErrors): Ошибка формата запроса, дубликат пользователя или ошибка валидации"
+// @Failure 400 {object} dto.ValidationErrors "Validation failed"
+// @Failure 400 {object} dto.ErrorResponse "User already exists"
 // @Failure 500 {object} dto.ErrorResponse "failed to register user / registered, but failed to login: Ошибка сервера при регистрации или авто-входе"
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -34,14 +36,19 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Собираем все ошибки валидации
 	validationErrors := dto.ValidationErrors{}
-	if err := validator.ValidateEmail(req.Email); err != nil {
+
+	cleanEmail, err := validator.ValidateEmail(req.Email)
+	if err != nil {
 		validationErrors.Email = err.Error()
 	}
+
+	cleanName, err := validator.ValidateName(req.Name)
+	if err != nil {
+		validationErrors.Name = err.Error()
+	}
+
 	if err := validator.ValidatePassword(req.Password); err != nil {
 		validationErrors.Password = err.Error()
-	}
-	if err := validator.ValidateName(req.Name); err != nil {
-		validationErrors.Name = err.Error()
 	}
 
 	// Если есть хотя бы одна ошибка валидации, возвращаем их все
@@ -50,7 +57,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := h.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password, req.Name)
+	userID, err := h.services.Auth.RegisterNewUser(r.Context(), cleanEmail, req.Password, cleanName)
 	if err != nil {
 		if errors.Is(err, auth.ErrUserAlreadyExists) {
 			responser.RespondWithError(w, http.StatusBadRequest, ErrUserAlreadyExists)
@@ -69,7 +76,7 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// сразу логиним
-	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), req.Email, req.Password)
+	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), cleanEmail, req.Password)
 	if err != nil {
 		h.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
@@ -128,9 +135,12 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 // handleCredentialsLogin обрабатывает вход пользователя по email и паролю
 func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Request, email, password string) {
 	validationErrors := dto.ValidationErrors{}
-	if err := validator.ValidateEmail(email); err != nil {
+
+	cleanEmail, err := validator.ValidateEmail(email)
+	if err != nil {
 		validationErrors.Email = err.Error()
 	}
+
 	if err := validator.ValidatePassword(password); err != nil {
 		validationErrors.Password = err.Error()
 	}
@@ -147,7 +157,7 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), email, password)
+	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), cleanEmail, password)
 	if err != nil {
 		if errors.Is(err, auth.ErrInvalidCredentials) {
 			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())

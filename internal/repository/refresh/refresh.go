@@ -10,6 +10,8 @@ import (
 )
 
 // Cache определяет интерфейс для взаимодействия с кэшем, используемым для хранения refresh токенов.
+//
+//go:generate mockgen -source=./refresh.go -destination=./mocks/mock_cache.go -package=mocks
 type Cache interface {
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
 	Get(ctx context.Context, key string) (string, error)
