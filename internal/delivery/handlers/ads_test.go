@@ -255,7 +255,7 @@ func TestHandleCreateAd_Success(t *testing.T) {
 	adsH.HandleCreateAd(rr, request)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	
+
 	var response map[string]int64
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.Equal(t, int64(123), response["ad_id"])
@@ -370,3 +370,5 @@ func TestHandleCloseAdByID_Success(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
+
+// TODO

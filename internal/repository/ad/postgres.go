@@ -317,3 +317,18 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 
 	return ads, nil
 }
+
+// TODO
+func (s *AdStorage) AddFavorite(ctx context.Context, userID int64, adID int64) error {
+	return nil
+}
+
+// TODO
+func (s *AdStorage) RemoveFavorite(ctx context.Context, userID int64, adID int64) error {
+	return nil
+}
+
+// TODO
+func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
+	return []models.Ad{}, nil
+}

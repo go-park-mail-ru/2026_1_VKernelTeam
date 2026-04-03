@@ -167,6 +167,20 @@ func (m *MockAds) EXPECT() *MockAdsMockRecorder {
 	return m.recorder
 }
 
+// AddFavorite mocks base method.
+func (m *MockAds) AddFavorite(ctx context.Context, userID, adID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddFavorite", ctx, userID, adID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddFavorite indicates an expected call of AddFavorite.
+func (mr *MockAdsMockRecorder) AddFavorite(ctx, userID, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFavorite", reflect.TypeOf((*MockAds)(nil).AddFavorite), ctx, userID, adID)
+}
+
 // CloseAd mocks base method.
 func (m *MockAds) CloseAd(ctx context.Context, id, userID int64) error {
 	m.ctrl.T.Helper()
@@ -253,6 +267,35 @@ func (m *MockAds) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 func (mr *MockAdsMockRecorder) GetAllAds(ctx interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAds)(nil).GetAllAds), ctx)
+}
+
+// GetUserFavorites mocks base method.
+func (m *MockAds) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserFavorites", ctx, userID)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserFavorites indicates an expected call of GetUserFavorites.
+func (mr *MockAdsMockRecorder) GetUserFavorites(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserFavorites", reflect.TypeOf((*MockAds)(nil).GetUserFavorites), ctx, userID)
+}
+
+// RemoveFavorite mocks base method.
+func (m *MockAds) RemoveFavorite(ctx context.Context, userID, adID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveFavorite", ctx, userID, adID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveFavorite indicates an expected call of RemoveFavorite.
+func (mr *MockAdsMockRecorder) RemoveFavorite(ctx, userID, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFavorite", reflect.TypeOf((*MockAds)(nil).RemoveFavorite), ctx, userID, adID)
 }
 
 // UpdateAd mocks base method.

@@ -273,3 +273,18 @@ func TestAdStorage_GetAdsByUserID(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// TODO
+func TestAdStorage_AddFavorite(t *testing.T) {
+
+}
+
+// TODO
+func TestAdStorage_RemoveFavorite(t *testing.T) {
+
+}
+
+// TODO
+func TestAdStorage_GetUserFavorites(t *testing.T) {
+
+}

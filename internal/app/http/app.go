@@ -47,6 +47,9 @@ type Ads interface {
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
+	AddFavorite(ctx context.Context, userID int64, adID int64) error
+	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
+	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -145,6 +148,11 @@ func (a *App) setupRoutes() {
 	a.router.Handle("PUT "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
 	a.router.Handle("DELETE "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
 	a.router.Handle("POST "+prefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
+
+	// Избранное
+	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
+	a.router.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteFromFavorites)))
+	a.router.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(a.adsHandlers.HandleGetFavorites)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

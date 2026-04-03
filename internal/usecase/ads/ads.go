@@ -19,6 +19,9 @@ type AdsProvider interface {
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
+	AddFavorite(ctx context.Context, userID int64, adID int64) error
+	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
+	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 type Ads struct {
@@ -179,4 +182,19 @@ func (a *Ads) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, er
 	log.Info("got all ads by user ID")
 
 	return ads, nil
+}
+
+// TODO
+func (a *Ads) AddFavorite(ctx context.Context, userID int64, adID int64) error {
+	return nil
+}
+
+// TODO
+func (a *Ads) RemoveFavorite(ctx context.Context, userID int64, adID int64) error {
+	return nil
+}
+
+// TODO
+func (a *Ads) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
+	return []models.Ad{}, nil
 }

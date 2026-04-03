@@ -324,3 +324,18 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 		"ads": ads,
 	})
 }
+
+// TODO
+func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// TODO
+func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.Request) {
+
+}
+
+// TODO
+func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request) {
+
+}

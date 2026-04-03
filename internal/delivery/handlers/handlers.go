@@ -47,6 +47,9 @@ type Ads interface {
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
+	AddFavorite(ctx context.Context, userID int64, adID int64) error
+	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
+	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации

@@ -192,3 +192,18 @@ func TestAds_GetAdsByUserID(t *testing.T) {
 		assert.Nil(t, ads)
 	})
 }
+
+// TODO
+func TestAds_AddFavorite(t *testing.T) {
+
+}
+
+// TODO
+func TestAds_RemoveFavorite(t *testing.T) {
+
+}
+
+// TODO
+func TestAds_GetUserFavorites(t *testing.T) {
+
+}
