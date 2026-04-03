@@ -11,3 +11,5 @@ bin/
 *.pem
 *.txt
 schema.md
+.agents
+skills-*.json

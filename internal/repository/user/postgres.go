@@ -74,22 +74,6 @@ func (s *UserStorage) User(ctx context.Context, email string) (models.User, erro
 	return u, nil
 }
 
-// IsAdmin проверяет, является ли пользователь с данным ID администратором.
-func (s *UserStorage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
-	const query = `SELECT id FROM "user" WHERE id = $1`
-
-	var id int64
-	err := s.pool.QueryRow(ctx, query, userID).Scan(&id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return false, ErrUserNotFound
-		}
-		return false, fmt.Errorf("IsAdmin: %w", err)
-	}
-
-	return false, nil
-}
-
 // UserByID возвращает пользователя по его ID.
 func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, error) {
 	const query = `
