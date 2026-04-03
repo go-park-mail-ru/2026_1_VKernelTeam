@@ -274,17 +274,169 @@ func TestAdStorage_GetAdsByUserID(t *testing.T) {
 	})
 }
 
-// TODO
 func TestAdStorage_AddFavorite(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
 
+	storage := NewAdStorage(mock)
+	ctx := context.Background()
+	userID := int64(1)
+	adID := int64(10)
+
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO favorite")).
+			WithArgs(userID, adID).
+			WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+		err := storage.AddFavorite(ctx, userID, adID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Conflict_Do_Nothing", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO favorite")).
+			WithArgs(userID, adID).
+			WillReturnResult(pgxmock.NewResult("INSERT", 0))
+
+		err := storage.AddFavorite(ctx, userID, adID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO favorite")).
+			WithArgs(userID, adID).
+			WillReturnError(assert.AnError)
+
+		err := storage.AddFavorite(ctx, userID, adID)
+		assert.Error(t, err)
+	})
 }
 
-// TODO
 func TestAdStorage_RemoveFavorite(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
 
+	storage := NewAdStorage(mock)
+	ctx := context.Background()
+	userID := int64(1)
+	adID := int64(10)
+
+	t.Run("Success", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM favorite")).
+			WithArgs(userID, adID).
+			WillReturnResult(pgxmock.NewResult("DELETE", 1))
+
+		err := storage.RemoveFavorite(ctx, userID, adID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("NotFound_Still_Success", func(t *testing.T) {
+		// Если записи не было, DELETE просто удалит 0 строк, это не ошибка
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM favorite")).
+			WithArgs(userID, adID).
+			WillReturnResult(pgxmock.NewResult("DELETE", 0))
+
+		err := storage.RemoveFavorite(ctx, userID, adID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM favorite")).
+			WithArgs(userID, adID).
+			WillReturnError(assert.AnError)
+
+		err := storage.RemoveFavorite(ctx, userID, adID)
+		assert.Error(t, err)
+	})
 }
 
-// TODO
 func TestAdStorage_GetUserFavorites(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
 
+	storage := NewAdStorage(mock)
+	ctx := context.Background()
+	userID := int64(1)
+
+	t.Run("Success", func(t *testing.T) {
+		now := time.Now()
+		columns := []string{
+			"id", "seller_id", "category_id", "title", "description", "price", "status",
+			"location", "created_at", "updated_at", "photos", "views_count", "favorites_count",
+		}
+
+		rows := pgxmock.NewRows(columns).
+			AddRow(
+				int64(101),
+				int64(2),
+				int64(3),
+				"Title 1",
+				"Desc 1",
+				int64(100),
+				"active",
+				"Moscow",
+				now,
+				now,
+				[]string{"img1.png"},
+				int64(1),
+				int64(1),
+			).
+			AddRow(
+				int64(102),
+				int64(2),
+				int64(3),
+				"Title 2",
+				"Desc 2",
+				int64(200),
+				"active",
+				"Piter",
+				now,
+				now,
+				[]string{"img2.png"},
+				int64(2),
+				int64(2),
+			)
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(userID).
+			WillReturnRows(rows)
+
+		ads, err := storage.GetUserFavorites(ctx, userID)
+		assert.NoError(t, err)
+		assert.Len(t, ads, 2)
+		assert.Equal(t, int64(101), ads[0].ID)
+		assert.Equal(t, "Moscow", ads[0].Location)
+	})
+
+	t.Run("Empty", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(userID).
+			WillReturnRows(pgxmock.NewRows([]string{"id"}))
+
+		ads, err := storage.GetUserFavorites(ctx, userID)
+		assert.NoError(t, err)
+		assert.Empty(t, ads)
+		assert.NotNil(t, ads)
+	})
+
+	t.Run("ScanError", func(t *testing.T) {
+		// Подсовываем неверный тип данных (строку вместо id int64) для проверки обработки ошибки Scan
+		rows := pgxmock.NewRows([]string{"id"}).AddRow("not_an_id")
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(userID).
+			WillReturnRows(rows)
+
+		_, err := storage.GetUserFavorites(ctx, userID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "scan")
+	})
 }
