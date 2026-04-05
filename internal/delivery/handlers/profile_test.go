@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -214,7 +215,73 @@ func TestHandleGetPublicProfile(t *testing.T) {
 	})
 }
 
-// TODO
 func TestHandleUploadAvatar(t *testing.T) {
+	authH, _, mockAuth, _ := setupHandlers(t)
 
+	t.Run("Success", func(t *testing.T) {
+		userID := int64(42)
+		filename := "test.png"
+		fileContent := []byte("\x89PNG\r\n\x1a\n") // Мини-заголовок PNG
+
+		// Создаем буфер и multipart-писатель
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+
+		// Создаем часть формы для файла
+		part, err := writer.CreateFormFile("avatar", filename)
+		assert.NoError(t, err)
+		_, _ = part.Write(fileContent)
+		writer.Close()
+
+		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		// Кладем ID в контекст (имитируем AuthMiddleware)
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+		req = req.WithContext(ctx)
+
+		rr := httptest.NewRecorder()
+
+		mockAuth.EXPECT().
+			UpdateAvatar(gomock.Any(), userID, gomock.Any(), filename).
+			Return(models.User{ID: userID, AvatarPath: "/new/path.png"}, nil)
+
+		authH.HandleUploadAvatar(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+
+		var resp models.User
+		err = json.Unmarshal(rr.Body.Bytes(), &resp)
+		assert.NoError(t, err)
+		assert.Equal(t, "/new/path.png", resp.AvatarPath)
+	})
+
+	t.Run("Unauthorized", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", nil)
+
+		// Не кладем userID в контекст
+		rr := httptest.NewRecorder()
+
+		authH.HandleUploadAvatar(rr, req)
+
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	})
+
+	t.Run("NoFile", func(t *testing.T) {
+		userID := int64(42)
+		body := &bytes.Buffer{}
+		writer := multipart.NewWriter(body)
+		writer.Close() // Пустая форма без поля "avatar"
+
+		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
+		req = req.WithContext(ctx)
+		rr := httptest.NewRecorder()
+
+		authH.HandleUploadAvatar(rr, req)
+
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	})
 }

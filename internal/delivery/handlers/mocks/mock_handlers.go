@@ -6,6 +6,7 @@ package mocks
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 	time "time"
 
@@ -237,6 +238,21 @@ func (m *MockAuth) RegisterNewUser(ctx context.Context, email, password, name st
 func (mr *MockAuthMockRecorder) RegisterNewUser(ctx, email, password, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterNewUser", reflect.TypeOf((*MockAuth)(nil).RegisterNewUser), ctx, email, password, name)
+}
+
+// UpdateAvatar mocks base method.
+func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, file, filename)
+	ret0, _ := ret[0].(models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAvatar indicates an expected call of UpdateAvatar.
+func (mr *MockAuthMockRecorder) UpdateAvatar(ctx, userID, file, filename interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAvatar", reflect.TypeOf((*MockAuth)(nil).UpdateAvatar), ctx, userID, file, filename)
 }
 
 // UpdateProfile mocks base method.

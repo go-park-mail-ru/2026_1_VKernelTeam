@@ -8,7 +8,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -22,6 +26,13 @@ import (
 )
 
 //go:generate mockgen -source=auth.go -destination=mocks/mock_auth.go
+
+var allowedTypes = map[string]struct{}{
+	"image/jpeg": {},
+	"image/png":  {},
+	"image/webp": {},
+	"image/gif":  {},
+}
 
 // TokenRevoker описывает интерфейс для отзыва токенов
 type TokenRevoker interface {
@@ -43,6 +54,7 @@ type UserProviderSaver interface {
 	UserByID(ctx context.Context, userID int64) (models.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 	UpdateUser(ctx context.Context, userID int64, name string) (models.User, error)
+	UpdateAvatarPath(ctx context.Context, userID int64, path string) error
 }
 
 // Auth представляет собой сервис аутентификации. Он использует логгер,
@@ -325,4 +337,72 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 
 	log.Info("user profile updated successfully")
 	return user, nil
+}
+
+func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error) {
+	const op = "auth.UpdateAvatar"
+
+	// Валидация реального содержимого
+	buff := make([]byte, 512)
+	if _, err := file.Read(buff); err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to read file header: %w", op, err)
+	}
+
+	// Возвращаем указатель в начало файла после чтения заголовка
+	if _, err := file.Seek(0, io.SeekStart); err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to seek file: %w", op, err)
+	}
+
+	contentType := http.DetectContentType(buff)
+	if _, ok := allowedTypes[contentType]; !ok {
+		return models.User{}, fmt.Errorf("%s: unsupported file type: %s", op, contentType)
+	}
+
+	// Получаем текущий профиль, чтобы знать путь к старому аватару
+	user, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	// Генерируем уникальное имя файла (ID + timestamp)
+	// Экранируем расширение, чтобы не протащили лишнего
+	ext := filepath.Ext(filename)
+	newFileName := fmt.Sprintf("%d_%d%s", userID, time.Now().Unix(), ext)
+
+	// Физический путь для сохранения и путь для БД/фронта
+	storageDir := filepath.Join("static", "img", "avatars")
+	storagePath := filepath.Join(storageDir, newFileName)
+	dbPath := "/static/img/avatars/" + newFileName
+
+	// Создаем директорию, если её нет
+	if err := os.MkdirAll(storageDir, 0755); err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to create dir: %w", op, err)
+	}
+
+	// Сохраняем новый файл
+	dst, err := os.Create(storagePath)
+	if err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to create file: %w", op, err)
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, file); err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to copy file: %w", op, err)
+	}
+
+	// Обновляем путь в базе данных
+	if err := a.userStorage.UpdateAvatarPath(ctx, userID, dbPath); err != nil {
+		// Если БД упала, удаляем свежезагруженный файл
+		_ = os.Remove(storagePath)
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	// Удаляем старый файл, если он существует и это не дефолтная картинка
+	if user.AvatarPath != "" && user.AvatarPath != "/static/img/default_avatar.webp" {
+		// Убираем ведущий слэш для os.Remove, чтобы путь стал относительным корня проекта
+		oldFilePath := filepath.Clean(user.AvatarPath[1:])
+		_ = os.Remove(oldFilePath)
+	}
+
+	return a.userStorage.UserByID(ctx, userID)
 }

@@ -533,6 +533,39 @@ paths:
       summary: Получить профиль пользователя
       tags:
       - auth
+  /profile/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Принимает файл через multipart/form-data. Поле: "avatar"'
+      parameters:
+      - description: Файл изображения
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: аватар обновлен
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: file too big / failed to get file
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Загрузить аватар
+      tags:
+      - auth
   /profile/update:
     post:
       consumes:

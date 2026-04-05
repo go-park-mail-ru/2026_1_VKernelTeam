@@ -11,3 +11,5 @@ bin/
 *.pem
 *.txt
 schema.md
+
+*static/img/avatars
