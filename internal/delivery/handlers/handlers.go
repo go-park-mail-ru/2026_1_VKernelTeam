@@ -3,6 +3,7 @@ package handlers
 // Package handlers содержит HTTP-обработчики для всех маршрутов приложения
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,6 +17,9 @@ import (
 
 // ошибки HTTP-обработчиков
 const (
+	// Максимальный вес аватарки - 5 MB
+	MaxUploadSize = 5 << 20
+
 	ErrInvalidRequestBody   = "invalid request body"
 	ErrUserAlreadyExists    = "user already exists"
 	ErrFailedToRegisterUser = "failed to register user"
@@ -31,6 +35,8 @@ const (
 	ErrFailedToGetUserAds   = "failed to get user ads"
 	ErrUnauthorized         = "unauthorized"
 	ErrInvalidProductID     = "invalid product id"
+	ErrFileTooBig           = "file too big"
+	ErrFailedToGetFile      = "failed to get file"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
@@ -68,6 +74,7 @@ type Auth interface {
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
 	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
+	UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации

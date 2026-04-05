@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -587,4 +588,63 @@ func TestUpdateProfile_Success(t *testing.T) {
 	u, err := auth.UpdateProfile(context.Background(), userID, newName)
 	assert.NoError(t, err)
 	assert.Equal(t, newName, u.Name)
+}
+
+func TestUpdateAvatar_Success(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		nil,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	userID := int64(124)
+	filename := "test_avatar.png"
+
+	// Имитируем валидный PNG (заголовок: 8 байт)
+	pngHeader := []byte("\x89PNG\r\n\x1a\n")
+	fileContent := append(pngHeader, []byte("fake-image-data")...)
+	fileReader := bytes.NewReader(fileContent)
+
+	// Ожидаем получение текущего пользователя для проверки старого аватара
+	oldUser := models.User{
+		ID:         userID,
+		AvatarPath: "/static/img/avatars/old.png",
+	}
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(oldUser, nil).
+		Times(1)
+
+	// Ожидаем сохранение нового пути в БД
+	storageMock.EXPECT().
+		UpdateAvatarPath(gomock.Any(), userID, gomock.Any()).
+		Return(nil)
+
+	// Ожидаем финальный возврат обновленного профиля
+	updatedUser := models.User{
+		ID:         userID,
+		AvatarPath: "/static/img/avatars/124_123456789.png",
+	}
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(updatedUser, nil).
+		Times(1)
+
+	result, err := auth.UpdateAvatar(context.Background(), userID, fileReader, filename)
+
+	assert.NoError(t, err)
+	assert.Equal(t, updatedUser.AvatarPath, result.AvatarPath)
+
+	defer os.RemoveAll("static")
 }
