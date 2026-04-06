@@ -135,3 +135,19 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 
 	return u, nil
 }
+
+// UpdateAvatarPath обновляет путь к аватару пользователя
+func (r *UserStorage) UpdateAvatarPath(ctx context.Context, userID int64, path string) error {
+	const query = `UPDATE "user" SET avatar_path = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
+
+	res, err := r.pool.Exec(ctx, query, path, userID)
+	if err != nil {
+		return fmt.Errorf("UpdateAvatarPath: %w", err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}

@@ -3,6 +3,7 @@ package handlers
 // Package handlers содержит HTTP-обработчики для всех маршрутов приложения
 import (
 	"context"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -16,6 +17,9 @@ import (
 
 // ошибки HTTP-обработчиков
 const (
+	// Максимальный вес аватарки - 5 MB
+	MaxUploadSize = 5 << 20
+
 	ErrInvalidRequestBody   = "invalid request body"
 	ErrUserAlreadyExists    = "user already exists"
 	ErrFailedToRegisterUser = "failed to register user"
@@ -30,12 +34,24 @@ const (
 	ErrInvalidUserID        = "invalid user id"
 	ErrFailedToGetUserAds   = "failed to get user ads"
 	ErrUnauthorized         = "unauthorized"
+	ErrInvalidProductID     = "invalid product id"
+	ErrFileTooBig           = "file too big"
+	ErrFailedToGetFile      = "failed to get file"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
 type Services struct {
 	Ads  Ads
 	Auth Auth
+	Cart Cart
+}
+
+// Cart описывает методы сервиса корзины
+type Cart interface {
+	AddToCart(ctx context.Context, userID, productID int64) error
+	RemoveFromCart(ctx context.Context, userID, productID int64) error
+	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
+	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -58,6 +74,7 @@ type Auth interface {
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
 	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
+	UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
@@ -71,6 +88,13 @@ type AuthHandlers struct {
 
 // AdsHandlers содержит обработчики для объявлений
 type AdsHandlers struct {
+	log      *slog.Logger
+	services Services
+	tokenTTL time.Duration
+}
+
+// CartHandlers содержит обработчики для корзины
+type CartHandlers struct {
 	log      *slog.Logger
 	services Services
 	tokenTTL time.Duration
@@ -90,6 +114,15 @@ func NewAuthHandlers(log *slog.Logger, services Services, tokenTTL time.Duration
 // NewAdsHandlers создает новый экземпляр AdsHandlers
 func NewAdsHandlers(log *slog.Logger, services Services, tokenTTL time.Duration) *AdsHandlers {
 	return &AdsHandlers{
+		log:      log,
+		services: services,
+		tokenTTL: tokenTTL,
+	}
+}
+
+// NewCartHandlers создает новый экземпляр CartHandlers
+func NewCartHandlers(log *slog.Logger, services Services, tokenTTL time.Duration) *CartHandlers {
+	return &CartHandlers{
 		log:      log,
 		services: services,
 		tokenTTL: tokenTTL,

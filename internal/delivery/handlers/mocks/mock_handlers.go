@@ -6,6 +6,7 @@ package mocks
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 	time "time"
 
@@ -13,6 +14,87 @@ import (
 	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	gomock "github.com/golang/mock/gomock"
 )
+
+// MockCart is a mock of Cart interface.
+type MockCart struct {
+	ctrl     *gomock.Controller
+	recorder *MockCartMockRecorder
+}
+
+// MockCartMockRecorder is the mock recorder for MockCart.
+type MockCartMockRecorder struct {
+	mock *MockCart
+}
+
+// NewMockCart creates a new mock instance.
+func NewMockCart(ctrl *gomock.Controller) *MockCart {
+	mock := &MockCart{ctrl: ctrl}
+	mock.recorder = &MockCartMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCart) EXPECT() *MockCartMockRecorder {
+	return m.recorder
+}
+
+// AddToCart mocks base method.
+func (m *MockCart) AddToCart(ctx context.Context, userID, productID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddToCart", ctx, userID, productID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddToCart indicates an expected call of AddToCart.
+func (mr *MockCartMockRecorder) AddToCart(ctx, userID, productID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToCart", reflect.TypeOf((*MockCart)(nil).AddToCart), ctx, userID, productID)
+}
+
+// Checkout mocks base method.
+func (m *MockCart) Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Checkout", ctx, userID)
+	ret0, _ := ret[0].(*dto.CheckoutResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Checkout indicates an expected call of Checkout.
+func (mr *MockCartMockRecorder) Checkout(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockCart)(nil).Checkout), ctx, userID)
+}
+
+// GetCart mocks base method.
+func (m *MockCart) GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCart", ctx, userID)
+	ret0, _ := ret[0].(*dto.CartResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCart indicates an expected call of GetCart.
+func (mr *MockCartMockRecorder) GetCart(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCart", reflect.TypeOf((*MockCart)(nil).GetCart), ctx, userID)
+}
+
+// RemoveFromCart mocks base method.
+func (m *MockCart) RemoveFromCart(ctx context.Context, userID, productID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveFromCart", ctx, userID, productID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveFromCart indicates an expected call of RemoveFromCart.
+func (mr *MockCartMockRecorder) RemoveFromCart(ctx, userID, productID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFromCart", reflect.TypeOf((*MockCart)(nil).RemoveFromCart), ctx, userID, productID)
+}
 
 // MockAds is a mock of Ads interface.
 type MockAds struct {
@@ -237,6 +319,21 @@ func (m *MockAuth) RegisterNewUser(ctx context.Context, email, password, name st
 func (mr *MockAuthMockRecorder) RegisterNewUser(ctx, email, password, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterNewUser", reflect.TypeOf((*MockAuth)(nil).RegisterNewUser), ctx, email, password, name)
+}
+
+// UpdateAvatar mocks base method.
+func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, file, filename)
+	ret0, _ := ret[0].(models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAvatar indicates an expected call of UpdateAvatar.
+func (mr *MockAuthMockRecorder) UpdateAvatar(ctx, userID, file, filename interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAvatar", reflect.TypeOf((*MockAuth)(nil).UpdateAvatar), ctx, userID, file, filename)
 }
 
 // UpdateProfile mocks base method.
