@@ -52,7 +52,6 @@ type UserProviderSaver interface {
 	SaveUser(ctx context.Context, email string, passHash []byte, name string) (uid int64, err error)
 	User(ctx context.Context, email string) (models.User, error)
 	UserByID(ctx context.Context, userID int64) (models.User, error)
-	IsAdmin(ctx context.Context, userID int64) (bool, error)
 	UpdateUser(ctx context.Context, userID int64, name string) (models.User, error)
 	UpdateAvatarPath(ctx context.Context, userID int64, path string) error
 }
@@ -267,29 +266,6 @@ func (a *Auth) RegisterNewUser(ctx context.Context, email, password, name string
 	}
 	log.Info("user registered")
 	return id, nil
-}
-
-// IsAdmin возвращает true, если пользователь с заданным ID обладает правами
-// администратора.
-func (a *Auth) IsAdmin(ctx context.Context, userID int64) (bool, error) {
-	const op = "auth.IsAdmin"
-
-	log := a.log.With(
-		slog.String("op", op),
-		slog.Int64("user_id", userID),
-	)
-	log.Info("checking if user is admin")
-
-	isAdmin, err := a.userStorage.IsAdmin(ctx, userID)
-	if err != nil {
-		if errors.Is(err, db.ErrUserNotFound) {
-			return false, fmt.Errorf("%s: %w", op, err)
-		}
-		log.Error("failed to check if user is admin")
-		return false, fmt.Errorf("%s: %w", op, err)
-	}
-	log.Info("user is admin", slog.Bool("is_admin", isAdmin))
-	return isAdmin, nil
 }
 
 // GetProfile возвращает профиль пользователя по его ID.
