@@ -9,6 +9,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
 // HandleGetProfile возвращает профиль текущего авторизованного пользователя
@@ -76,8 +78,18 @@ func (h *AuthHandlers) HandleUpdateProfile(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Удаляем HTML-теги из имени (защита от XSS)
+	req.Name = sanitizer.StripHTML(req.Name)
+
+	// Валидируем имя
+	cleanName, err := validator.ValidateName(req.Name)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Обновляем профиль
-	updatedUser, err := h.services.Auth.UpdateProfile(r.Context(), userID, req.Name)
+	updatedUser, err := h.services.Auth.UpdateProfile(r.Context(), userID, cleanName)
 	if err != nil {
 		h.log.Error("failed to update profile", slog.String("op", op), slog.String("error", err.Error()))
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
