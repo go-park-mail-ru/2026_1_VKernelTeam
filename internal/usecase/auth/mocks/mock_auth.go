@@ -6,6 +6,7 @@ package mock_auth
 
 import (
 	context "context"
+	mime "mime/multipart"
 	reflect "reflect"
 	time "time"
 
@@ -209,4 +210,42 @@ func (m *MockUserProviderSaver) UserByID(ctx context.Context, userID int64) (mod
 func (mr *MockUserProviderSaverMockRecorder) UserByID(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UserByID", reflect.TypeOf((*MockUserProviderSaver)(nil).UserByID), ctx, userID)
+}
+
+// MockFileStorage is a mock of FileStorage interface.
+type MockFileStorage struct {
+	ctrl     *gomock.Controller
+	recorder *MockFileStorageMockRecorder
+}
+
+// MockFileStorageMockRecorder is the mock recorder for MockFileStorage.
+type MockFileStorageMockRecorder struct {
+	mock *MockFileStorage
+}
+
+// NewMockFileStorage creates a new mock instance.
+func NewMockFileStorage(ctrl *gomock.Controller) *MockFileStorage {
+	mock := &MockFileStorage{ctrl: ctrl}
+	mock.recorder = &MockFileStorageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFileStorage) EXPECT() *MockFileStorageMockRecorder {
+	return m.recorder
+}
+
+// UploadFile mocks base method.
+func (m *MockFileStorage) UploadFile(ctx context.Context, file mime.File, folder string, extension string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFile", ctx, file, folder, extension)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFile indicates an expected call of UploadFile.
+func (mr *MockFileStorageMockRecorder) UploadFile(ctx, file, folder, extension interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockFileStorage)(nil).UploadFile), ctx, file, folder, extension)
 }

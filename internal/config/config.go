@@ -18,16 +18,25 @@ type Config struct {
 	Env             string
 	DatabaseDSN     string
 	RedisAddr       string
+	TokenSecret     string
 	RefreshTTL      time.Duration
 	TokenTTL        time.Duration
-	HTTP            HTTPConfig
 	CleanupInterval time.Duration
-	TokenSecret     string
+	HTTP            HTTPConfig
+	S3Storage       S3Config
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.
 type HTTPConfig struct {
 	Port int `json:"port"`
+}
+
+type S3Config struct {
+	EndpointURL      string `json:"endpoint_url"`
+	RegionName       string `json:"region_name"`
+	BucketName       string `json:"bucket_name"`
+	AccessKeyID      string `json:"access_key_id"`
+	SecretAccessKey  string `json:"secret_access_key"`
 }
 
 // MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
@@ -81,6 +90,31 @@ func MustLoadConfig() *Config {
 		panic("REDIS_ADDR is not set in environment or .env file")
 	}
 
+	s3EndpointURL := os.Getenv("S3_ENDPOINT_URL")
+	if s3EndpointURL == "" {
+		panic("S3_ENDPOINT_URL is not set in environment or .env file")
+	}
+
+	s3RegionName := os.Getenv("S3_REGION_NAME")
+	if s3RegionName == "" {
+		panic("S3_REGION_NAME is not set in environment or .env file")
+	}
+
+	s3BucketName := os.Getenv("S3_BUCKET_NAME")
+	if s3BucketName == "" {
+		panic("S3_BUCKET_NAME is not set in environment or .env file")
+	}
+
+	s3AccessKeyID := os.Getenv("S3_ACCESS_KEY_ID")
+	if s3AccessKeyID == "" {
+		panic("S3_ACCESS_KEY_ID is not set in environment or .env file")
+	}
+
+	s3SecretAccessKey := os.Getenv("S3_SECRET_ACCESS_KEY")
+	if s3SecretAccessKey == "" {
+		panic("S3_SECRET_ACCESS_KEY is not set in environment or .env file")
+	}
+
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
 	return &Config{
@@ -91,6 +125,13 @@ func MustLoadConfig() *Config {
 		TokenTTL:        parseDuration(rawConfig.TokenTTL, "token_ttl"),
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),
+		S3Storage: S3Config{
+			EndpointURL:      s3EndpointURL,
+			RegionName:       s3RegionName,
+			BucketName:       s3BucketName,
+			AccessKeyID:      s3AccessKeyID,
+			SecretAccessKey:  s3SecretAccessKey,
+		},
 		TokenSecret:     secret,
 	}
 }

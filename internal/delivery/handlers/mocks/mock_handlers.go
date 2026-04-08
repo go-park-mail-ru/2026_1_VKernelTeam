@@ -6,7 +6,7 @@ package mocks
 
 import (
 	context "context"
-	io "io"
+	mime "mime/multipart"
 	reflect "reflect"
 	time "time"
 
@@ -322,7 +322,7 @@ func (mr *MockAuthMockRecorder) RegisterNewUser(ctx, email, password, name inter
 }
 
 // UpdateAvatar mocks base method.
-func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error) {
+func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file mime.File, filename string) (models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, file, filename)
 	ret0, _ := ret[0].(models.User)

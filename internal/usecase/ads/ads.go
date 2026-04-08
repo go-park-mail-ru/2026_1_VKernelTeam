@@ -15,6 +15,7 @@ type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	AddProductImages(ctx context.Context, adID int64, photos []string) error
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
@@ -72,6 +73,13 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 	if err != nil {
 		log.Error("failed to create ad", "error", err)
 		return 0, err
+	}
+
+	if len(req.Photos) > 0 {
+		if err := a.adsStorage.AddProductImages(ctx, adID, req.Photos); err != nil {
+			log.Error("failed to add product images", "error", err)
+			return 0, fmt.Errorf("%s: %w", op, err)
+		}
 	}
 
 	log.Info("ad created successfully", "ad_id", adID)

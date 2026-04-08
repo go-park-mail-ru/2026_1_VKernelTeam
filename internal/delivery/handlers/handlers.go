@@ -3,8 +3,8 @@ package handlers
 // Package handlers содержит HTTP-обработчики для всех маршрутов приложения
 import (
 	"context"
-	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -74,7 +74,7 @@ type Auth interface {
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
 	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
-	UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error)
+	UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации

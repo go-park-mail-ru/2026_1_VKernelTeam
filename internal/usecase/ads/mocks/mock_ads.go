@@ -36,6 +36,20 @@ func (m *MockAdsProvider) EXPECT() *MockAdsProviderMockRecorder {
 	return m.recorder
 }
 
+// AddProductImages mocks base method.
+func (m *MockAdsProvider) AddProductImages(ctx context.Context, adID int64, photos []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddProductImages", ctx, adID, photos)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddProductImages indicates an expected call of AddProductImages.
+func (mr *MockAdsProviderMockRecorder) AddProductImages(ctx, adID, photos interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProductImages", reflect.TypeOf((*MockAdsProvider)(nil).AddProductImages), ctx, adID, photos)
+}
+
 // CloseAd mocks base method.
 func (m *MockAdsProvider) CloseAd(ctx context.Context, id, userID int64) error {
 	m.ctrl.T.Helper()
