@@ -134,3 +134,29 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 		assert.Equal(t, newName, u.Name)
 	})
 }
+
+func TestUserStorage_UpdateAvatarPath(t *testing.T) {
+	mock, _ := pgxmock.NewPool()
+	repo := user.NewUserStorage(mock)
+	ctx := context.Background()
+	userID := int64(1)
+	newPath := "/static/img/avatars/1_12345.png"
+
+	t.Run("success", func(t *testing.T) {
+		mock.ExpectExec(`UPDATE "user" SET avatar_path = \$1`).
+			WithArgs(newPath, userID).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+		err := repo.UpdateAvatarPath(ctx, userID, newPath)
+		assert.NoError(t, err)
+	})
+
+	t.Run("user_not_found", func(t *testing.T) {
+		mock.ExpectExec(`UPDATE "user" SET avatar_path = \$1`).
+			WithArgs(newPath, userID).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 0))
+
+		err := repo.UpdateAvatarPath(ctx, userID, newPath)
+		assert.Error(t, err)
+	})
+}

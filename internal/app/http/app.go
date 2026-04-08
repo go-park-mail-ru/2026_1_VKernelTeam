@@ -8,6 +8,7 @@ package httpapp
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -36,6 +37,7 @@ type Auth interface {
 	Refresh(ctx context.Context, refreshToken string) (string, string, error)
 	GetProfile(ctx context.Context, userID int64) (models.User, error)
 	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
+	UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -52,6 +54,13 @@ type Ads interface {
 	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
+type Cart interface {
+	AddToCart(ctx context.Context, userID, productID int64) error
+	RemoveFromCart(ctx context.Context, userID, productID int64) error
+	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
+	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
+}
+
 // TokenChecker интерфейс для проверки отозванных токенов
 type TokenChecker interface {
 	Check(jti string) bool
@@ -61,6 +70,7 @@ type TokenChecker interface {
 type Services struct {
 	Ads  Ads
 	Auth Auth
+	Cart Cart
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -76,6 +86,7 @@ type App struct {
 	secret       string
 	authHandlers *handlers.AuthHandlers
 	adsHandlers  *handlers.AdsHandlers
+	cartHandlers *handlers.CartHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -101,10 +112,17 @@ func New(
 	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
+		Cart: services.Cart,
 	}, tokenTTL, refreshTTL, secret)
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
+		Cart: services.Cart,
+	}, tokenTTL)
+	app.cartHandlers = handlers.NewCartHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
 	}, tokenTTL)
 
 	app.setupRoutes()
@@ -148,6 +166,12 @@ func (a *App) setupRoutes() {
 	a.router.Handle("PUT "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
 	a.router.Handle("DELETE "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
 	a.router.Handle("POST "+prefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
+
+	// Корзина (защищено)
+	a.router.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleGetCart)))
+	a.router.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleAddToCart)))
+	a.router.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(a.cartHandlers.HandleRemoveFromCart)))
+	a.router.Handle("POST "+prefix+"/cart/checkout", authMW(http.HandlerFunc(a.cartHandlers.HandleCheckout)))
 
 	// Избранное
 	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))

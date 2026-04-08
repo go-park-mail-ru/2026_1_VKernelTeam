@@ -137,21 +137,6 @@ func (m *MockUserProviderSaver) EXPECT() *MockUserProviderSaverMockRecorder {
 	return m.recorder
 }
 
-// IsAdmin mocks base method.
-func (m *MockUserProviderSaver) IsAdmin(ctx context.Context, userID int64) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsAdmin", ctx, userID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsAdmin indicates an expected call of IsAdmin.
-func (mr *MockUserProviderSaverMockRecorder) IsAdmin(ctx, userID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsAdmin", reflect.TypeOf((*MockUserProviderSaver)(nil).IsAdmin), ctx, userID)
-}
-
 // SaveUser mocks base method.
 func (m *MockUserProviderSaver) SaveUser(ctx context.Context, email string, passHash []byte, name string) (int64, error) {
 	m.ctrl.T.Helper()
@@ -165,6 +150,20 @@ func (m *MockUserProviderSaver) SaveUser(ctx context.Context, email string, pass
 func (mr *MockUserProviderSaverMockRecorder) SaveUser(ctx, email, passHash, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveUser", reflect.TypeOf((*MockUserProviderSaver)(nil).SaveUser), ctx, email, passHash, name)
+}
+
+// UpdateAvatarPath mocks base method.
+func (m *MockUserProviderSaver) UpdateAvatarPath(ctx context.Context, userID int64, path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAvatarPath", ctx, userID, path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateAvatarPath indicates an expected call of UpdateAvatarPath.
+func (mr *MockUserProviderSaverMockRecorder) UpdateAvatarPath(ctx, userID, path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAvatarPath", reflect.TypeOf((*MockUserProviderSaver)(nil).UpdateAvatarPath), ctx, userID, path)
 }
 
 // UpdateUser mocks base method.

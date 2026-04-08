@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"log/slog"
@@ -227,102 +228,6 @@ func TestLogin_UserNotFound(t *testing.T) {
 	}
 }
 
-// TestIsAdmin_True проверяет, что IsAdmin возвращает true для администратора.
-func TestIsAdmin_True(t *testing.T) {
-	log := getTestLogger()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
-	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
-
-	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-
-	auth := New(log,
-		storageMock,
-		tokenRevoker,
-		refreshMock,
-		time.Hour,
-		time.Hour,
-		testSecret,
-	)
-
-	storageMock.EXPECT().
-		IsAdmin(gomock.Any(), int64(1)).
-		Return(true, nil).
-		Times(1)
-
-	isAdmin, err := auth.IsAdmin(context.Background(), 1)
-
-	if err != nil || !isAdmin {
-		t.Fatalf("IsAdmin failed: %v", err)
-	}
-}
-
-// TestIsAdmin_False проверяет, что IsAdmin возвращает false для обычного
-// пользователя.
-func TestIsAdmin_False(t *testing.T) {
-	log := getTestLogger()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
-	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
-
-	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-
-	auth := New(log,
-		storageMock,
-		tokenRevoker,
-		refreshMock,
-		time.Hour,
-		time.Hour,
-		testSecret,
-	)
-
-	storageMock.EXPECT().
-		IsAdmin(gomock.Any(), int64(1)).
-		Return(false, nil).
-		Times(1)
-
-	isAdmin, err := auth.IsAdmin(context.Background(), 1)
-
-	if err != nil || isAdmin {
-		t.Fatalf("IsAdmin failed: %v", err)
-	}
-}
-
-// TestIsAdmin_Error проверяет поведение при ошибке провайдера.
-func TestIsAdmin_Error(t *testing.T) {
-	log := getTestLogger()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
-	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
-
-	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-
-	auth := New(log,
-		storageMock,
-		tokenRevoker,
-		refreshMock,
-		time.Hour,
-		time.Hour,
-		testSecret,
-	)
-
-	storageMock.EXPECT().
-		IsAdmin(gomock.Any(), gomock.Any()).
-		Return(false, db.ErrUserNotFound).
-		Times(1)
-
-	_, err := auth.IsAdmin(context.Background(), 1)
-	if !errors.Is(err, db.ErrUserNotFound) {
-		t.Fatalf("expected ErrUserNotFound, got %v", err)
-	}
-}
-
 // TestRegisterNewUser_SaveError имитирует сбой при сохранении пользователя.
 func TestRegisterNewUser_SaveError(t *testing.T) {
 	log := getTestLogger()
@@ -382,37 +287,6 @@ func TestLogin_UserProviderError(t *testing.T) {
 	_, _, _, err := auth.Login(context.Background(), "user@example.com", "pwd")
 	if err == nil {
 		t.Fatalf("expected error when user provider fails")
-	}
-}
-
-// TestIsAdmin_GenericError проверяет, что общая ошибка передаётся дальше.
-func TestIsAdmin_GenericError(t *testing.T) {
-	log := getTestLogger()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
-	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
-
-	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
-
-	auth := New(log,
-		storageMock,
-		tokenRevoker,
-		refreshMock,
-		time.Hour,
-		time.Hour,
-		testSecret,
-	)
-
-	storageMock.EXPECT().
-		IsAdmin(gomock.Any(), int64(123)).
-		Return(false, errors.New("whoops")).
-		Times(1)
-
-	_, err := auth.IsAdmin(context.Background(), 123)
-	if err == nil {
-		t.Fatalf("expected generic error from IsAdmin")
 	}
 }
 
@@ -587,4 +461,63 @@ func TestUpdateProfile_Success(t *testing.T) {
 	u, err := auth.UpdateProfile(context.Background(), userID, newName)
 	assert.NoError(t, err)
 	assert.Equal(t, newName, u.Name)
+}
+
+func TestUpdateAvatar_Success(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		nil,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	userID := int64(124)
+	filename := "test_avatar.png"
+
+	// Имитируем валидный PNG (заголовок: 8 байт)
+	pngHeader := []byte("\x89PNG\r\n\x1a\n")
+	fileContent := append(pngHeader, []byte("fake-image-data")...)
+	fileReader := bytes.NewReader(fileContent)
+
+	// Ожидаем получение текущего пользователя для проверки старого аватара
+	oldUser := models.User{
+		ID:         userID,
+		AvatarPath: "/static/img/avatars/old.png",
+	}
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(oldUser, nil).
+		Times(1)
+
+	// Ожидаем сохранение нового пути в БД
+	storageMock.EXPECT().
+		UpdateAvatarPath(gomock.Any(), userID, gomock.Any()).
+		Return(nil)
+
+	// Ожидаем финальный возврат обновленного профиля
+	updatedUser := models.User{
+		ID:         userID,
+		AvatarPath: "/static/img/avatars/124_123456789.png",
+	}
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(updatedUser, nil).
+		Times(1)
+
+	result, err := auth.UpdateAvatar(context.Background(), userID, fileReader, filename)
+
+	assert.NoError(t, err)
+	assert.Equal(t, updatedUser.AvatarPath, result.AvatarPath)
+
+	defer os.RemoveAll("static")
 }

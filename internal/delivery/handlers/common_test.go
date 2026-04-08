@@ -29,3 +29,20 @@ func setupHandlers(t *testing.T) (*AuthHandlers, *AdsHandlers, *mocks.MockAuth, 
 
 	return authH, adsH, mockAuth, mockAds
 }
+
+// setupCartHandlers возвращает готовый хендлер корзины и мок корзины
+func setupCartHandlers(t *testing.T) (*CartHandlers, *mocks.MockCart) {
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockCart := mocks.NewMockCart(ctrl)
+
+	services := Services{
+		Cart: mockCart,
+	}
+
+	cartH := NewCartHandlers(logger, services, time.Hour)
+
+	return cartH, mockCart
+}

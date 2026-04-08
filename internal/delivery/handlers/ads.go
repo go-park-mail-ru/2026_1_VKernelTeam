@@ -11,6 +11,7 @@ import (
 	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
@@ -105,6 +106,11 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	// Устанавливаем UserID из токена, а не из тела запроса
 	req.UserID = userID
 
+	// Удаляем HTML-теги из текстовых полей (защита от XSS)
+	req.Title = sanitizer.StripHTML(req.Title)
+	req.Description = sanitizer.StripHTML(req.Description)
+	req.Location = sanitizer.StripHTML(req.Location)
+
 	// Валидируем запрос
 	validationErrors := validator.ValidateCreateAdRequest(&req)
 	if validationErrors.HasErrors() {
@@ -168,6 +174,11 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	// Устанавливаем ID и UserID из URL и токена
 	req.ID = id
 	req.UserID = userID
+
+	// Удаляем HTML-теги из текстовых полей (защита от XSS)
+	req.Title = sanitizer.StripHTML(req.Title)
+	req.Description = sanitizer.StripHTML(req.Description)
+	req.Location = sanitizer.StripHTML(req.Location)
 
 	// Валидируем запрос
 	validationErrors := validator.ValidateUpdateAdRequest(&req)
