@@ -125,10 +125,6 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Обновляем CSRF-токен после успешного мутирующего запроса
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
-
 	// Возвращаем ID созданного объявления
 	responser.RespondWithJSON(w, http.StatusOK, map[string]int64{"ad_id": adID})
 }
@@ -201,10 +197,6 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Обновляем CSRF-токен после успешного мутирующего запроса
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
-
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "updated"})
 }
 
@@ -248,9 +240,6 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
-
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
@@ -293,9 +282,6 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
-
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "archived"})
 }
