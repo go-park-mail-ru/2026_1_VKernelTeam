@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
@@ -33,6 +34,9 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
+
+	// Удаляем HTML-теги из имени (защита от XSS)
+	req.Name = sanitizer.StripHTML(req.Name)
 
 	// Собираем все ошибки валидации
 	validationErrors := dto.ValidationErrors{}
