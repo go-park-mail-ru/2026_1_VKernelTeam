@@ -255,7 +255,7 @@ func TestHandleCreateAd_Success(t *testing.T) {
 	adsH.HandleCreateAd(rr, request)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
-	
+
 	var response map[string]int64
 	json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.Equal(t, int64(123), response["ad_id"])
@@ -369,4 +369,135 @@ func TestHandleCloseAdByID_Success(t *testing.T) {
 	mux.ServeHTTP(rr, request)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandleAddToFavorites_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	adID := int64(100)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mockAds.EXPECT().
+		AddFavorite(gomock.Any(), userID, adID).
+		Return(nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /ads/{id}/favorite", adsH.HandleAddToFavorites)
+
+	request := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/ads/%d/favorite", adID), nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var response map[string]string
+	json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.Equal(t, "ok", response["status"])
+}
+
+func TestHandleDeleteFromFavorites_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	adID := int64(100)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mockAds.EXPECT().
+		RemoveFavorite(gomock.Any(), userID, adID).
+		Return(nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("DELETE /ads/{id}/favorite", adsH.HandleDeleteFromFavorites)
+
+	request := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/ads/%d/favorite", adID), nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestHandleGetFavorites_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	testAds := []models.Ad{
+		{ID: 1, Title: "Favorite Ad 1", Price: 1000},
+		{ID: 2, Title: "Favorite Ad 2", Price: 2000},
+	}
+
+	mockAds.EXPECT().
+		GetUserFavorites(gomock.Any(), userID).
+		Return(testAds, nil)
+
+	request := httptest.NewRequest(http.MethodGet, "/profile/favorites", nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleGetFavorites(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var response struct {
+		Ads []models.Ad `json:"ads"`
+	}
+	err := json.Unmarshal(rr.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.Equal(t, testAds, response.Ads)
+}
+
+func TestHandleAddToFavorites_Unauthorized(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	// Контекст пустой, userID не положен
+	request := httptest.NewRequest(http.MethodPost, "/ads/100/favorite", nil)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleAddToFavorites(rr, request)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
+
+func TestHandleAddToFavorites_InvalidAdID(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	userID := int64(1)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /ads/{id}/favorite", adsH.HandleAddToFavorites)
+
+	// Передаем строку "abc" вместо ID
+	request := httptest.NewRequest(http.MethodPost, "/ads/abc/favorite", nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetFavorites_ServiceError(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	userID := int64(1)
+	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
+
+	mockAds.EXPECT().
+		GetUserFavorites(gomock.Any(), userID).
+		Return(nil, assert.AnError)
+
+	request := httptest.NewRequest(http.MethodGet, "/profile/favorites", nil)
+	request = request.WithContext(ctx)
+	rr := httptest.NewRecorder()
+
+	adsH.HandleGetFavorites(rr, request)
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }

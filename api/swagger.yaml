@@ -441,6 +441,75 @@ paths:
       summary: Закрыть объявление
       tags:
       - ads
+  /ads/{id}/favorite:
+    delete:
+      description: Удаляет объявление из списка избранного текущего пользователя
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: статус операции
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid ad id: Некорректный ID'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить из избранного
+      tags:
+      - favorites
+    post:
+      description: Добавляет объявление в список избранного текущего пользователя
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: статус операции
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid ad id: Некорректный ID'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Добавить в избранное
+      tags:
+      - favorites
   /auth/login:
     post:
       consumes:
@@ -743,6 +812,34 @@ paths:
       summary: Загрузить аватар
       tags:
       - auth
+  /profile/favorites:
+    get:
+      description: Возвращает список всех объявлений, добавленных текущим пользователем
+        в избранное
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список избранных объявлений
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Ad'
+              type: array
+            type: object
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить избранное
+      tags:
+      - favorites
   /profile/update:
     post:
       consumes:

@@ -192,3 +192,96 @@ func TestAds_GetAdsByUserID(t *testing.T) {
 		assert.Nil(t, ads)
 	})
 }
+
+func TestAds_AddFavorite(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	adID := int64(10)
+
+	t.Run("Success", func(t *testing.T) {
+		mockStorage.EXPECT().AddFavorite(ctx, userID, adID).Return(nil)
+
+		err := usecase.AddFavorite(ctx, userID, adID)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("Storage Error", func(t *testing.T) {
+		storageErr := errors.New("db error")
+		mockStorage.EXPECT().AddFavorite(ctx, userID, adID).Return(storageErr)
+
+		err := usecase.AddFavorite(ctx, userID, adID)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "usecase.ads.AddFavorite")
+	})
+}
+
+func TestAds_RemoveFavorite(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	adID := int64(10)
+
+	t.Run("Success", func(t *testing.T) {
+		mockStorage.EXPECT().RemoveFavorite(ctx, userID, adID).Return(nil)
+
+		err := usecase.RemoveFavorite(ctx, userID, adID)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("Storage Error", func(t *testing.T) {
+		mockStorage.EXPECT().RemoveFavorite(ctx, userID, adID).Return(errors.New("db error"))
+
+		err := usecase.RemoveFavorite(ctx, userID, adID)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestAds_GetUserFavorites(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage)
+
+	ctx := context.Background()
+	userID := int64(1)
+	testAds := []models.Ad{
+		{ID: 10, Title: "Fav Ad"},
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		mockStorage.EXPECT().GetUserFavorites(ctx, userID).Return(testAds, nil)
+
+		ads, err := usecase.GetUserFavorites(ctx, userID)
+
+		assert.NoError(t, err)
+		assert.Equal(t, testAds, ads)
+	})
+
+	t.Run("Storage Error", func(t *testing.T) {
+		mockStorage.EXPECT().GetUserFavorites(ctx, userID).Return(nil, errors.New("db error"))
+
+		ads, err := usecase.GetUserFavorites(ctx, userID)
+
+		assert.Error(t, err)
+		assert.Nil(t, ads)
+	})
+}
