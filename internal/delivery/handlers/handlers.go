@@ -63,6 +63,7 @@ type Ads interface {
 	DeleteAd(ctx context.Context, id int64, userID int64) error
 	CloseAd(ctx context.Context, id int64, userID int64) error
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
+	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации

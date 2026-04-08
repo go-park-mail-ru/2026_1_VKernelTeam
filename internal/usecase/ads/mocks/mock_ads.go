@@ -6,6 +6,7 @@ package mocks
 
 import (
 	context "context"
+	multipart "mime/multipart"
 	reflect "reflect"
 
 	dto "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
@@ -93,6 +94,20 @@ func (mr *MockAdsProviderMockRecorder) DeleteAd(ctx, id, userID interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAd", reflect.TypeOf((*MockAdsProvider)(nil).DeleteAd), ctx, id, userID)
 }
 
+// DeleteProductImages mocks base method.
+func (m *MockAdsProvider) DeleteProductImages(ctx context.Context, adID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProductImages", ctx, adID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProductImages indicates an expected call of DeleteProductImages.
+func (mr *MockAdsProviderMockRecorder) DeleteProductImages(ctx, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProductImages", reflect.TypeOf((*MockAdsProvider)(nil).DeleteProductImages), ctx, adID)
+}
+
 // GetAdByID mocks base method.
 func (m *MockAdsProvider) GetAdByID(ctx context.Context, id int64) (models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -150,4 +165,42 @@ func (m *MockAdsProvider) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest
 func (mr *MockAdsProviderMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAdsProvider)(nil).UpdateAd), ctx, req)
+}
+
+// MockFileStorage is a mock of FileStorage interface.
+type MockFileStorage struct {
+	ctrl     *gomock.Controller
+	recorder *MockFileStorageMockRecorder
+}
+
+// MockFileStorageMockRecorder is the mock recorder for MockFileStorage.
+type MockFileStorageMockRecorder struct {
+	mock *MockFileStorage
+}
+
+// NewMockFileStorage creates a new mock instance.
+func NewMockFileStorage(ctrl *gomock.Controller) *MockFileStorage {
+	mock := &MockFileStorage{ctrl: ctrl}
+	mock.recorder = &MockFileStorageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFileStorage) EXPECT() *MockFileStorageMockRecorder {
+	return m.recorder
+}
+
+// UploadFile mocks base method.
+func (m *MockFileStorage) UploadFile(ctx context.Context, file multipart.File, folder, extension string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadFile", ctx, file, folder, extension)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadFile indicates an expected call of UploadFile.
+func (mr *MockFileStorageMockRecorder) UploadFile(ctx, file, folder, extension interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockFileStorage)(nil).UploadFile), ctx, file, folder, extension)
 }

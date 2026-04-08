@@ -20,7 +20,7 @@ func TestAds_GetAllAds(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	testAds := []models.Ad{{ID: 1, Title: "Test"}}
@@ -46,7 +46,7 @@ func TestAds_CreateAd(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	req := &dto.CreateAdRequest{Title: "Title"}
@@ -72,7 +72,7 @@ func TestAds_GetAdByID(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	adID := int64(1)
@@ -98,7 +98,7 @@ func TestAds_UpdateAd(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	req := &dto.UpdateAdRequest{ID: 1}
@@ -122,7 +122,7 @@ func TestAds_DeleteAd(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	adID := int64(1)
@@ -147,7 +147,7 @@ func TestAds_CloseAd(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	adID := int64(1)
@@ -172,7 +172,7 @@ func TestAds_GetAdsByUserID(t *testing.T) {
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, nil)
 
 	ctx := context.Background()
 	userID := int64(1)

@@ -55,9 +55,9 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Создает новое объявление. Доступно только авторизованным пользователям.",
+                "description": "Создает новое объявление с фотографиями через multipart/form-data. Доступно только авторизованным пользователям.",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -68,13 +68,17 @@ const docTemplate = `{
                 "summary": "Создать объявление",
                 "parameters": [
                     {
-                        "description": "Данные объявления (title, description, price, category_id, status, location)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.CreateAdRequest"
-                        }
+                        "type": "string",
+                        "description": "JSON с данными объявления (title, description, price, category_id, status, location)",
+                        "name": "data",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Фотографии объявления (можно несколько)",
+                        "name": "photos",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -155,9 +159,9 @@ const docTemplate = `{
                         "CookieAuth": []
                     }
                 ],
-                "description": "Обновляет объявление по заданному ID. Доступно только владельцу объявления.",
+                "description": "Обновляет объявление по заданному ID с возможностью замены фотографий через multipart/form-data. Доступно только владельцу.",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -175,13 +179,17 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные для обновления (title, description, price, category_id, status, location)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateAdRequest"
-                        }
+                        "type": "string",
+                        "description": "JSON с данными для обновления (title, description, price, category_id, status, location)",
+                        "name": "data",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Новые фотографии объявления (заменяют старые)",
+                        "name": "photos",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -1004,35 +1012,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CreateAdRequest": {
-            "type": "object",
-            "properties": {
-                "category_id": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1116,29 +1095,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.UpdateAdRequest": {
-            "type": "object",
-            "properties": {
-                "category_id": {
-                    "type": "integer"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
                     "type": "string"
                 }
             }

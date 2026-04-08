@@ -3,9 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
@@ -77,11 +80,12 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 
 // HandleCreateAd обрабатывает запрос на создание нового объявления
 // @Summary Создать объявление
-// @Description Создает новое объявление. Доступно только авторизованным пользователям.
+// @Description Создает новое объявление с фотографиями через multipart/form-data. Доступно только авторизованным пользователям.
 // @Tags ads
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param body body dto.CreateAdRequest true "Данные объявления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными объявления (title, description, price, category_id, status, location)"
+// @Param photos formData file false "Фотографии объявления (можно несколько)"
 // @Success 200 {object} map[string]int64 "ID созданного объявления"
 // @Failure 400 {object} dto.ErrorResponse "invalid request body / ошибки валидации"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
@@ -89,20 +93,34 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 // @Security CookieAuth
 // @Router /ads [post]
 func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем UserID из JWT-контекста (установлен AuthMiddleware)
+	const op = "handlers.HandleCreateAd"
+
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
 		responser.RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
+	// Ограничиваем размер запроса (50 MB на все фото)
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		h.log.Error("parse multipart form error", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, ErrFileTooBig)
+		return
+	}
+
+	// Парсим JSON-данные из поля "data"
 	var req dto.CreateAdRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dataField := r.FormValue("data")
+	if dataField == "" {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
+	}
+	if err := json.NewDecoder(strings.NewReader(dataField)).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	// Устанавливаем UserID из токена, а не из тела запроса
 	req.UserID = userID
 
 	// Валидируем запрос
@@ -111,6 +129,15 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
+
+	// Загружаем фотографии в S3
+	photoURLs, err := h.uploadPhotosFromForm(r)
+	if err != nil {
+		h.log.Error("failed to upload photos", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	req.Photos = photoURLs
 
 	// Создаем новое объявление
 	adID, err := h.services.Ads.CreateAd(r.Context(), &req)
@@ -123,18 +150,18 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	csrfToken := middleware.GenerateCSRFToken()
 	setCsrfCookie(w, csrfToken, h.tokenTTL)
 
-	// Возвращаем ID созданного объявления
 	responser.RespondWithJSON(w, http.StatusOK, map[string]int64{"ad_id": adID})
 }
 
 // HandleUpdateAdByID обрабатывает запрос на обновление объявления
 // @Summary Обновить объявление
-// @Description Обновляет объявление по заданному ID. Доступно только владельцу объявления.
+// @Description Обновляет объявление по заданному ID с возможностью замены фотографий через multipart/form-data. Доступно только владельцу.
 // @Tags ads
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID объявления"
-// @Param body body dto.UpdateAdRequest true "Данные для обновления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными для обновления (title, description, price, category_id, status, location)"
+// @Param photos formData file false "Новые фотографии объявления (заменяют старые)"
 // @Success 200 {object} map[string]string "объявление успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id / invalid request body / ошибки валидации"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
@@ -143,14 +170,14 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Security CookieAuth
 // @Router /ads/{id} [put]
 func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем UserID из JWT-контекста
+	const op = "handlers.HandleUpdateAdByID"
+
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
 		responser.RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	// Парсим ID из URL
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -158,14 +185,26 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Декодируем тело запроса
+	// Ограничиваем размер запроса (50 MB на все фото)
+	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
+	if err := r.ParseMultipartForm(50 << 20); err != nil {
+		h.log.Error("parse multipart form error", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, ErrFileTooBig)
+		return
+	}
+
+	// Парсим JSON-данные из поля "data"
 	var req dto.UpdateAdRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	dataField := r.FormValue("data")
+	if dataField == "" {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
+	}
+	if err := json.NewDecoder(strings.NewReader(dataField)).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
 
-	// Устанавливаем ID и UserID из URL и токена
 	req.ID = id
 	req.UserID = userID
 
@@ -175,6 +214,15 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
+
+	// Загружаем фотографии в S3 (если есть)
+	photoURLs, err := h.uploadPhotosFromForm(r)
+	if err != nil {
+		h.log.Error("failed to upload photos", slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	req.Photos = photoURLs
 
 	// Обновляем объявление
 	if err := h.services.Ads.UpdateAd(r.Context(), &req); err != nil {
@@ -190,11 +238,37 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Обновляем CSRF-токен после успешного мутирующего запроса
 	csrfToken := middleware.GenerateCSRFToken()
 	setCsrfCookie(w, csrfToken, h.tokenTTL)
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
+// uploadPhotosFromForm извлекает фотографии из multipart формы и загружает их в S3.
+func (h *AdsHandlers) uploadPhotosFromForm(r *http.Request) ([]string, error) {
+	files := r.MultipartForm.File["photos"]
+	if len(files) == 0 {
+		return nil, nil
+	}
+
+	var openFiles []multipart.File
+	var filenames []string
+	defer func() {
+		for _, f := range openFiles {
+			f.Close()
+		}
+	}()
+
+	for _, fh := range files {
+		f, err := fh.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open uploaded file: %w", err)
+		}
+		openFiles = append(openFiles, f)
+		filenames = append(filenames, fh.Filename)
+	}
+
+	return h.services.Ads.UploadAdPhotos(r.Context(), openFiles, filenames)
 }
 
 // HandleDeleteAd обрабатывает запрос на удаление объявления

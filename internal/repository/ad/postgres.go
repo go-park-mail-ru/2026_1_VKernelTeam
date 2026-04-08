@@ -215,6 +215,18 @@ func (s *AdStorage) AddProductImages(ctx context.Context, adID int64, photos []s
 	return nil
 }
 
+// DeleteProductImages удаляет все изображения объявления.
+func (s *AdStorage) DeleteProductImages(ctx context.Context, adID int64) error {
+	const query = `DELETE FROM product_image WHERE product_id = $1`
+
+	_, err := s.pool.Exec(ctx, query, adID)
+	if err != nil {
+		return fmt.Errorf("DeleteProductImages: exec: %w", err)
+	}
+
+	return nil
+}
+
 // UpdateAd обновляет объявление. Проверяет принадлежность объявления пользователю.
 func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 	const query = `

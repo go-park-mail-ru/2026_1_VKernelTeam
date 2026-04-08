@@ -6,7 +6,7 @@ package mock_httpapp
 
 import (
 	context "context"
-	mime "mime/multipart"
+	multipart "mime/multipart"
 	reflect "reflect"
 	time "time"
 
@@ -116,7 +116,7 @@ func (mr *MockAuthMockRecorder) RegisterNewUser(ctx, email, password, name inter
 }
 
 // UpdateAvatar mocks base method.
-func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file mime.File, filename string) (models.User, error) {
+func (m *MockAuth) UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, file, filename)
 	ret0, _ := ret[0].(models.User)
@@ -283,6 +283,21 @@ func (m *MockAds) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error 
 func (mr *MockAdsMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAds)(nil).UpdateAd), ctx, req)
+}
+
+// UploadAdPhotos mocks base method.
+func (m *MockAds) UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadAdPhotos", ctx, files, filenames)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UploadAdPhotos indicates an expected call of UploadAdPhotos.
+func (mr *MockAdsMockRecorder) UploadAdPhotos(ctx, files, filenames interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAdPhotos", reflect.TypeOf((*MockAds)(nil).UploadAdPhotos), ctx, files, filenames)
 }
 
 // MockCart is a mock of Cart interface.
