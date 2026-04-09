@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	cfg "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/google/uuid"
 )
@@ -19,17 +19,13 @@ type Storage interface {
 	DeleteFile(ctx context.Context, fileURL string) error
 }
 
-type Uploader interface {
-	UploadObject(ctx context.Context, input *transfermanager.UploadObjectInput, opts ...func(*transfermanager.Options)) (*transfermanager.UploadObjectOutput, error)
-}
-
-type Deleter interface {
+type S3API interface {
+	PutObject(ctx context.Context, input *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 	DeleteObject(ctx context.Context, input *s3.DeleteObjectInput, optFns ...func(*s3.Options)) (*s3.DeleteObjectOutput, error)
 }
 
 type Client struct {
-	uploader   Uploader
-	deleter    Deleter
+	s3Client   S3API
 	bucketName string
 	domain     string
 }
@@ -49,8 +45,7 @@ func NewS3Client(ctx context.Context, s3Config cfg.S3Config) (Storage, error) {
 	})
 
 	return &Client{
-		uploader:   transfermanager.New(s3Client),
-		deleter:    s3Client,
+		s3Client:   s3Client,
 		bucketName: s3Config.BucketName,
 		domain:     fmt.Sprintf("%s/%s", s3Config.EndpointURL, s3Config.BucketName),
 	}, nil
@@ -59,10 +54,11 @@ func NewS3Client(ctx context.Context, s3Config cfg.S3Config) (Storage, error) {
 func (c *Client) UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error) {
 	fileName := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), extension)
 
-	_, err := c.uploader.UploadObject(ctx, &transfermanager.UploadObjectInput{
+	_, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(c.bucketName),
 		Key:    aws.String(fileName),
 		Body:   file,
+		ACL:    types.ObjectCannedACLPublicRead,
 	})
 
 	if err != nil {
@@ -76,7 +72,7 @@ func (c *Client) DeleteFile(ctx context.Context, fileURL string) error {
 	// Извлекаем ключ из URL
 	key := fileURL[len(c.domain)+1:]
 
-	_, err := c.deleter.DeleteObject(ctx, &s3.DeleteObjectInput{
+	_, err := c.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(c.bucketName),
 		Key:    aws.String(key),
 	})
