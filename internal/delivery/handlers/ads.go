@@ -217,9 +217,16 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	req.UserID = userID
 
 	// Удаляем HTML-теги из текстовых полей (защита от XSS)
-	req.Title = sanitizer.StripHTML(req.Title)
-	req.Description = sanitizer.StripHTML(req.Description)
-	req.Location = sanitizer.StripHTML(req.Location)
+	// Санитизуем только если поля были отправлены
+	if req.Title != nil {
+		*req.Title = sanitizer.StripHTML(*req.Title)
+	}
+	if req.Description != nil {
+		*req.Description = sanitizer.StripHTML(*req.Description)
+	}
+	if req.Location != nil {
+		*req.Location = sanitizer.StripHTML(*req.Location)
+	}
 
 	// Валидируем запрос
 	validationErrors := validator.ValidateUpdateAdRequest(&req)

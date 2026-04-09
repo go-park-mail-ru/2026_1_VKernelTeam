@@ -149,17 +149,40 @@ func TestAdStorage_UpdateAd(t *testing.T) {
 
 	storage := NewAdStorage(mock)
 	ctx := context.Background()
-	req := &dto.UpdateAdRequest{
-		ID:         10,
-		UserID:     1,
-		CategoryID: 2,
-		Title:      "Title",
-		Status:     "active",
-	}
 
-	t.Run("Success", func(t *testing.T) {
+	t.Run("Success with only title", func(t *testing.T) {
+		title := "New Title"
+		req := &dto.UpdateAdRequest{
+			ID:     10,
+			UserID: 1,
+			Title:  &title,
+		}
+
+		// Ожидаем динамический запрос с только title
 		mock.ExpectExec(regexp.QuoteMeta("UPDATE product")).
-			WithArgs(req.CategoryID, req.Title, req.Description, req.Price, req.Status, req.Location, req.ID, req.UserID).
+			WithArgs(title, req.ID, req.UserID).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+		err := storage.UpdateAd(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Success with multiple fields", func(t *testing.T) {
+		title := "New Title"
+		price := int64(500)
+		status := "active"
+		req := &dto.UpdateAdRequest{
+			ID:     10,
+			UserID: 1,
+			Title:  &title,
+			Price:  &price,
+			Status: &status,
+		}
+
+		// Ожидаем динамический запрос с несколькими полями
+		// Порядок аргументов: title, price, status, id, userID
+		mock.ExpectExec(regexp.QuoteMeta("UPDATE product")).
+			WithArgs(title, price, status, req.ID, req.UserID).
 			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 		err := storage.UpdateAd(ctx, req)
@@ -167,12 +190,31 @@ func TestAdStorage_UpdateAd(t *testing.T) {
 	})
 
 	t.Run("NotFound", func(t *testing.T) {
+		title := "Title"
+		req := &dto.UpdateAdRequest{
+			ID:     10,
+			UserID: 1,
+			Title:  &title,
+		}
+
 		mock.ExpectExec(regexp.QuoteMeta("UPDATE product")).
-			WithArgs(req.CategoryID, req.Title, req.Description, req.Price, req.Status, req.Location, req.ID, req.UserID).
+			WithArgs(title, req.ID, req.UserID).
 			WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 
 		err := storage.UpdateAd(ctx, req)
 		assert.ErrorIs(t, err, ErrAdNotFound)
+	})
+
+	t.Run("Error when no fields to update", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     10,
+			UserID: 1,
+			// Все поля nil
+		}
+
+		err := storage.UpdateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no fields to update")
 	})
 }
 
