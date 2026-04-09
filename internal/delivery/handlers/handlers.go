@@ -37,6 +37,7 @@ const (
 	ErrInvalidProductID     = "invalid product id"
 	ErrFileTooBig           = "file too big"
 	ErrFailedToGetFile      = "failed to get file"
+	ErrFailedToUploadPhotos   = "failed to upload photos"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам

@@ -38,6 +38,10 @@ func main() {
 	s3AccessKey := os.Getenv("S3_ACCESS_KEY_ID")
 	s3SecretKey := os.Getenv("S3_SECRET_ACCESS_KEY")
 
+	if s3Endpoint == "" || s3Region == "" || s3Bucket == "" || s3AccessKey == "" || s3SecretKey == "" {
+		log.Fatal("S3_ENDPOINT_URL, S3_REGION_NAME, S3_BUCKET_NAME, S3_ACCESS_KEY_ID, and S3_SECRET_ACCESS_KEY must all be set")
+	}
+
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(s3Region),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(s3AccessKey, s3SecretKey, "")),

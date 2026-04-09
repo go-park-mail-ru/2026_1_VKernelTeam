@@ -49,6 +49,7 @@ type RefreshStorage interface {
 // FileStorage описывает интерфейс для загрузки файлов в объектное хранилище
 type FileStorage interface {
 	UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error)
+	DeleteFile(ctx context.Context, fileURL string) error
 }
 
 // UserProviderSaver предоставляет методы сохранения пользователя в хранилище
@@ -326,6 +327,21 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error) {
 	const op = "auth.UpdateAvatar"
 
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+
+	// Получаем текущие данные пользователя для получения старого аватара
+	currentUser, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: user not found: %w", op, err)
+		}
+		log.Error("failed to fetch current user", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
+
 	// Валидация реального содержимого
 	buff := make([]byte, 512)
 	if _, err := file.Read(buff); err != nil {
@@ -352,7 +368,19 @@ func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file multipart.Fi
 
 	// Обновляем путь в базе данных
 	if err := a.userStorage.UpdateAvatarPath(ctx, userID, avatarURL); err != nil {
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
+		return models.User{}, fmt.Errorf("%s: failed to update avatar path: %w", op, err)
+	}
+
+	// Удаляем старый аватар из S3, если он существовал
+	// Делаем это после успешного обновления БД, чтобы избежать orphaned файлов
+	if currentUser.AvatarPath != "" {
+		if err := a.fileStorage.DeleteFile(ctx, currentUser.AvatarPath); err != nil {
+			// Логируем ошибку, но не падаем - новый аватар уже в БД
+			log.Error("failed to delete old avatar from S3",
+				slog.String("old_avatar", currentUser.AvatarPath),
+				slog.String("error", err.Error()),
+			)
+		}
 	}
 
 	return a.userStorage.UserByID(ctx, userID)

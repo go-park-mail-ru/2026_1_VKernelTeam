@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -70,7 +71,14 @@ func (c *Client) UploadFile(ctx context.Context, file multipart.File, folder str
 
 func (c *Client) DeleteFile(ctx context.Context, fileURL string) error {
 	// Извлекаем ключ из URL
-	key := fileURL[len(c.domain)+1:]
+	prefix := c.domain + "/"
+	if !strings.HasPrefix(fileURL, prefix) {
+		return fmt.Errorf("invalid file URL: does not belong to this bucket")
+	}
+	key := strings.TrimPrefix(fileURL, prefix)
+	if key == "" {
+		return fmt.Errorf("invalid file URL: empty key")
+	}
 
 	_, err := c.s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(c.bucketName),

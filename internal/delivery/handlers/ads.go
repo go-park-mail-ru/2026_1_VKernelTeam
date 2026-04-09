@@ -109,6 +109,11 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFileTooBig)
 		return
 	}
+	defer func() {
+		if r.MultipartForm != nil {
+			_ = r.MultipartForm.RemoveAll()
+		}
+	}()
 
 	// Парсим JSON-данные из поля "data"
 	var req dto.CreateAdRequest
@@ -139,8 +144,8 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	// Загружаем фотографии в S3
 	photoURLs, err := h.uploadPhotosFromForm(r)
 	if err != nil {
-		h.log.Error("failed to upload photos", slog.String("op", op), slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+		h.log.Error(ErrFailedToUploadPhotos, slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, ErrFailedToUploadPhotos)
 		return
 	}
 	req.Photos = photoURLs
@@ -226,8 +231,8 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	// Загружаем фотографии в S3 (если есть)
 	photoURLs, err := h.uploadPhotosFromForm(r)
 	if err != nil {
-		h.log.Error("failed to upload photos", slog.String("op", op), slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+		h.log.Error(ErrFailedToUploadPhotos, slog.String("op", op), slog.String("error", err.Error()))
+		responser.RespondWithError(w, http.StatusBadRequest, ErrFailedToUploadPhotos)
 		return
 	}
 	req.Photos = photoURLs

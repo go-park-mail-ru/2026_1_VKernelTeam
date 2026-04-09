@@ -26,6 +26,7 @@ type App struct {
 	HTTPServer *httpapp.App
 	RedisCache *redis.RedisCache
 	dbClient   *postgres.Client
+	s3Client   s3.Storage
 }
 
 // New собирает все зависимости и возвращает готовое приложение.
@@ -85,6 +86,7 @@ func New(
 		HTTPServer: httpApp,
 		RedisCache: rc,
 		dbClient:   dbClient,
+		s3Client:   s3Storage,
 	}
 }
 

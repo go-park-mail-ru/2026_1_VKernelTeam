@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"mime/multipart"
 	"net/http"
-	"path/filepath"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -85,7 +84,7 @@ func (a *Ads) UploadAdPhotos(ctx context.Context, files []multipart.File, filena
 	const op = "ads.UploadAdPhotos"
 
 	urls := make([]string, 0, len(files))
-	for i, file := range files {
+	for _, file := range files {
 		// Валидация содержимого файла
 		buf := make([]byte, 512)
 		if _, err := file.Read(buf); err != nil {
@@ -95,15 +94,30 @@ func (a *Ads) UploadAdPhotos(ctx context.Context, files []multipart.File, filena
 			return nil, fmt.Errorf("%s: failed to seek file: %w", op, err)
 		}
 
+		var mimeToExt = map[string]string{
+			"image/jpeg": ".jpg",
+			"image/png":  ".png",
+			"image/webp": ".webp",
+			"image/gif":  ".gif",
+		}
+
+
 		contentType := http.DetectContentType(buf)
 		if _, ok := allowedImageTypes[contentType]; !ok {
 			return nil, fmt.Errorf("%s: unsupported file type: %s", op, contentType)
 		}
 
-		ext := filepath.Ext(filenames[i])
+		ext := mimeToExt[contentType]
+
+		if len(files) != len(filenames) {
+			return nil, fmt.Errorf("%s: files and filenames count mismatch", op)
+		}
 
 		url, err := a.fileStorage.UploadFile(ctx, file, "ads", ext)
 		if err != nil {
+			for _, uploadedURL := range urls {
+				_ = a.fileStorage.DeleteFile(ctx, uploadedURL)
+			}
 			return nil, fmt.Errorf("%s: failed to upload photo: %w", op, err)
 		}
 		urls = append(urls, url)
