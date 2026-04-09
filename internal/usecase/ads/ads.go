@@ -27,9 +27,10 @@ type AdsProvider interface {
 	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
 }
 
-// FileStorage описывает интерфейс для загрузки файлов в объектное хранилище
+// FileStorage описывает интерфейс для работы с файлами в объектном хранилище
 type FileStorage interface {
 	UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error)
+	DeleteFile(ctx context.Context, fileURL string) error
 }
 
 var allowedImageTypes = map[string]struct{}{
@@ -191,7 +192,7 @@ func (a *Ads) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 	return nil
 }
 
-// DeleteAd удаляет объявление (мягкое удаление).
+// DeleteAd удаляет объявление (мягкое удаление) и его фотографии из S3.
 func (a *Ads) DeleteAd(ctx context.Context, id int64, userID int64) error {
 	const op = "ads.DeleteAd"
 
@@ -202,10 +203,29 @@ func (a *Ads) DeleteAd(ctx context.Context, id int64, userID int64) error {
 	)
 	log.Info("deleting ad")
 
-	err := a.adsStorage.DeleteAd(ctx, id, userID)
+	ad, err := a.adsStorage.GetAdByID(ctx, id)
+	if err != nil {
+		log.Error("failed to get ad before deletion", "error", err)
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = a.adsStorage.DeleteAd(ctx, id, userID)
 	if err != nil {
 		log.Error("failed to delete ad", "error", err)
 		return err
+	}
+
+	// Удаляем фотографии из S3
+	for _, photoURL := range ad.Photos {
+		if err := a.fileStorage.DeleteFile(ctx, photoURL); err != nil {
+			log.Error("failed to delete photo from s3", "photo_url", photoURL, "error", err)
+		}
+	}
+
+	if len(ad.Photos) > 0 {
+		if err := a.adsStorage.DeleteProductImages(ctx, id); err != nil {
+			log.Error("failed to delete product images from db", "error", err)
+		}
 	}
 
 	log.Info("ad deleted successfully")
