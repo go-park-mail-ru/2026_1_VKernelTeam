@@ -357,3 +357,109 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 
 	return ads, nil
 }
+
+// AddFavorite добавляет объявление в избранное.
+func (s *AdStorage) AddFavorite(ctx context.Context, userID int64, adID int64) error {
+	// ON CONFLICT DO NOTHING чтобы не возвращать ошибку, если пользователь нажал "лайк" дважды
+	const query = `
+		INSERT INTO favorite (user_id, product_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`
+
+	_, err := s.pool.Exec(ctx, query, userID, adID)
+	if err != nil {
+		return fmt.Errorf("AddFavorite: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveFavorite удаляет объявление из избранного.
+func (s *AdStorage) RemoveFavorite(ctx context.Context, userID int64, adID int64) error {
+	const query = `
+		DELETE FROM favorite
+		WHERE user_id = $1 AND product_id = $2
+	`
+
+	_, err := s.pool.Exec(ctx, query, userID, adID)
+	if err != nil {
+		return fmt.Errorf("RemoveFavorite: %w", err)
+	}
+
+	return nil
+}
+
+// GetUserFavorites возвращает полный список объявлений, которые пользователь добавил в избранное.
+func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
+	const query = `
+		SELECT
+			p.id,
+			p.seller_id,
+			p.category_id,
+			p.title,
+			p.description,
+			p.price,
+			p.status,
+			COALESCE(p.location, '') AS location,
+			p.created_at,
+			p.updated_at,
+			COALESCE(
+				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
+				'{}'
+			) AS photos,
+			COUNT(DISTINCT pv.id)        AS views_count,
+			COUNT(DISTINCT f_all.user_id) AS favorites_count
+		FROM favorite f
+		JOIN product p ON f.product_id = p.id
+		LEFT JOIN product_image pi ON pi.product_id = p.id
+		LEFT JOIN product_view  pv ON pv.product_id = p.id
+		LEFT JOIN favorite   f_all ON f_all.product_id = p.id
+		WHERE f.user_id = $1
+		  AND p.deleted_at IS NULL
+		GROUP BY p.id, f.created_at
+		ORDER BY f.created_at DESC
+	`
+
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserFavorites: query: %w", err)
+	}
+	defer rows.Close()
+
+	var ads []models.Ad
+	for rows.Next() {
+		var ad models.Ad
+		var photos []string
+		err := rows.Scan(
+			&ad.ID,
+			&ad.SellerID,
+			&ad.CategoryID,
+			&ad.Title,
+			&ad.Description,
+			&ad.Price,
+			&ad.Status,
+			&ad.Location,
+			&ad.CreatedAt,
+			&ad.UpdatedAt,
+			&photos,
+			&ad.ViewsCount,
+			&ad.FavoritesCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserFavorites: scan: %w", err)
+		}
+		ad.Photos = photos
+		ads = append(ads, ad)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("GetUserFavorites: rows: %w", err)
+	}
+
+	if ads == nil {
+		ads = []models.Ad{}
+	}
+
+	return ads, nil
+}

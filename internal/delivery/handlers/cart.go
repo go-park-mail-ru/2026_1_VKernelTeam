@@ -75,9 +75,6 @@ func (h *CartHandlers) HandleAddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
-
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "added"})
 }
 
@@ -119,9 +116,6 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
-
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
 
@@ -148,9 +142,6 @@ func (h *CartHandlers) HandleCheckout(w http.ResponseWriter, r *http.Request) {
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	csrfToken := middleware.GenerateCSRFToken()
-	setCsrfCookie(w, csrfToken, h.tokenTTL)
 
 	responser.RespondWithJSON(w, http.StatusOK, res)
 }
