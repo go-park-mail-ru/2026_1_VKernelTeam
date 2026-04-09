@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,26 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
+
+// createMultipartRequest создаёт multipart/form-data запрос с JSON-данными в поле "data"
+func createMultipartRequest(method, url string, data interface{}) (*http.Request, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := writer.WriteField("data", string(jsonData)); err != nil {
+		return nil, err
+	}
+	writer.Close()
+
+	req := httptest.NewRequest(method, url, &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	return req, nil
+}
 
 // Тесты для обработчика получения объявлений
 
@@ -242,13 +263,13 @@ func TestHandleCreateAd_Success(t *testing.T) {
 		Status:      "active",
 		Location:    "Moscow",
 	}
-	reqBody, _ := json.Marshal(reqDto)
 
 	mockAds.EXPECT().
 		CreateAd(gomock.Any(), gomock.Any()).
 		Return(int64(123), nil)
 
-	request := httptest.NewRequest(http.MethodPost, "/ads", bytes.NewBuffer(reqBody))
+	request, err := createMultipartRequest(http.MethodPost, "/ads", reqDto)
+	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -282,7 +303,6 @@ func TestHandleUpdateAdByID_Success(t *testing.T) {
 	reqDto := dto.UpdateAdRequest{
 		Title: "Updated Title",
 	}
-	reqBody, _ := json.Marshal(reqDto)
 
 	mockAds.EXPECT().
 		UpdateAd(gomock.Any(), gomock.Any()).
@@ -291,7 +311,8 @@ func TestHandleUpdateAdByID_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
 
-	request := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/ads/%d", adID), bytes.NewBuffer(reqBody))
+	request, err := createMultipartRequest(http.MethodPut, fmt.Sprintf("/ads/%d", adID), reqDto)
+	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -307,7 +328,6 @@ func TestHandleUpdateAdByID_Forbidden(t *testing.T) {
 	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
 
 	reqDto := dto.UpdateAdRequest{Title: "Title"}
-	reqBody, _ := json.Marshal(reqDto)
 
 	mockAds.EXPECT().
 		UpdateAd(gomock.Any(), gomock.Any()).
@@ -316,7 +336,8 @@ func TestHandleUpdateAdByID_Forbidden(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
 
-	request := httptest.NewRequest(http.MethodPut, "/ads/10", bytes.NewBuffer(reqBody))
+	request, err := createMultipartRequest(http.MethodPut, "/ads/10", reqDto)
+	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 

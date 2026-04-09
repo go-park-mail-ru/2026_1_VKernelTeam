@@ -10,8 +10,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -46,6 +46,12 @@ type RefreshStorage interface {
 	DeleteRefresh(ctx context.Context, token string) error
 }
 
+// FileStorage описывает интерфейс для загрузки файлов в объектное хранилище
+type FileStorage interface {
+	UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error)
+	DeleteFile(ctx context.Context, fileURL string) error
+}
+
 // UserProviderSaver предоставляет методы сохранения пользователя в хранилище
 // получения данных о пользователе и проверки его административных прав.
 type UserProviderSaver interface {
@@ -64,6 +70,7 @@ type Auth struct {
 	userStorage    UserProviderSaver
 	tokenRevoker   TokenRevoker
 	refreshStorage RefreshStorage
+	fileStorage    FileStorage
 	tokenTTL       time.Duration
 	refreshTTL     time.Duration
 	secret         string
@@ -83,6 +90,7 @@ func New(
 	userStorage UserProviderSaver,
 	tokenRevoker TokenRevoker,
 	refreshStorage RefreshStorage,
+	fileStorage FileStorage,
 	tokenTTL time.Duration,
 	refreshTTL time.Duration,
 	secret string,
@@ -92,6 +100,7 @@ func New(
 		userStorage:    userStorage,
 		tokenRevoker:   tokenRevoker,
 		refreshStorage: refreshStorage,
+		fileStorage:    fileStorage,
 		tokenTTL:       tokenTTL,
 		refreshTTL:     refreshTTL,
 		secret:         secret,
@@ -315,8 +324,23 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 	return user, nil
 }
 
-func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeker, filename string) (models.User, error) {
+func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error) {
 	const op = "auth.UpdateAvatar"
+
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("user_id", userID),
+	)
+
+	// Получаем текущие данные пользователя для получения старого аватара
+	currentUser, err := a.userStorage.UserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			return models.User{}, fmt.Errorf("%s: user not found: %w", op, err)
+		}
+		log.Error("failed to fetch current user", slog.String("error", err.Error()))
+		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	}
 
 	// Валидация реального содержимого
 	buff := make([]byte, 512)
@@ -334,50 +358,29 @@ func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file io.ReadSeeke
 		return models.User{}, fmt.Errorf("%s: unsupported file type: %s", op, contentType)
 	}
 
-	// Получаем текущий профиль, чтобы знать путь к старому аватару
-	user, err := a.userStorage.UserByID(ctx, userID)
-	if err != nil {
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
-	}
-
-	// Генерируем уникальное имя файла (ID + timestamp)
-	// Экранируем расширение, чтобы не протащили лишнего
 	ext := filepath.Ext(filename)
-	newFileName := fmt.Sprintf("%d_%d%s", userID, time.Now().Unix(), ext)
 
-	// Физический путь для сохранения и путь для БД/фронта
-	storageDir := filepath.Join("static", "img", "avatars")
-	storagePath := filepath.Join(storageDir, newFileName)
-	dbPath := "/static/img/avatars/" + newFileName
-
-	// Создаем директорию, если её нет
-	if err := os.MkdirAll(storageDir, 0755); err != nil {
-		return models.User{}, fmt.Errorf("%s: failed to create dir: %w", op, err)
-	}
-
-	// Сохраняем новый файл
-	dst, err := os.Create(storagePath)
+	// Загружаем файл в S3
+	avatarURL, err := a.fileStorage.UploadFile(ctx, file, "avatars", ext)
 	if err != nil {
-		return models.User{}, fmt.Errorf("%s: failed to create file: %w", op, err)
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		return models.User{}, fmt.Errorf("%s: failed to copy file: %w", op, err)
+		return models.User{}, fmt.Errorf("%s: failed to upload avatar: %w", op, err)
 	}
 
 	// Обновляем путь в базе данных
-	if err := a.userStorage.UpdateAvatarPath(ctx, userID, dbPath); err != nil {
-		// Если БД упала, удаляем свежезагруженный файл
-		_ = os.Remove(storagePath)
-		return models.User{}, fmt.Errorf("%s: %w", op, err)
+	if err := a.userStorage.UpdateAvatarPath(ctx, userID, avatarURL); err != nil {
+		return models.User{}, fmt.Errorf("%s: failed to update avatar path: %w", op, err)
 	}
 
-	// Удаляем старый файл, если он существует и это не дефолтная картинка
-	if user.AvatarPath != "" && user.AvatarPath != "/static/img/default_avatar.webp" {
-		// Убираем ведущий слэш для os.Remove, чтобы путь стал относительным корня проекта
-		oldFilePath := filepath.Clean(user.AvatarPath[1:])
-		_ = os.Remove(oldFilePath)
+	// Удаляем старый аватар из S3, если он существовал
+	// Делаем это после успешного обновления БД, чтобы избежать orphaned файлов
+	if currentUser.AvatarPath != "" {
+		if err := a.fileStorage.DeleteFile(ctx, currentUser.AvatarPath); err != nil {
+			// Логируем ошибку, но не падаем - новый аватар уже в БД
+			log.Error("failed to delete old avatar from S3",
+				slog.String("old_avatar", currentUser.AvatarPath),
+				slog.String("error", err.Error()),
+			)
+		}
 	}
 
 	return a.userStorage.UserByID(ctx, userID)

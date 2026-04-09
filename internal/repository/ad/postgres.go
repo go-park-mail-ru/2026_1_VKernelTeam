@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -185,6 +186,45 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 	}
 
 	return adID, nil
+}
+
+// AddProductImages добавляет изображения к объявлению в таблицу product_image.
+func (s *AdStorage) AddProductImages(ctx context.Context, adID int64, photos []string) error {
+	if len(photos) == 0 {
+		return nil
+	}
+
+	const baseQuery = `INSERT INTO product_image (product_id, file_path, sort_order) VALUES `
+
+	args := make([]any, 0, len(photos)*3)
+	var sb strings.Builder
+	for i, photo := range photos {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		paramIdx := i * 3
+		fmt.Fprintf(&sb, "($%d, $%d, $%d)", paramIdx+1, paramIdx+2, paramIdx+3)
+		args = append(args, adID, photo, i)
+	}
+
+	_, err := s.pool.Exec(ctx, baseQuery+sb.String(), args...)
+	if err != nil {
+		return fmt.Errorf("AddProductImages: exec: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteProductImages удаляет все изображения объявления.
+func (s *AdStorage) DeleteProductImages(ctx context.Context, adID int64) error {
+	const query = `DELETE FROM product_image WHERE product_id = $1`
+
+	_, err := s.pool.Exec(ctx, query, adID)
+	if err != nil {
+		return fmt.Errorf("DeleteProductImages: exec: %w", err)
+	}
+
+	return nil
 }
 
 // UpdateAd обновляет объявление. Проверяет принадлежность объявления пользователю.

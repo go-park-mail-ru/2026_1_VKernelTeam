@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"mime/multipart"
 	"os"
 	"testing"
 	"time"
@@ -47,6 +48,7 @@ func TestRegisterNewUser_Success(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -84,6 +86,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -123,6 +126,7 @@ func TestLogin_Success(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -172,6 +176,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -211,6 +216,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -243,6 +249,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -274,6 +281,7 @@ func TestLogin_UserProviderError(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -305,6 +313,7 @@ func TestLogout_Success(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -335,6 +344,7 @@ func TestRefresh_Success(t *testing.T) {
 		storageMock,
 		nil,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -380,6 +390,7 @@ func TestRefresh_InvalidToken(t *testing.T) {
 		nil,
 		nil,
 		refreshMock,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -402,6 +413,7 @@ func TestValidateTokenAndGetUser_Success(t *testing.T) {
 
 	auth := New(log,
 		storageMock,
+		nil,
 		nil,
 		nil,
 		time.Hour,
@@ -427,6 +439,7 @@ func TestValidateTokenAndGetUser_InvalidJWT(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -445,6 +458,7 @@ func TestUpdateProfile_Success(t *testing.T) {
 
 	auth := New(log,
 		storageMock,
+		nil,
 		nil,
 		nil,
 		time.Hour,
@@ -469,11 +483,13 @@ func TestUpdateAvatar_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+	fileMock := mock_auth.NewMockFileStorage(ctrl)
 
 	auth := New(log,
 		storageMock,
 		nil,
 		nil,
+		fileMock,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -481,32 +497,61 @@ func TestUpdateAvatar_Success(t *testing.T) {
 
 	userID := int64(124)
 	filename := "test_avatar.png"
+	s3URL := "https://hb.vkcs.cloud/my-bucket/avatars/some-uuid.png"
 
-	// Имитируем валидный PNG (заголовок: 8 байт)
+	// Создаём multipart файл для теста
 	pngHeader := []byte("\x89PNG\r\n\x1a\n")
-	fileContent := append(pngHeader, []byte("fake-image-data")...)
-	fileReader := bytes.NewReader(fileContent)
+	fileContent := append(pngHeader, bytes.Repeat([]byte{0}, 504)...)
 
-	// Ожидаем получение текущего пользователя для проверки старого аватара
-	oldUser := models.User{
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("avatar", filename)
+	assert.NoError(t, err)
+	_, err = part.Write(fileContent)
+	assert.NoError(t, err)
+	writer.Close()
+
+	// Парсим multipart для получения multipart.File
+	reader := multipart.NewReader(body, writer.Boundary())
+	form, err := reader.ReadForm(10 << 20)
+	assert.NoError(t, err)
+	defer form.RemoveAll()
+
+	file, err := form.File["avatar"][0].Open()
+	assert.NoError(t, err)
+	defer file.Close()
+
+	oldAvatarURL := "https://hb.vkcs.cloud/my-bucket/avatars/old-uuid.png"
+	currentUser := models.User{
 		ID:         userID,
-		AvatarPath: "/static/img/avatars/old.png",
+		AvatarPath: oldAvatarURL,
 	}
 
+	// Ожидаем получение текущего пользователя для старого аватара
 	storageMock.EXPECT().
 		UserByID(gomock.Any(), userID).
-		Return(oldUser, nil).
+		Return(currentUser, nil).
 		Times(1)
 
-	// Ожидаем сохранение нового пути в БД
+	// Ожидаем загрузку в S3
+	fileMock.EXPECT().
+		UploadFile(gomock.Any(), gomock.Any(), "avatars", ".png").
+		Return(s3URL, nil)
+
+	// Ожидаем сохранение URL в БД
 	storageMock.EXPECT().
-		UpdateAvatarPath(gomock.Any(), userID, gomock.Any()).
+		UpdateAvatarPath(gomock.Any(), userID, s3URL).
+		Return(nil)
+
+	// Ожидаем удаление старого аватара из S3
+	fileMock.EXPECT().
+		DeleteFile(gomock.Any(), oldAvatarURL).
 		Return(nil)
 
 	// Ожидаем финальный возврат обновленного профиля
 	updatedUser := models.User{
 		ID:         userID,
-		AvatarPath: "/static/img/avatars/124_123456789.png",
+		AvatarPath: s3URL,
 	}
 
 	storageMock.EXPECT().
@@ -514,10 +559,98 @@ func TestUpdateAvatar_Success(t *testing.T) {
 		Return(updatedUser, nil).
 		Times(1)
 
-	result, err := auth.UpdateAvatar(context.Background(), userID, fileReader, filename)
+	result, err := auth.UpdateAvatar(context.Background(), userID, file, filename)
 
 	assert.NoError(t, err)
-	assert.Equal(t, updatedUser.AvatarPath, result.AvatarPath)
+	assert.Equal(t, s3URL, result.AvatarPath)
+}
 
-	defer os.RemoveAll("static")
+// TestUpdateAvatar_DeleteOldFails проверяет, что если удаление старого аватара
+// из S3 не удается, операция все равно успешна (логируем ошибку, но не падаем).
+func TestUpdateAvatar_DeleteOldFails(t *testing.T) {
+	log := getTestLogger()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+	fileMock := mock_auth.NewMockFileStorage(ctrl)
+
+	auth := New(log,
+		storageMock,
+		nil,
+		nil,
+		fileMock,
+		time.Hour,
+		time.Hour,
+		testSecret,
+	)
+
+	userID := int64(125)
+	filename := "test_avatar.png"
+	s3URL := "https://hb.vkcs.cloud/my-bucket/avatars/new-uuid.png"
+	oldAvatarURL := "https://hb.vkcs.cloud/my-bucket/avatars/old-uuid.png"
+
+	// Создаём multipart файл для теста
+	pngHeader := []byte("\x89PNG\r\n\x1a\n")
+	fileContent := append(pngHeader, bytes.Repeat([]byte{0}, 504)...)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("avatar", filename)
+	assert.NoError(t, err)
+	_, err = part.Write(fileContent)
+	assert.NoError(t, err)
+	writer.Close()
+
+	reader := multipart.NewReader(body, writer.Boundary())
+	form, err := reader.ReadForm(10 << 20)
+	assert.NoError(t, err)
+	defer form.RemoveAll()
+
+	file, err := form.File["avatar"][0].Open()
+	assert.NoError(t, err)
+	defer file.Close()
+
+	currentUser := models.User{
+		ID:         userID,
+		AvatarPath: oldAvatarURL,
+	}
+
+	// Ожидаем получение текущего пользователя
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(currentUser, nil).
+		Times(1)
+
+	// Ожидаем загрузку в S3
+	fileMock.EXPECT().
+		UploadFile(gomock.Any(), gomock.Any(), "avatars", ".png").
+		Return(s3URL, nil)
+
+	// Ожидаем сохранение URL в БД
+	storageMock.EXPECT().
+		UpdateAvatarPath(gomock.Any(), userID, s3URL).
+		Return(nil)
+
+	// Ожидаем попытку удаления старого аватара, но это не удается
+	fileMock.EXPECT().
+		DeleteFile(gomock.Any(), oldAvatarURL).
+		Return(errors.New("S3 deletion failed"))
+
+	// Все равно ожидаем финальный возврат обновленного профиля
+	updatedUser := models.User{
+		ID:         userID,
+		AvatarPath: s3URL,
+	}
+
+	storageMock.EXPECT().
+		UserByID(gomock.Any(), userID).
+		Return(updatedUser, nil).
+		Times(1)
+
+	// Операция должна пройти успешно, даже если удаление старого файла не удалось
+	result, err := auth.UpdateAvatar(context.Background(), userID, file, filename)
+
+	assert.NoError(t, err)
+	assert.Equal(t, s3URL, result.AvatarPath)
 }

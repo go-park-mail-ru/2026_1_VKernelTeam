@@ -38,6 +38,11 @@ func TestMustLoadConfig_SuccessEnv(t *testing.T) {
 		t.Setenv("TOKEN_SECRET", "test-secret-key")
 		t.Setenv("DATABASE_DSN", "postgres://user:pass@localhost:5432/testdb?sslmode=disable")
 		t.Setenv("REDIS_ADDR", "localhost:6379")
+		t.Setenv("S3_ENDPOINT_URL", "https://hb.vkcs.cloud")
+		t.Setenv("S3_REGION_NAME", "ru-msk")
+		t.Setenv("S3_BUCKET_NAME", "test-bucket")
+		t.Setenv("S3_ACCESS_KEY_ID", "test-key")
+		t.Setenv("S3_SECRET_ACCESS_KEY", "test-secret")
 
 		cfg := MustLoadConfig()
 		assert.NotNil(t, cfg)

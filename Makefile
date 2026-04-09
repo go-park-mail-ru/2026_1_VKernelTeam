@@ -80,6 +80,9 @@ migrate:
 	migrate -path ./internal/repository/postgres/migrations \
 		-database "$(DATABASE_URL)" up
 
+migrate-ads-img:
+	go run ./cmd/migrate-images/
+
 lint:
 	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...
 

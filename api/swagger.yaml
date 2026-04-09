@@ -41,25 +41,6 @@ definitions:
         description: Ключ — ID продавца
         type: object
     type: object
-  dto.CreateAdRequest:
-    properties:
-      category_id:
-        type: integer
-      description:
-        type: string
-      location:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
-      price:
-        type: integer
-      status:
-        type: string
-      title:
-        type: string
-    type: object
   dto.ErrorResponse:
     properties:
       error:
@@ -114,21 +95,6 @@ definitions:
       id:
         type: integer
       name:
-        type: string
-    type: object
-  dto.UpdateAdRequest:
-    properties:
-      category_id:
-        type: integer
-      description:
-        type: string
-      location:
-        type: string
-      price:
-        type: integer
-      status:
-        type: string
-      title:
         type: string
     type: object
   dto.UpdateProfileRequest:
@@ -259,16 +225,20 @@ paths:
       - ads
     post:
       consumes:
-      - application/json
-      description: Создает новое объявление. Доступно только авторизованным пользователям.
+      - multipart/form-data
+      description: Создает новое объявление с фотографиями через multipart/form-data.
+        Доступно только авторизованным пользователям.
       parameters:
-      - description: Данные объявления (title, description, price, category_id, status,
-          location)
-        in: body
-        name: body
+      - description: JSON с данными объявления (title, description, price, category_id,
+          status, location)
+        in: formData
+        name: data
         required: true
-        schema:
-          $ref: '#/definitions/dto.CreateAdRequest'
+        type: string
+      - description: Фотографии объявления (можно несколько)
+        in: formData
+        name: photos
+        type: file
       produces:
       - application/json
       responses:
@@ -359,22 +329,25 @@ paths:
       - ads
     put:
       consumes:
-      - application/json
-      description: Обновляет объявление по заданному ID. Доступно только владельцу
-        объявления.
+      - multipart/form-data
+      description: Обновляет объявление по заданному ID с возможностью замены фотографий
+        через multipart/form-data. Доступно только владельцу.
       parameters:
       - description: ID объявления
         in: path
         name: id
         required: true
         type: integer
-      - description: Данные для обновления (title, description, price, category_id,
+      - description: JSON с данными для обновления (title, description, price, category_id,
           status, location)
-        in: body
-        name: body
+        in: formData
+        name: data
         required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateAdRequest'
+        type: string
+      - description: Новые фотографии объявления (заменяют старые)
+        in: formData
+        name: photos
+        type: file
       produces:
       - application/json
       responses:
