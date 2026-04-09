@@ -19,8 +19,9 @@ func TestAds_GetAllAds(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	testAds := []models.Ad{{ID: 1, Title: "Test"}}
@@ -45,8 +46,9 @@ func TestAds_CreateAd(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	req := &dto.CreateAdRequest{Title: "Title"}
@@ -71,8 +73,9 @@ func TestAds_GetAdByID(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	adID := int64(1)
@@ -97,8 +100,9 @@ func TestAds_UpdateAd(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	req := &dto.UpdateAdRequest{ID: 1}
@@ -160,8 +164,9 @@ func TestAds_CloseAd(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	adID := int64(1)
@@ -185,8 +190,9 @@ func TestAds_GetAdsByUserID(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage, nil)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -212,8 +218,9 @@ func TestAds_AddFavorite(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -243,8 +250,9 @@ func TestAds_RemoveFavorite(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
@@ -272,8 +280,9 @@ func TestAds_GetUserFavorites(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	usecase := New(logger, mockStorage)
+	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
 	userID := int64(1)
