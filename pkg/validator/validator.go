@@ -210,33 +210,33 @@ func ValidateCreateAdRequest(req *dto.CreateAdRequest) *dto.ValidationErrors {
 func ValidateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
 	errs := dto.ValidationErrors{}
 
-	if req.CategoryID != 0 {
-		if err := ValidateCategoryID(req.CategoryID); err != nil {
+	if req.CategoryID != nil {
+		if err := ValidateCategoryID(*req.CategoryID); err != nil {
 			errs.CategoryID = err.Error()
 		}
 	}
-	if req.Title != "" {
-		if err := ValidateAdTitle(req.Title); err != nil {
+	if req.Title != nil {
+		if err := ValidateAdTitle(*req.Title); err != nil {
 			errs.Title = err.Error()
 		}
 	}
-	if req.Description != "" {
-		if err := ValidateAdDescription(req.Description); err != nil {
+	if req.Description != nil {
+		if err := ValidateAdDescription(*req.Description); err != nil {
 			errs.Description = err.Error()
 		}
 	}
-	if req.Price != 0 || req.Price < 0 {
-		if err := ValidateAdPrice(req.Price); err != nil {
+	if req.Price != nil {
+		if err := ValidateAdPrice(*req.Price); err != nil {
 			errs.Price = err.Error()
 		}
 	}
-	if req.Status != "" {
-		if err := ValidateAdStatus(req.Status); err != nil {
+	if req.Status != nil {
+		if err := ValidateAdStatus(*req.Status); err != nil {
 			errs.Status = err.Error()
 		}
 	}
-	if req.Location != "" {
-		if err := ValidateAdLocation(req.Location); err != nil {
+	if req.Location != nil {
+		if err := ValidateAdLocation(*req.Location); err != nil {
 			errs.Location = err.Error()
 		}
 	}

@@ -300,8 +300,9 @@ func TestHandleUpdateAdByID_Success(t *testing.T) {
 	adID := int64(10)
 	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
 
+	title := "Updated Title"
 	reqDto := dto.UpdateAdRequest{
-		Title: "Updated Title",
+		Title: &title,
 	}
 
 	mockAds.EXPECT().
@@ -327,7 +328,8 @@ func TestHandleUpdateAdByID_Forbidden(t *testing.T) {
 	userID := int64(1)
 	ctx := context.WithValue(context.Background(), middleware.UserIDKey, userID)
 
-	reqDto := dto.UpdateAdRequest{Title: "Title"}
+	title := "Title"
+	reqDto := dto.UpdateAdRequest{Title: &title}
 
 	mockAds.EXPECT().
 		UpdateAd(gomock.Any(), gomock.Any()).

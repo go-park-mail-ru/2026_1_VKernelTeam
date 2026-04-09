@@ -228,31 +228,64 @@ func (s *AdStorage) DeleteProductImages(ctx context.Context, adID int64) error {
 }
 
 // UpdateAd обновляет объявление. Проверяет принадлежность объявления пользователю.
+// Обновляет только те поля, которые были отправлены (не nil).
 func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
-	const query = `
-		UPDATE product
-		SET category_id = $1,
-		    title       = $2,
-		    description = $3,
-		    price       = $4,
-		    status      = $5,
-		    location    = $6,
-		    updated_at  = NOW()
-		WHERE id = $7
-		  AND seller_id = $8
-		  AND deleted_at IS NULL
-	`
+	var updates []string
+	var args []any
 
-	result, err := s.pool.Exec(ctx, query,
-		req.CategoryID,
-		req.Title,
-		req.Description,
-		req.Price,
-		req.Status,
-		req.Location,
-		req.ID,
-		req.UserID,
-	)
+	argNum := 1
+
+	// Динамически строим SET clause с только переданными полями
+	if req.CategoryID != nil {
+		updates = append(updates, fmt.Sprintf("category_id = $%d", argNum))
+		args = append(args, *req.CategoryID)
+		argNum++
+	}
+	if req.Title != nil {
+		updates = append(updates, fmt.Sprintf("title = $%d", argNum))
+		args = append(args, *req.Title)
+		argNum++
+	}
+	if req.Description != nil {
+		updates = append(updates, fmt.Sprintf("description = $%d", argNum))
+		args = append(args, *req.Description)
+		argNum++
+	}
+	if req.Price != nil {
+		updates = append(updates, fmt.Sprintf("price = $%d", argNum))
+		args = append(args, *req.Price)
+		argNum++
+	}
+	if req.Status != nil {
+		updates = append(updates, fmt.Sprintf("status = $%d", argNum))
+		args = append(args, *req.Status)
+		argNum++
+	}
+	if req.Location != nil {
+		updates = append(updates, fmt.Sprintf("location = $%d", argNum))
+		args = append(args, *req.Location)
+		argNum++
+	}
+
+	// Если нет полей для обновления, возвращаем ошибку
+	if len(updates) == 0 {
+		return fmt.Errorf("UpdateAd: no fields to update")
+	}
+
+	// Добавляем updated_at и WHERE условия
+	updates = append(updates, fmt.Sprintf("updated_at = NOW()"))
+
+	query := fmt.Sprintf(`
+		UPDATE product
+		SET %s
+		WHERE id = $%d
+		  AND seller_id = $%d
+		  AND deleted_at IS NULL
+	`, strings.Join(updates, ", "), argNum, argNum+1)
+
+	args = append(args, req.ID, req.UserID)
+
+	result, err := s.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("UpdateAd: exec: %w", err)
 	}

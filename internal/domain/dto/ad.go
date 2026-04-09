@@ -16,12 +16,12 @@ type CreateAdRequest struct {
 type UpdateAdRequest struct {
 	ID          int64    `json:"-"`
 	UserID      int64    `json:"-"`
-	CategoryID  int64    `json:"category_id,omitempty"`
-	Title       string   `json:"title,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Price       int64    `json:"price,omitempty"`
-	Status      string   `json:"status,omitempty"`
-	Location    string   `json:"location,omitempty"`
+	CategoryID  *int64   `json:"category_id,omitempty"`
+	Title       *string  `json:"title,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	Price       *int64   `json:"price,omitempty"`
+	Status      *string  `json:"status,omitempty"`
+	Location    *string  `json:"location,omitempty"`
 	Photos      []string `json:"-"`
 }
 

@@ -209,16 +209,18 @@ func TestValidateCreateAdRequest(t *testing.T) {
 
 func TestValidateUpdateAdRequest(t *testing.T) {
 	t.Run("Partial update - only title", func(t *testing.T) {
+		title := "New valid title"
 		req := &dto.UpdateAdRequest{
-			Title: "New valid title",
+			Title: &title,
 		}
 		errs := ValidateUpdateAdRequest(req)
 		assert.Equal(t, dto.ValidationErrors{}, *errs)
 	})
 
 	t.Run("Invalid partial update", func(t *testing.T) {
+		price := int64(-50)
 		req := &dto.UpdateAdRequest{
-			Price: -50,
+			Price: &price,
 		}
 		errs := ValidateUpdateAdRequest(req)
 		assert.Equal(t, ErrAdPriceNegative.Error(), errs.Price)
