@@ -210,6 +210,49 @@ func (mr *MockAdsProviderMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAdsProvider)(nil).UpdateAd), ctx, req)
 }
 
+// SetProductCharacteristics mocks base method.
+func (m *MockAdsProvider) SetProductCharacteristics(ctx context.Context, productID int64, inputs []dto.CharacteristicInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetProductCharacteristics", ctx, productID, inputs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetProductCharacteristics indicates an expected call of SetProductCharacteristics.
+func (mr *MockAdsProviderMockRecorder) SetProductCharacteristics(ctx, productID, inputs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProductCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).SetProductCharacteristics), ctx, productID, inputs)
+}
+
+// SetProductCustomCharacteristics mocks base method.
+func (m *MockAdsProvider) SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetProductCustomCharacteristics", ctx, productID, inputs)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetProductCustomCharacteristics indicates an expected call of SetProductCustomCharacteristics.
+func (mr *MockAdsProviderMockRecorder) SetProductCustomCharacteristics(ctx, productID, inputs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProductCustomCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).SetProductCustomCharacteristics), ctx, productID, inputs)
+}
+
+// GetCategoryCharacteristics mocks base method.
+func (m *MockAdsProvider) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
+	ret0, _ := ret[0].([]models.CategoryCharacteristic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
+func (mr *MockAdsProviderMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).GetCategoryCharacteristics), ctx, categoryID)
+}
+
 // MockFileStorage is a mock of FileStorage interface.
 type MockFileStorage struct {
 	ctrl     *gomock.Controller

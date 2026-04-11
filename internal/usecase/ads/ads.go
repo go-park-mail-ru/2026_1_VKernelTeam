@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
 type AdsProvider interface {
@@ -27,6 +28,9 @@ type AdsProvider interface {
 	AddFavorite(ctx context.Context, userID int64, adID int64) error
 	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
 	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
+	SetProductCharacteristics(ctx context.Context, productID int64, inputs []dto.CharacteristicInput) error
+	SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error
+	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
 // FileStorage описывает интерфейс для работы с файлами в объектном хранилище
@@ -101,7 +105,6 @@ func (a *Ads) UploadAdPhotos(ctx context.Context, files []multipart.File, filena
 			"image/gif":  ".gif",
 		}
 
-
 		contentType := http.DetectContentType(buf)
 		if _, ok := allowedImageTypes[contentType]; !ok {
 			return nil, fmt.Errorf("%s: unsupported file type: %s", op, contentType)
@@ -152,6 +155,34 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 		}
 	}
 
+	// Сохранение категорийных характеристик
+	if len(req.CategoryCharacteristics) > 0 {
+		// Валидация против определений категории
+		defs, err := a.adsStorage.GetCategoryCharacteristics(ctx, req.CategoryID)
+		if err != nil {
+			log.Error("failed to get category characteristics", "error", err)
+			return 0, fmt.Errorf("%s: %w", op, err)
+		}
+		if err := validator.ValidateCharacteristics(req.CategoryCharacteristics, defs); err != nil {
+			return 0, err
+		}
+		if err := a.adsStorage.SetProductCharacteristics(ctx, adID, req.CategoryCharacteristics); err != nil {
+			log.Error("failed to set product characteristics", "error", err)
+			return 0, fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	// Сохранение пользовательских характеристик
+	if len(req.CustomCharacteristics) > 0 {
+		if err := validator.ValidateCustomCharacteristics(req.CustomCharacteristics); err != nil {
+			return 0, err
+		}
+		if err := a.adsStorage.SetProductCustomCharacteristics(ctx, adID, req.CustomCharacteristics); err != nil {
+			log.Error("failed to set custom characteristics", "error", err)
+			return 0, fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
 	log.Info("ad created successfully", "ad_id", adID)
 	return adID, nil
 }
@@ -187,10 +218,15 @@ func (a *Ads) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 	)
 	log.Info("updating ad")
 
-	err := a.adsStorage.UpdateAd(ctx, req)
-	if err != nil {
-		log.Error("failed to update ad", "error", err)
-		return err
+	// Обновляем основные поля только если они переданы
+	hasBaseFields := req.CategoryID != nil || req.Title != nil || req.Description != nil ||
+		req.Price != nil || req.Status != nil || req.Location != nil
+	if hasBaseFields {
+		err := a.adsStorage.UpdateAd(ctx, req)
+		if err != nil {
+			log.Error("failed to update ad", "error", err)
+			return err
+		}
 	}
 
 	// Если переданы новые фото — удаляем старые и сохраняем новые
@@ -201,6 +237,39 @@ func (a *Ads) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 		}
 		if err := a.adsStorage.AddProductImages(ctx, req.ID, req.Photos); err != nil {
 			log.Error("failed to add new images", "error", err)
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	// Обновление категорийных характеристик (merge-стратегия)
+	if len(req.CategoryCharacteristics) > 0 {
+		// Для валидации нужно узнать category_id объявления
+		ad, err := a.adsStorage.GetAdByID(ctx, req.ID)
+		if err != nil {
+			log.Error("failed to get ad for characteristics validation", "error", err)
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		defs, err := a.adsStorage.GetCategoryCharacteristics(ctx, ad.CategoryID)
+		if err != nil {
+			log.Error("failed to get category characteristics", "error", err)
+			return fmt.Errorf("%s: %w", op, err)
+		}
+		if err := validator.ValidateCharacteristics(req.CategoryCharacteristics, defs); err != nil {
+			return err
+		}
+		if err := a.adsStorage.SetProductCharacteristics(ctx, req.ID, req.CategoryCharacteristics); err != nil {
+			log.Error("failed to set product characteristics", "error", err)
+			return fmt.Errorf("%s: %w", op, err)
+		}
+	}
+
+	// Обновление пользовательских характеристик (merge-стратегия)
+	if len(req.CustomCharacteristics) > 0 {
+		if err := validator.ValidateCustomCharacteristics(req.CustomCharacteristics); err != nil {
+			return err
+		}
+		if err := a.adsStorage.SetProductCustomCharacteristics(ctx, req.ID, req.CustomCharacteristics); err != nil {
+			log.Error("failed to set custom characteristics", "error", err)
 			return fmt.Errorf("%s: %w", op, err)
 		}
 	}
@@ -350,4 +419,24 @@ func (a *Ads) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, 
 
 	log.Info("successfully retrieved favorites", slog.Int("count", len(favorites)))
 	return favorites, nil
+}
+
+// GetCategoryCharacteristics возвращает определения характеристик для категории.
+func (a *Ads) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	const op = "usecase.ads.GetCategoryCharacteristics"
+	log := a.log.With(
+		slog.String("op", op),
+		slog.Int64("category_id", categoryID),
+	)
+
+	log.Info("getting category characteristics")
+
+	chars, err := a.adsStorage.GetCategoryCharacteristics(ctx, categoryID)
+	if err != nil {
+		log.Error("failed to get category characteristics", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully retrieved category characteristics", slog.Int("count", len(chars)))
+	return chars, nil
 }

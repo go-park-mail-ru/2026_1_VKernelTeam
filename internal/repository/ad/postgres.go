@@ -88,6 +88,26 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
 	}
 	ad.Photos = photos
+
+	// Подгрузка характеристик
+	catChars, err := s.getProductCharacteristics(ctx, []int64{id})
+	if err != nil {
+		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
+	}
+	ad.CategoryCharacteristics = catChars[id]
+	if ad.CategoryCharacteristics == nil {
+		ad.CategoryCharacteristics = []models.ProductCharacteristic{}
+	}
+
+	customChars, err := s.getProductCustomCharacteristics(ctx, []int64{id})
+	if err != nil {
+		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
+	}
+	ad.CustomCharacteristics = customChars[id]
+	if ad.CustomCharacteristics == nil {
+		ad.CustomCharacteristics = []models.ProductCustomCharacteristic{}
+	}
+
 	return ad, nil
 }
 
@@ -158,6 +178,10 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 
 	if ads == nil {
 		ads = []models.Ad{}
+	}
+
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("GetAllAds: load characteristics: %w", err)
 	}
 
 	return ads, nil
@@ -273,7 +297,7 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 	}
 
 	// Добавляем updated_at и WHERE условия
-	updates = append(updates, fmt.Sprintf("updated_at = NOW()"))
+	updates = append(updates, "updated_at = NOW()")
 
 	query := fmt.Sprintf(`
 		UPDATE product
@@ -388,6 +412,10 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		ads = []models.Ad{}
 	}
 
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("GetAdsByUserID: load characteristics: %w", err)
+	}
+
 	return ads, nil
 }
 
@@ -494,5 +522,192 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 		ads = []models.Ad{}
 	}
 
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("GetUserFavorites: load characteristics: %w", err)
+	}
+
 	return ads, nil
+}
+
+// getProductCharacteristics загружает категорийные характеристики для набора product_id.
+func (s *AdStorage) getProductCharacteristics(ctx context.Context, ids []int64) (map[int64][]models.ProductCharacteristic, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT pc.product_id, cc.name, pc.value
+		FROM product_characteristic pc
+		JOIN category_characteristic cc ON cc.id = pc.category_characteristic_id
+		WHERE pc.product_id = ANY($1)
+		ORDER BY cc.sort_order
+	`
+
+	rows, err := s.pool.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("getProductCharacteristics: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[int64][]models.ProductCharacteristic, len(ids))
+	for rows.Next() {
+		var productID int64
+		var pc models.ProductCharacteristic
+		if err := rows.Scan(&productID, &pc.Name, &pc.Value); err != nil {
+			return nil, fmt.Errorf("getProductCharacteristics: scan: %w", err)
+		}
+		result[productID] = append(result[productID], pc)
+	}
+
+	return result, rows.Err()
+}
+
+// getProductCustomCharacteristics загружает пользовательские характеристики для набора product_id.
+func (s *AdStorage) getProductCustomCharacteristics(ctx context.Context, ids []int64) (map[int64][]models.ProductCustomCharacteristic, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT product_id, name, value
+		FROM product_custom_characteristic
+		WHERE product_id = ANY($1)
+		ORDER BY id
+	`
+
+	rows, err := s.pool.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("getProductCustomCharacteristics: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[int64][]models.ProductCustomCharacteristic, len(ids))
+	for rows.Next() {
+		var productID int64
+		var cc models.ProductCustomCharacteristic
+		if err := rows.Scan(&productID, &cc.Name, &cc.Value); err != nil {
+			return nil, fmt.Errorf("getProductCustomCharacteristics: scan: %w", err)
+		}
+		result[productID] = append(result[productID], cc)
+	}
+
+	return result, rows.Err()
+}
+
+// loadCharacteristicsForAds загружает характеристики для слайса объявлений (batch).
+func (s *AdStorage) loadCharacteristicsForAds(ctx context.Context, ads []models.Ad) error {
+	if len(ads) == 0 {
+		return nil
+	}
+
+	ids := make([]int64, len(ads))
+	for i := range ads {
+		ids[i] = ads[i].ID
+	}
+
+	catChars, err := s.getProductCharacteristics(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	customChars, err := s.getProductCustomCharacteristics(ctx, ids)
+	if err != nil {
+		return err
+	}
+
+	for i := range ads {
+		ads[i].CategoryCharacteristics = catChars[ads[i].ID]
+		if ads[i].CategoryCharacteristics == nil {
+			ads[i].CategoryCharacteristics = []models.ProductCharacteristic{}
+		}
+		ads[i].CustomCharacteristics = customChars[ads[i].ID]
+		if ads[i].CustomCharacteristics == nil {
+			ads[i].CustomCharacteristics = []models.ProductCustomCharacteristic{}
+		}
+	}
+
+	return nil
+}
+
+// SetProductCharacteristics выполняет UPSERT категорийных характеристик.
+// Пустой value означает удаление.
+func (s *AdStorage) SetProductCharacteristics(ctx context.Context, productID int64, inputs []dto.CharacteristicInput) error {
+	for _, inp := range inputs {
+		if inp.Value == "" {
+			// Удаление
+			const delQ = `DELETE FROM product_characteristic WHERE product_id = $1 AND category_characteristic_id = $2`
+			if _, err := s.pool.Exec(ctx, delQ, productID, inp.CategoryCharacteristicID); err != nil {
+				return fmt.Errorf("SetProductCharacteristics: delete: %w", err)
+			}
+		} else {
+			// UPSERT
+			const upsertQ = `
+				INSERT INTO product_characteristic (product_id, category_characteristic_id, value)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (product_id, category_characteristic_id)
+				DO UPDATE SET value = EXCLUDED.value
+			`
+			if _, err := s.pool.Exec(ctx, upsertQ, productID, inp.CategoryCharacteristicID, inp.Value); err != nil {
+				return fmt.Errorf("SetProductCharacteristics: upsert: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// SetProductCustomCharacteristics выполняет UPSERT пользовательских характеристик.
+// Пустой value означает удаление.
+func (s *AdStorage) SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error {
+	for _, inp := range inputs {
+		if inp.Value == "" {
+			// Удаление
+			const delQ = `DELETE FROM product_custom_characteristic WHERE product_id = $1 AND name = $2`
+			if _, err := s.pool.Exec(ctx, delQ, productID, inp.Name); err != nil {
+				return fmt.Errorf("SetProductCustomCharacteristics: delete: %w", err)
+			}
+		} else {
+			// UPSERT
+			const upsertQ = `
+				INSERT INTO product_custom_characteristic (product_id, name, value)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (product_id, name)
+				DO UPDATE SET value = EXCLUDED.value
+			`
+			if _, err := s.pool.Exec(ctx, upsertQ, productID, inp.Name, inp.Value); err != nil {
+				return fmt.Errorf("SetProductCustomCharacteristics: upsert: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// GetCategoryCharacteristics возвращает определения характеристик для категории.
+func (s *AdStorage) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	const query = `
+		SELECT id, category_id, name, allowed_values, sort_order
+		FROM category_characteristic
+		WHERE category_id = $1
+		ORDER BY sort_order
+	`
+
+	rows, err := s.pool.Query(ctx, query, categoryID)
+	if err != nil {
+		return nil, fmt.Errorf("GetCategoryCharacteristics: %w", err)
+	}
+	defer rows.Close()
+
+	var chars []models.CategoryCharacteristic
+	for rows.Next() {
+		var c models.CategoryCharacteristic
+		if err := rows.Scan(&c.ID, &c.CategoryID, &c.Name, &c.AllowedValues, &c.SortOrder); err != nil {
+			return nil, fmt.Errorf("GetCategoryCharacteristics: scan: %w", err)
+		}
+		chars = append(chars, c)
+	}
+
+	if chars == nil {
+		chars = []models.CategoryCharacteristic{}
+	}
+
+	return chars, rows.Err()
 }

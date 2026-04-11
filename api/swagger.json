@@ -808,6 +808,50 @@
                 }
             }
         },
+        "/categories/{id}/characteristics": {
+            "get": {
+                "description": "Возвращает список предопределённых характеристик категории с допустимыми значениями",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Получить характеристики категории",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID категории",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "список характеристик",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.CategoryCharacteristic"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid category id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile": {
             "get": {
                 "security": [
@@ -1260,7 +1304,13 @@
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
+                "category_characteristics": {
+                    "type": "string"
+                },
                 "category_id": {
+                    "type": "string"
+                },
+                "custom_characteristics": {
                     "type": "string"
                 },
                 "description": {
@@ -1301,11 +1351,23 @@
         "models.Ad": {
             "type": "object",
             "properties": {
+                "category_characteristics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProductCharacteristic"
+                    }
+                },
                 "category_id": {
                     "type": "integer"
                 },
                 "created_at": {
                     "type": "string"
+                },
+                "custom_characteristics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
+                    }
                 },
                 "deleted_at": {
                     "type": "string"
@@ -1345,6 +1407,52 @@
                 },
                 "views_count": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.CategoryCharacteristic": {
+            "type": "object",
+            "properties": {
+                "allowed_values": {
+                    "description": "nil = свободный ввод",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.ProductCharacteristic": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProductCustomCharacteristic": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

@@ -524,3 +524,66 @@ func TestHandleGetFavorites_ServiceError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
+
+func TestHandleGetCategoryCharacteristics_Success(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	categoryID := int64(10)
+	expected := []models.CategoryCharacteristic{
+		{ID: 1, CategoryID: categoryID, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}, SortOrder: 1},
+		{ID: 2, CategoryID: categoryID, Name: "Размер", AllowedValues: nil, SortOrder: 2},
+	}
+
+	mockAds.EXPECT().
+		GetCategoryCharacteristics(gomock.Any(), categoryID).
+		Return(expected, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
+
+	request := httptest.NewRequest(http.MethodGet, "/categories/10/characteristics", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var actualData []models.CategoryCharacteristic
+	err := json.Unmarshal(rr.Body.Bytes(), &actualData)
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actualData)
+}
+
+func TestHandleGetCategoryCharacteristics_InvalidID(t *testing.T) {
+	_, adsH, _, _ := setupHandlers(t)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
+
+	request := httptest.NewRequest(http.MethodGet, "/categories/abc/characteristics", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetCategoryCharacteristics_ServiceError(t *testing.T) {
+	_, adsH, _, mockAds := setupHandlers(t)
+
+	categoryID := int64(10)
+
+	mockAds.EXPECT().
+		GetCategoryCharacteristics(gomock.Any(), categoryID).
+		Return(nil, assert.AnError)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
+
+	request := httptest.NewRequest(http.MethodGet, "/categories/10/characteristics", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}

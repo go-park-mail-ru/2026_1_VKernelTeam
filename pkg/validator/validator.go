@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -35,6 +36,16 @@ var (
 	ErrAdLocationEmpty           = errors.New("location cannot be empty")
 	ErrAdLocationTooShort        = errors.New("location must be at least 2 characters long")
 	ErrAdLocationTooLong         = errors.New("location must be at most 100 characters long")
+
+	ErrCharacteristicIDInvalid      = errors.New("category_characteristic_id not found in category definitions")
+	ErrCharacteristicValueTooLong   = errors.New("characteristic value must be at most 500 characters")
+	ErrCharacteristicValueEmpty     = errors.New("characteristic value cannot be empty")
+	ErrCharacteristicValueNotInEnum = errors.New("characteristic value is not in allowed values")
+	ErrCustomCharacteristicsTooMany = errors.New("custom characteristics limit is 10")
+	ErrCustomCharNameEmpty          = errors.New("custom characteristic name cannot be empty")
+	ErrCustomCharNameTooLong        = errors.New("custom characteristic name must be at most 100 characters")
+	ErrCustomCharNameDuplicate      = errors.New("custom characteristic names must be unique")
+	ErrCustomCharValueTooLong       = errors.New("custom characteristic value must be at most 500 characters")
 
 	// Проверка наличия хотя бы одной буквы (латиница)
 	reHasLetter = regexp.MustCompile(`[a-zA-Z]`)
@@ -242,6 +253,75 @@ func ValidateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
 	}
 
 	return &errs
+}
+
+// ValidateCharacteristics проверяет категорийные характеристики:
+// - category_characteristic_id существует в определениях категории
+// - если allowed_values задан, value должен входить в список
+// - value: 1-500 символов
+func ValidateCharacteristics(inputs []dto.CharacteristicInput, defs []models.CategoryCharacteristic) error {
+	defMap := make(map[int64]models.CategoryCharacteristic, len(defs))
+	for _, d := range defs {
+		defMap[d.ID] = d
+	}
+
+	for _, inp := range inputs {
+		def, ok := defMap[inp.CategoryCharacteristicID]
+		if !ok {
+			return ErrCharacteristicIDInvalid
+		}
+
+		// Пустое значение допустимо (означает удаление), пропускаем остальные проверки
+		if inp.Value == "" {
+			continue
+		}
+
+		valLen := utf8.RuneCountInString(inp.Value)
+		if valLen > 500 {
+			return ErrCharacteristicValueTooLong
+		}
+
+		if def.AllowedValues != nil {
+			if !slices.Contains(def.AllowedValues, inp.Value) {
+				return ErrCharacteristicValueNotInEnum
+			}
+		}
+	}
+
+	return nil
+}
+
+// ValidateCustomCharacteristics проверяет пользовательские характеристики:
+// - не более 10 штук
+// - name: 1-100 символов, уникальные
+// - value: 0-500 символов (пустая строка допустима — означает удаление)
+func ValidateCustomCharacteristics(inputs []dto.CustomCharacteristicInput) error {
+	if len(inputs) > 10 {
+		return ErrCustomCharacteristicsTooMany
+	}
+
+	seen := make(map[string]struct{}, len(inputs))
+	for _, inp := range inputs {
+		nameLen := utf8.RuneCountInString(inp.Name)
+		if nameLen == 0 {
+			return ErrCustomCharNameEmpty
+		}
+		if nameLen > 100 {
+			return ErrCustomCharNameTooLong
+		}
+
+		if _, exists := seen[inp.Name]; exists {
+			return ErrCustomCharNameDuplicate
+		}
+		seen[inp.Name] = struct{}{}
+
+		valLen := utf8.RuneCountInString(inp.Value)
+		if valLen > 500 {
+			return ErrCustomCharValueTooLong
+		}
+	}
+
+	return nil
 }
 
 func ValidateAdLocation(location string) error {
