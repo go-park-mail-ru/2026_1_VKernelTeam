@@ -105,7 +105,8 @@ func TestAds_UpdateAd(t *testing.T) {
 	usecase := New(logger, mockStorage, mockFileStorage)
 
 	ctx := context.Background()
-	req := &dto.UpdateAdRequest{ID: 1}
+	title := "Updated"
+	req := &dto.UpdateAdRequest{ID: 1, Title: &title}
 
 	t.Run("Success", func(t *testing.T) {
 		mockStorage.EXPECT().UpdateAd(ctx, req).Return(nil)
@@ -306,5 +307,290 @@ func TestAds_GetUserFavorites(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, ads)
+	})
+}
+
+func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage, mockFileStorage)
+
+	ctx := context.Background()
+
+	t.Run("Success with category and custom characteristics", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Красный"},
+			},
+			CustomCharacteristics: []dto.CustomCharacteristicInput{
+				{Name: "Материал", Value: "Дерево"},
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(1), nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+		mockStorage.EXPECT().SetProductCharacteristics(ctx, int64(1), req.CategoryCharacteristics).Return(nil)
+		mockStorage.EXPECT().SetProductCustomCharacteristics(ctx, int64(1), req.CustomCharacteristics).Return(nil)
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), id)
+	})
+
+	t.Run("Fails on invalid category characteristic", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Жёлтый"}, // not in enum
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(2), nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), id)
+	})
+
+	t.Run("Fails on GetCategoryCharacteristics error", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Красный"},
+			},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(3), nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(nil, errors.New("db error"))
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), id)
+	})
+
+	t.Run("Fails on SetProductCharacteristics error", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Красный"},
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(4), nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+		mockStorage.EXPECT().SetProductCharacteristics(ctx, int64(4), req.CategoryCharacteristics).Return(errors.New("db error"))
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), id)
+	})
+
+	t.Run("Fails on SetProductCustomCharacteristics error", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CustomCharacteristics: []dto.CustomCharacteristicInput{
+				{Name: "Материал", Value: "Дерево"},
+			},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(5), nil)
+		mockStorage.EXPECT().SetProductCustomCharacteristics(ctx, int64(5), req.CustomCharacteristics).Return(errors.New("db error"))
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), id)
+	})
+
+	t.Run("Fails on invalid custom characteristics", func(t *testing.T) {
+		req := &dto.CreateAdRequest{
+			Title:      "Title",
+			CategoryID: 10,
+			CustomCharacteristics: []dto.CustomCharacteristicInput{
+				{Name: "", Value: "Дерево"}, // empty name
+			},
+		}
+
+		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(6), nil)
+
+		id, err := usecase.CreateAd(ctx, req)
+		assert.Error(t, err)
+		assert.Equal(t, int64(0), id)
+	})
+}
+
+func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage, mockFileStorage)
+
+	ctx := context.Background()
+
+	t.Run("Success with category characteristics merge", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Синий"},
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		// Нет основных полей — UpdateAd в репозитории не вызывается
+		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{ID: 1, CategoryID: 10}, nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+		mockStorage.EXPECT().SetProductCharacteristics(ctx, int64(1), req.CategoryCharacteristics).Return(nil)
+
+		err := usecase.UpdateAd(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Success with custom characteristics merge", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CustomCharacteristics: []dto.CustomCharacteristicInput{
+				{Name: "Материал", Value: "Металл"},
+			},
+		}
+
+		// Нет основных полей — UpdateAd в репозитории не вызывается
+		mockStorage.EXPECT().SetProductCustomCharacteristics(ctx, int64(1), req.CustomCharacteristics).Return(nil)
+
+		err := usecase.UpdateAd(ctx, req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("Fails on GetAdByID error during characteristics update", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Синий"},
+			},
+		}
+
+		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{}, errors.New("not found"))
+
+		err := usecase.UpdateAd(ctx, req)
+		assert.Error(t, err)
+	})
+
+	t.Run("Fails on validation error during characteristics update", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 999, Value: "Синий"}, // unknown ID
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{ID: 1, CategoryID: 10}, nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+
+		err := usecase.UpdateAd(ctx, req)
+		assert.Error(t, err)
+	})
+
+	t.Run("Fails on SetProductCharacteristics error during update", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CategoryCharacteristics: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Синий"},
+			},
+		}
+
+		defs := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+		}
+
+		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{ID: 1, CategoryID: 10}, nil)
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, int64(10)).Return(defs, nil)
+		mockStorage.EXPECT().SetProductCharacteristics(ctx, int64(1), req.CategoryCharacteristics).Return(errors.New("db error"))
+
+		err := usecase.UpdateAd(ctx, req)
+		assert.Error(t, err)
+	})
+
+	t.Run("Fails on invalid custom characteristics during update", func(t *testing.T) {
+		req := &dto.UpdateAdRequest{
+			ID:     1,
+			UserID: 2,
+			CustomCharacteristics: []dto.CustomCharacteristicInput{
+				{Name: "", Value: "value"}, // empty name
+			},
+		}
+
+		// Нет основных полей — UpdateAd не вызывается, но валидация ловит ошибку
+		err := usecase.UpdateAd(ctx, req)
+		assert.Error(t, err)
+	})
+}
+
+func TestAds_GetCategoryCharacteristics(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage, mockFileStorage)
+
+	ctx := context.Background()
+	categoryID := int64(10)
+
+	t.Run("Success", func(t *testing.T) {
+		expected := []models.CategoryCharacteristic{
+			{ID: 1, CategoryID: categoryID, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 2, CategoryID: categoryID, Name: "Размер", AllowedValues: nil},
+		}
+
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, categoryID).Return(expected, nil)
+
+		chars, err := usecase.GetCategoryCharacteristics(ctx, categoryID)
+		assert.NoError(t, err)
+		assert.Equal(t, expected, chars)
+	})
+
+	t.Run("Storage error", func(t *testing.T) {
+		mockStorage.EXPECT().GetCategoryCharacteristics(ctx, categoryID).Return(nil, errors.New("db error"))
+
+		chars, err := usecase.GetCategoryCharacteristics(ctx, categoryID)
+		assert.Error(t, err)
+		assert.Nil(t, chars)
 	})
 }

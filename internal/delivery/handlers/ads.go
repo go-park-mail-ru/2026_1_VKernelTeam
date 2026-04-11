@@ -153,6 +153,10 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 	// Создаем новое объявление
 	adID, err := h.services.Ads.CreateAd(r.Context(), &req)
 	if err != nil {
+		if isCharacteristicValidationError(err) {
+			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -252,6 +256,10 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		}
 		if errors.Is(err, ad.ErrAdForbidden) {
 			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
+			return
+		}
+		if isCharacteristicValidationError(err) {
+			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
@@ -524,4 +532,43 @@ func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request)
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"ads": favorites,
 	})
+}
+
+// HandleGetCategoryCharacteristics возвращает определения характеристик для категории.
+// @Summary Получить характеристики категории
+// @Description Возвращает список предопределённых характеристик категории с допустимыми значениями
+// @Tags categories
+// @Produce json
+// @Param id path int true "ID категории"
+// @Success 200 {array} models.CategoryCharacteristic "список характеристик"
+// @Failure 400 {object} dto.ErrorResponse "invalid category id"
+// @Failure 500 {object} dto.ErrorResponse "internal error"
+// @Router /categories/{id}/characteristics [get]
+func (h *AdsHandlers) HandleGetCategoryCharacteristics(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	categoryID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, "invalid category id")
+		return
+	}
+
+	chars, err := h.services.Ads.GetCategoryCharacteristics(r.Context(), categoryID)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, chars)
+}
+
+// isCharacteristicValidationError проверяет, является ли ошибка валидацией характеристик.
+func isCharacteristicValidationError(err error) bool {
+	return errors.Is(err, validator.ErrCharacteristicIDInvalid) ||
+		errors.Is(err, validator.ErrCharacteristicValueTooLong) ||
+		errors.Is(err, validator.ErrCharacteristicValueNotInEnum) ||
+		errors.Is(err, validator.ErrCustomCharacteristicsTooMany) ||
+		errors.Is(err, validator.ErrCustomCharNameEmpty) ||
+		errors.Is(err, validator.ErrCustomCharNameTooLong) ||
+		errors.Is(err, validator.ErrCustomCharNameDuplicate) ||
+		errors.Is(err, validator.ErrCustomCharValueTooLong)
 }

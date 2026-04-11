@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -233,4 +234,193 @@ func TestValidateAdLocation(t *testing.T) {
 	assert.ErrorIs(t, ValidateAdLocation(""), ErrAdLocationEmpty)
 	assert.ErrorIs(t, ValidateAdLocation("A"), ErrAdLocationTooShort)
 	assert.ErrorIs(t, ValidateAdLocation(strings.Repeat("A", 101)), ErrAdLocationTooLong)
+}
+
+func TestValidateCharacteristics(t *testing.T) {
+	defs := []models.CategoryCharacteristic{
+		{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий", "Зелёный"}},
+		{ID: 2, CategoryID: 10, Name: "Размер", AllowedValues: nil}, // свободный ввод
+	}
+
+	tests := []struct {
+		name    string
+		inputs  []dto.CharacteristicInput
+		wantErr error
+	}{
+		{
+			name: "Valid input with enum value",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Красный"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Valid input with free text",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 2, Value: "XL"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Invalid category_characteristic_id",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 999, Value: "test"},
+			},
+			wantErr: ErrCharacteristicIDInvalid,
+		},
+		{
+			name: "Value not in allowed enum",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Жёлтый"},
+			},
+			wantErr: ErrCharacteristicValueNotInEnum,
+		},
+		{
+			name: "Value too long",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 2, Value: strings.Repeat("A", 501)},
+			},
+			wantErr: ErrCharacteristicValueTooLong,
+		},
+		{
+			name: "Empty value is allowed (means deletion)",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: ""},
+			},
+			wantErr: nil,
+		},
+		{
+			name:    "Empty inputs is valid",
+			inputs:  []dto.CharacteristicInput{},
+			wantErr: nil,
+		},
+		{
+			name: "Multiple valid inputs",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 1, Value: "Синий"},
+				{CategoryCharacteristicID: 2, Value: "M"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Value exactly 500 chars is valid",
+			inputs: []dto.CharacteristicInput{
+				{CategoryCharacteristicID: 2, Value: strings.Repeat("Б", 500)},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateCharacteristics(tt.inputs, defs)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestValidateCustomCharacteristics(t *testing.T) {
+	tests := []struct {
+		name    string
+		inputs  []dto.CustomCharacteristicInput
+		wantErr error
+	}{
+		{
+			name: "Valid input",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "Материал", Value: "Дерево"},
+			},
+			wantErr: nil,
+		},
+		{
+			name:    "Empty inputs is valid",
+			inputs:  []dto.CustomCharacteristicInput{},
+			wantErr: nil,
+		},
+		{
+			name: "More than 10 items",
+			inputs: func() []dto.CustomCharacteristicInput {
+				items := make([]dto.CustomCharacteristicInput, 11)
+				for i := range items {
+					items[i] = dto.CustomCharacteristicInput{
+						Name:  fmt.Sprintf("Характеристика_%d", i),
+						Value: "val",
+					}
+				}
+				return items
+			}(),
+			wantErr: ErrCustomCharacteristicsTooMany,
+		},
+		{
+			name: "Empty name",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "", Value: "value"},
+			},
+			wantErr: ErrCustomCharNameEmpty,
+		},
+		{
+			name: "Name too long",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: strings.Repeat("A", 101), Value: "value"},
+			},
+			wantErr: ErrCustomCharNameTooLong,
+		},
+		{
+			name: "Duplicate names",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "Цвет", Value: "Красный"},
+				{Name: "Цвет", Value: "Синий"},
+			},
+			wantErr: ErrCustomCharNameDuplicate,
+		},
+		{
+			name: "Value too long",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "Поле", Value: strings.Repeat("B", 501)},
+			},
+			wantErr: ErrCustomCharValueTooLong,
+		},
+		{
+			name: "Empty value is allowed (means deletion)",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "Материал", Value: ""},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Exactly 10 items is valid",
+			inputs: func() []dto.CustomCharacteristicInput {
+				items := make([]dto.CustomCharacteristicInput, 10)
+				for i := range items {
+					items[i] = dto.CustomCharacteristicInput{
+						Name:  fmt.Sprintf("Характеристика_%d", i),
+						Value: "val",
+					}
+				}
+				return items
+			}(),
+			wantErr: nil,
+		},
+		{
+			name: "Name exactly 100 chars is valid",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: strings.Repeat("A", 100), Value: "val"},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "Value exactly 500 chars is valid",
+			inputs: []dto.CustomCharacteristicInput{
+				{Name: "Поле", Value: strings.Repeat("B", 500)},
+			},
+			wantErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateCustomCharacteristics(tt.inputs)
+			assert.Equal(t, tt.wantErr, err)
+		})
+	}
 }

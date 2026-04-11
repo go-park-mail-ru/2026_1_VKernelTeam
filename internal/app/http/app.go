@@ -53,6 +53,7 @@ type Ads interface {
 	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
 	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
+	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
 type Cart interface {
@@ -154,6 +155,9 @@ func (a *App) setupRoutes() {
 	// Обработчии объявлений
 	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
 	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
+
+	// Характеристики категорий (публичная ручка)
+	a.router.HandleFunc("GET "+prefix+"/categories/{id}/characteristics", a.adsHandlers.HandleGetCategoryCharacteristics)
 
 	// Публичный профиль продавца и его объявления
 	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)

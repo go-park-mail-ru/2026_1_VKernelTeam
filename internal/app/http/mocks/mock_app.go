@@ -343,6 +343,21 @@ func (mr *MockAdsMockRecorder) UploadAdPhotos(ctx, files, filenames interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAdPhotos", reflect.TypeOf((*MockAds)(nil).UploadAdPhotos), ctx, files, filenames)
 }
 
+// GetCategoryCharacteristics mocks base method.
+func (m *MockAds) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
+	ret0, _ := ret[0].([]models.CategoryCharacteristic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
+func (mr *MockAdsMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAds)(nil).GetCategoryCharacteristics), ctx, categoryID)
+}
+
 // MockCart is a mock of Cart interface.
 type MockCart struct {
 	ctrl     *gomock.Controller

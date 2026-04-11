@@ -37,7 +37,7 @@ const (
 	ErrInvalidProductID     = "invalid product id"
 	ErrFileTooBig           = "file too big"
 	ErrFailedToGetFile      = "failed to get file"
-	ErrFailedToUploadPhotos   = "failed to upload photos"
+	ErrFailedToUploadPhotos = "failed to upload photos"
 )
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
@@ -68,6 +68,7 @@ type Ads interface {
 	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
 	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
+	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
 // Auth описывает минимальный набор методов сервиса аутентификации

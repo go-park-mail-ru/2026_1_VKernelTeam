@@ -32,11 +32,11 @@ type HTTPConfig struct {
 }
 
 type S3Config struct {
-	EndpointURL      string `json:"endpoint_url"`
-	RegionName       string `json:"region_name"`
-	BucketName       string `json:"bucket_name"`
-	AccessKeyID      string `json:"access_key_id"`
-	SecretAccessKey  string `json:"secret_access_key"`
+	EndpointURL     string `json:"endpoint_url"`
+	RegionName      string `json:"region_name"`
+	BucketName      string `json:"bucket_name"`
+	AccessKeyID     string `json:"access_key_id"`
+	SecretAccessKey string `json:"secret_access_key"`
 }
 
 // MustLoadConfig загружает конфигурацию и паникует в случае ошибки.
@@ -126,13 +126,13 @@ func MustLoadConfig() *Config {
 		HTTP:            rawConfig.HTTP,
 		CleanupInterval: parseDuration(rawConfig.CleanupInterval, "cleanup_interval"),
 		S3Storage: S3Config{
-			EndpointURL:      s3EndpointURL,
-			RegionName:       s3RegionName,
-			BucketName:       s3BucketName,
-			AccessKeyID:      s3AccessKeyID,
-			SecretAccessKey:  s3SecretAccessKey,
+			EndpointURL:     s3EndpointURL,
+			RegionName:      s3RegionName,
+			BucketName:      s3BucketName,
+			AccessKeyID:     s3AccessKeyID,
+			SecretAccessKey: s3SecretAccessKey,
 		},
-		TokenSecret:     secret,
+		TokenSecret: secret,
 	}
 }
 
