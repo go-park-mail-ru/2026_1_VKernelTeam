@@ -129,8 +129,12 @@ func New(
 
 	app.setupRoutes()
 
+	// Цепочка middleware (снаружи → внутрь):
+	// CORS → RequestID → AccessLog → CSRF → Router
 	handlerWithCSRF := middleware.CSRFMiddleware(app.router)
-	finalHandler := middleware.CORSMiddleware(handlerWithCSRF)
+	handlerWithAccessLog := middleware.AccessLogMiddleware(log)(handlerWithCSRF)
+	handlerWithRequestID := middleware.RequestIDMiddleware(handlerWithAccessLog)
+	finalHandler := middleware.CORSMiddleware(handlerWithRequestID)
 
 	app.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
@@ -223,8 +227,10 @@ func (a *App) Run() error {
 
 // Stop корректно останавливает сервер.
 func (a *App) Stop() {
-	a.log.With(slog.String("opStop", opStop)).
-		Info("stopping http server", slog.Int("port", a.port))
+	a.log.Info("stopping http server",
+		slog.String("op", opStop),
+		slog.Int("port", a.port),
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

@@ -3,6 +3,7 @@ package cart
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestCartStorage_Add(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	storage := NewCartStorage(mock)
+	storage := NewCartStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -56,7 +57,7 @@ func TestCartStorage_Remove(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	storage := NewCartStorage(mock)
+	storage := NewCartStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -96,7 +97,7 @@ func TestCartStorage_GetByUserID(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	storage := NewCartStorage(mock)
+	storage := NewCartStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	columns := []string{"id", "title", "price", "seller_id", "first_name", "image_path"}
@@ -157,7 +158,7 @@ func TestCartStorage_Clear(t *testing.T) {
 	require.NoError(t, err)
 	defer mock.Close()
 
-	storage := NewCartStorage(mock)
+	storage := NewCartStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -202,7 +203,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		cartRows := pgxmock.NewRows(cartColumns).
 			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")
@@ -249,7 +250,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
@@ -269,7 +270,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		cartRows := pgxmock.NewRows(cartColumns).
 			AddRow(int64(10), int64(2), int64(5000), "reserved", int64(2), "Иван", "ivan@mail.ru")
@@ -290,7 +291,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		mock.ExpectBegin().WillReturnError(fmt.Errorf("db unavailable"))
 
@@ -305,7 +306,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
@@ -324,7 +325,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		cartRows := pgxmock.NewRows(cartColumns).
 			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")
@@ -350,7 +351,7 @@ func TestCartStorage_Checkout(t *testing.T) {
 		require.NoError(t, err)
 		defer mock.Close()
 
-		storage := NewCartStorage(mock)
+		storage := NewCartStorage(mock, slog.Default())
 
 		cartRows := pgxmock.NewRows(cartColumns).
 			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")

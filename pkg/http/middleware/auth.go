@@ -48,14 +48,14 @@ func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.
 			})
 
 			if err != nil || !token.Valid {
-				log.Info("invalid token attempt", slog.String("error", err.Error()))
+				log.WarnContext(r.Context(), "invalid token attempt", slog.String("error", err.Error()))
 				responser.RespondWithError(w, http.StatusUnauthorized, ErrInvalidToken)
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
-				log.Error("failed to cast claims", slog.Any("claims", token.Claims))
+				log.ErrorContext(r.Context(), "failed to cast claims", slog.Any("claims", token.Claims))
 				responser.RespondWithError(w, http.StatusUnauthorized, ErrInvalidTokenClaims)
 				return
 			}
@@ -63,7 +63,7 @@ func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.
 			// Блокируем запрос, если токен был отозван
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
-				log.Info("attempt to use revoked token", slog.String("jti", jti))
+				log.WarnContext(r.Context(), "attempt to use revoked token", slog.String("jti", jti))
 				responser.RespondWithError(w, http.StatusUnauthorized, ErrTokenRevoked)
 				return
 			}

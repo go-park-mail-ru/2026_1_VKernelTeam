@@ -4,12 +4,33 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const (
+	opGetAdByID                      = "db.ad.GetAdByID"
+	opGetAllAds                      = "db.ad.GetAllAds"
+	opCreateAd                       = "db.ad.CreateAd"
+	opAddProductImages               = "db.ad.AddProductImages"
+	opDeleteProductImages            = "db.ad.DeleteProductImages"
+	opUpdateAd                       = "db.ad.UpdateAd"
+	opDeleteAd                       = "db.ad.DeleteAd"
+	opCloseAd                        = "db.ad.CloseAd"
+	opGetAdsByUserID                 = "db.ad.GetAdsByUserID"
+	opAddFavorite                    = "db.ad.AddFavorite"
+	opRemoveFavorite                 = "db.ad.RemoveFavorite"
+	opGetUserFavorites               = "db.ad.GetUserFavorites"
+	opGetProductCharacteristics      = "db.ad.getProductCharacteristics"
+	opGetProductCustomCharacteristics = "db.ad.getProductCustomCharacteristics"
+	opSetProductCharacteristics      = "db.ad.SetProductCharacteristics"
+	opSetProductCustomCharacteristics = "db.ad.SetProductCustomCharacteristics"
+	opGetCategoryCharacteristics     = "db.ad.GetCategoryCharacteristics"
 )
 
 // PgxPool интерфейс для пула соединений (или транзакции),
@@ -29,10 +50,11 @@ var (
 // AdStorage отвечает за операции с объявлениями.
 type AdStorage struct {
 	pool PgxPool
+	log  *slog.Logger
 }
 
-func NewAdStorage(pool PgxPool) *AdStorage {
-	return &AdStorage{pool: pool}
+func NewAdStorage(pool PgxPool, log *slog.Logger) *AdStorage {
+	return &AdStorage{pool: pool, log: log}
 }
 
 // GetAdByID возвращает объявление по ID. Возвращает ErrAdNotFound, если оно не найдено.
@@ -64,6 +86,11 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		GROUP BY p.id
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetAdByID),
+		slog.Int64("ad_id", id),
+	)
+
 	var ad models.Ad
 	var photos []string
 	err := s.pool.QueryRow(ctx, query, id).Scan(
@@ -83,8 +110,17 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.log.DebugContext(ctx, "ad not found",
+				slog.String("op", opGetAdByID),
+				slog.Int64("ad_id", id),
+			)
 			return models.Ad{}, ErrAdNotFound
 		}
+		s.log.ErrorContext(ctx, "failed to get ad by id",
+			slog.String("op", opGetAdByID),
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
 	}
 	ad.Photos = photos
@@ -108,6 +144,10 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		ad.CustomCharacteristics = []models.ProductCustomCharacteristic{}
 	}
 
+	s.log.DebugContext(ctx, "ad fetched successfully",
+		slog.String("op", opGetAdByID),
+		slog.Int64("ad_id", id),
+	)
 	return ad, nil
 }
 
@@ -141,8 +181,16 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 		ORDER BY p.created_at DESC
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetAllAds),
+	)
+
 	rows, err := s.pool.Query(ctx, query)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query all ads",
+			slog.String("op", opGetAllAds),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("GetAllAds: query: %w", err)
 	}
 	defer rows.Close()
@@ -166,6 +214,10 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&ad.ViewsCount,
 			&ad.FavoritesCount,
 		); err != nil {
+			s.log.ErrorContext(ctx, "failed to scan ad row",
+				slog.String("op", opGetAllAds),
+				slog.String("error", err.Error()),
+			)
 			return nil, fmt.Errorf("GetAllAds: scan: %w", err)
 		}
 		ad.Photos = photos
@@ -173,6 +225,10 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	}
 
 	if err := rows.Err(); err != nil {
+		s.log.ErrorContext(ctx, "rows iteration error",
+			slog.String("op", opGetAllAds),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("GetAllAds: rows: %w", err)
 	}
 
@@ -184,6 +240,10 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 		return nil, fmt.Errorf("GetAllAds: load characteristics: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "all ads fetched successfully",
+		slog.String("op", opGetAllAds),
+		slog.Int("count", len(ads)),
+	)
 	return ads, nil
 }
 
@@ -194,6 +254,12 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
 	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCreateAd),
+		slog.Int64("user_id", req.UserID),
+		slog.String("title", req.Title),
+	)
 
 	var adID int64
 	err := s.pool.QueryRow(ctx, query,
@@ -206,9 +272,17 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 		req.Location,
 	).Scan(&adID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to create ad",
+			slog.String("op", opCreateAd),
+			slog.String("error", err.Error()),
+		)
 		return 0, fmt.Errorf("CreateAd: insert: %w", err)
 	}
 
+	s.log.InfoContext(ctx, "ad created in database",
+		slog.String("op", opCreateAd),
+		slog.Int64("ad_id", adID),
+	)
 	return adID, nil
 }
 
@@ -219,6 +293,12 @@ func (s *AdStorage) AddProductImages(ctx context.Context, adID int64, photos []s
 	}
 
 	const baseQuery = `INSERT INTO product_image (product_id, file_path, sort_order) VALUES `
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opAddProductImages),
+		slog.Int64("ad_id", adID),
+		slog.Int("photos_count", len(photos)),
+	)
 
 	args := make([]any, 0, len(photos)*3)
 	var sb strings.Builder
@@ -233,9 +313,18 @@ func (s *AdStorage) AddProductImages(ctx context.Context, adID int64, photos []s
 
 	_, err := s.pool.Exec(ctx, baseQuery+sb.String(), args...)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to add product images",
+			slog.String("op", opAddProductImages),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("AddProductImages: exec: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "product images added",
+		slog.String("op", opAddProductImages),
+		slog.Int64("ad_id", adID),
+	)
 	return nil
 }
 
@@ -243,11 +332,25 @@ func (s *AdStorage) AddProductImages(ctx context.Context, adID int64, photos []s
 func (s *AdStorage) DeleteProductImages(ctx context.Context, adID int64) error {
 	const query = `DELETE FROM product_image WHERE product_id = $1`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opDeleteProductImages),
+		slog.Int64("ad_id", adID),
+	)
+
 	_, err := s.pool.Exec(ctx, query, adID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to delete product images",
+			slog.String("op", opDeleteProductImages),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("DeleteProductImages: exec: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "product images deleted",
+		slog.String("op", opDeleteProductImages),
+		slog.Int64("ad_id", adID),
+	)
 	return nil
 }
 
@@ -259,7 +362,6 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 
 	argNum := 1
 
-	// Динамически строим SET clause с только переданными полями
 	if req.CategoryID != nil {
 		updates = append(updates, fmt.Sprintf("category_id = $%d", argNum))
 		args = append(args, *req.CategoryID)
@@ -291,12 +393,10 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 		argNum++
 	}
 
-	// Если нет полей для обновления, возвращаем ошибку
 	if len(updates) == 0 {
 		return fmt.Errorf("UpdateAd: no fields to update")
 	}
 
-	// Добавляем updated_at и WHERE условия
 	updates = append(updates, "updated_at = NOW()")
 
 	query := fmt.Sprintf(`
@@ -309,15 +409,35 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 
 	args = append(args, req.ID, req.UserID)
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opUpdateAd),
+		slog.Int64("ad_id", req.ID),
+		slog.Int64("user_id", req.UserID),
+	)
+
 	result, err := s.pool.Exec(ctx, query, args...)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to update ad",
+			slog.String("op", opUpdateAd),
+			slog.Int64("ad_id", req.ID),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("UpdateAd: exec: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
+		s.log.WarnContext(ctx, "ad not found or not owned by user",
+			slog.String("op", opUpdateAd),
+			slog.Int64("ad_id", req.ID),
+			slog.Int64("user_id", req.UserID),
+		)
 		return ErrAdNotFound
 	}
 
+	s.log.InfoContext(ctx, "ad updated in database",
+		slog.String("op", opUpdateAd),
+		slog.Int64("ad_id", req.ID),
+	)
 	return nil
 }
 
@@ -331,15 +451,34 @@ func (s *AdStorage) DeleteAd(ctx context.Context, id int64, userID int64) error 
 		  AND deleted_at IS NULL
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opDeleteAd),
+		slog.Int64("ad_id", id),
+		slog.Int64("user_id", userID),
+	)
+
 	result, err := s.pool.Exec(ctx, query, id, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to delete ad",
+			slog.String("op", opDeleteAd),
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("DeleteAd: exec: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
+		s.log.WarnContext(ctx, "ad not found for deletion",
+			slog.String("op", opDeleteAd),
+			slog.Int64("ad_id", id),
+		)
 		return ErrAdNotFound
 	}
 
+	s.log.InfoContext(ctx, "ad soft-deleted",
+		slog.String("op", opDeleteAd),
+		slog.Int64("ad_id", id),
+	)
 	return nil
 }
 
@@ -355,15 +494,34 @@ func (s *AdStorage) CloseAd(ctx context.Context, id int64, userID int64) error {
 		  AND status != 'archived'
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCloseAd),
+		slog.Int64("ad_id", id),
+		slog.Int64("user_id", userID),
+	)
+
 	result, err := s.pool.Exec(ctx, query, id, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to close ad",
+			slog.String("op", opCloseAd),
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("CloseAd: exec: %w", err)
 	}
 
 	if result.RowsAffected() == 0 {
+		s.log.WarnContext(ctx, "ad not found for closing",
+			slog.String("op", opCloseAd),
+			slog.Int64("ad_id", id),
+		)
 		return ErrAdNotFound
 	}
 
+	s.log.InfoContext(ctx, "ad archived",
+		slog.String("op", opCloseAd),
+		slog.Int64("ad_id", id),
+	)
 	return nil
 }
 
@@ -385,8 +543,17 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		ORDER BY p.created_at DESC
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetAdsByUserID),
+		slog.Int64("user_id", userID),
+	)
+
 	rows, err := s.pool.Query(ctx, query, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query ads by user id",
+			slog.String("op", opGetAdsByUserID),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("GetAdsByUserID: query: %w", err)
 	}
 
@@ -401,6 +568,10 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
 		); err != nil {
+			s.log.ErrorContext(ctx, "failed to scan ad row",
+				slog.String("op", opGetAdsByUserID),
+				slog.String("error", err.Error()),
+			)
 			return nil, fmt.Errorf("GetAdsByUserID: scan: %w", err)
 		}
 
@@ -416,23 +587,42 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		return nil, fmt.Errorf("GetAdsByUserID: load characteristics: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "ads by user id fetched",
+		slog.String("op", opGetAdsByUserID),
+		slog.Int64("user_id", userID),
+		slog.Int("count", len(ads)),
+	)
 	return ads, nil
 }
 
 // AddFavorite добавляет объявление в избранное.
 func (s *AdStorage) AddFavorite(ctx context.Context, userID int64, adID int64) error {
-	// ON CONFLICT DO NOTHING чтобы не возвращать ошибку, если пользователь нажал "лайк" дважды
 	const query = `
 		INSERT INTO favorite (user_id, product_id)
 		VALUES ($1, $2)
 		ON CONFLICT DO NOTHING
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opAddFavorite),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
+
 	_, err := s.pool.Exec(ctx, query, userID, adID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to add favorite",
+			slog.String("op", opAddFavorite),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("AddFavorite: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "favorite added",
+		slog.String("op", opAddFavorite),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
 	return nil
 }
 
@@ -443,11 +633,26 @@ func (s *AdStorage) RemoveFavorite(ctx context.Context, userID int64, adID int64
 		WHERE user_id = $1 AND product_id = $2
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opRemoveFavorite),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
+
 	_, err := s.pool.Exec(ctx, query, userID, adID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to remove favorite",
+			slog.String("op", opRemoveFavorite),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("RemoveFavorite: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "favorite removed",
+		slog.String("op", opRemoveFavorite),
+		slog.Int64("user_id", userID),
+		slog.Int64("ad_id", adID),
+	)
 	return nil
 }
 
@@ -482,8 +687,17 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 		ORDER BY f.created_at DESC
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUserFavorites),
+		slog.Int64("user_id", userID),
+	)
+
 	rows, err := s.pool.Query(ctx, query, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query user favorites",
+			slog.String("op", opGetUserFavorites),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("GetUserFavorites: query: %w", err)
 	}
 	defer rows.Close()
@@ -508,6 +722,10 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			&ad.FavoritesCount,
 		)
 		if err != nil {
+			s.log.ErrorContext(ctx, "failed to scan favorite row",
+				slog.String("op", opGetUserFavorites),
+				slog.String("error", err.Error()),
+			)
 			return nil, fmt.Errorf("GetUserFavorites: scan: %w", err)
 		}
 		ad.Photos = photos
@@ -526,6 +744,11 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 		return nil, fmt.Errorf("GetUserFavorites: load characteristics: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "user favorites fetched",
+		slog.String("op", opGetUserFavorites),
+		slog.Int64("user_id", userID),
+		slog.Int("count", len(ads)),
+	)
 	return ads, nil
 }
 
@@ -543,8 +766,17 @@ func (s *AdStorage) getProductCharacteristics(ctx context.Context, ids []int64) 
 		ORDER BY cc.sort_order
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetProductCharacteristics),
+		slog.Int("ids_count", len(ids)),
+	)
+
 	rows, err := s.pool.Query(ctx, query, ids)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query product characteristics",
+			slog.String("op", opGetProductCharacteristics),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("getProductCharacteristics: %w", err)
 	}
 	defer rows.Close()
@@ -575,8 +807,17 @@ func (s *AdStorage) getProductCustomCharacteristics(ctx context.Context, ids []i
 		ORDER BY id
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetProductCustomCharacteristics),
+		slog.Int("ids_count", len(ids)),
+	)
+
 	rows, err := s.pool.Query(ctx, query, ids)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query product custom characteristics",
+			slog.String("op", opGetProductCustomCharacteristics),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("getProductCustomCharacteristics: %w", err)
 	}
 	defer rows.Close()
@@ -632,15 +873,23 @@ func (s *AdStorage) loadCharacteristicsForAds(ctx context.Context, ads []models.
 // SetProductCharacteristics выполняет UPSERT категорийных характеристик.
 // Пустой value означает удаление.
 func (s *AdStorage) SetProductCharacteristics(ctx context.Context, productID int64, inputs []dto.CharacteristicInput) error {
+	s.log.DebugContext(ctx, "setting product characteristics",
+		slog.String("op", opSetProductCharacteristics),
+		slog.Int64("product_id", productID),
+		slog.Int("count", len(inputs)),
+	)
+
 	for _, inp := range inputs {
 		if inp.Value == "" {
-			// Удаление
 			const delQ = `DELETE FROM product_characteristic WHERE product_id = $1 AND category_characteristic_id = $2`
 			if _, err := s.pool.Exec(ctx, delQ, productID, inp.CategoryCharacteristicID); err != nil {
+				s.log.ErrorContext(ctx, "failed to delete characteristic",
+					slog.String("op", opSetProductCharacteristics),
+					slog.String("error", err.Error()),
+				)
 				return fmt.Errorf("SetProductCharacteristics: delete: %w", err)
 			}
 		} else {
-			// UPSERT
 			const upsertQ = `
 				INSERT INTO product_characteristic (product_id, category_characteristic_id, value)
 				VALUES ($1, $2, $3)
@@ -648,6 +897,10 @@ func (s *AdStorage) SetProductCharacteristics(ctx context.Context, productID int
 				DO UPDATE SET value = EXCLUDED.value
 			`
 			if _, err := s.pool.Exec(ctx, upsertQ, productID, inp.CategoryCharacteristicID, inp.Value); err != nil {
+				s.log.ErrorContext(ctx, "failed to upsert characteristic",
+					slog.String("op", opSetProductCharacteristics),
+					slog.String("error", err.Error()),
+				)
 				return fmt.Errorf("SetProductCharacteristics: upsert: %w", err)
 			}
 		}
@@ -658,15 +911,23 @@ func (s *AdStorage) SetProductCharacteristics(ctx context.Context, productID int
 // SetProductCustomCharacteristics выполняет UPSERT пользовательских характеристик.
 // Пустой value означает удаление.
 func (s *AdStorage) SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error {
+	s.log.DebugContext(ctx, "setting product custom characteristics",
+		slog.String("op", opSetProductCustomCharacteristics),
+		slog.Int64("product_id", productID),
+		slog.Int("count", len(inputs)),
+	)
+
 	for _, inp := range inputs {
 		if inp.Value == "" {
-			// Удаление
 			const delQ = `DELETE FROM product_custom_characteristic WHERE product_id = $1 AND name = $2`
 			if _, err := s.pool.Exec(ctx, delQ, productID, inp.Name); err != nil {
+				s.log.ErrorContext(ctx, "failed to delete custom characteristic",
+					slog.String("op", opSetProductCustomCharacteristics),
+					slog.String("error", err.Error()),
+				)
 				return fmt.Errorf("SetProductCustomCharacteristics: delete: %w", err)
 			}
 		} else {
-			// UPSERT
 			const upsertQ = `
 				INSERT INTO product_custom_characteristic (product_id, name, value)
 				VALUES ($1, $2, $3)
@@ -674,6 +935,10 @@ func (s *AdStorage) SetProductCustomCharacteristics(ctx context.Context, product
 				DO UPDATE SET value = EXCLUDED.value
 			`
 			if _, err := s.pool.Exec(ctx, upsertQ, productID, inp.Name, inp.Value); err != nil {
+				s.log.ErrorContext(ctx, "failed to upsert custom characteristic",
+					slog.String("op", opSetProductCustomCharacteristics),
+					slog.String("error", err.Error()),
+				)
 				return fmt.Errorf("SetProductCustomCharacteristics: upsert: %w", err)
 			}
 		}
@@ -690,8 +955,17 @@ func (s *AdStorage) GetCategoryCharacteristics(ctx context.Context, categoryID i
 		ORDER BY sort_order
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetCategoryCharacteristics),
+		slog.Int64("category_id", categoryID),
+	)
+
 	rows, err := s.pool.Query(ctx, query, categoryID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query category characteristics",
+			slog.String("op", opGetCategoryCharacteristics),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("GetCategoryCharacteristics: %w", err)
 	}
 	defer rows.Close()
@@ -709,5 +983,10 @@ func (s *AdStorage) GetCategoryCharacteristics(ctx context.Context, categoryID i
 		chars = []models.CategoryCharacteristic{}
 	}
 
+	s.log.DebugContext(ctx, "category characteristics fetched",
+		slog.String("op", opGetCategoryCharacteristics),
+		slog.Int64("category_id", categoryID),
+		slog.Int("count", len(chars)),
+	)
 	return chars, rows.Err()
 }

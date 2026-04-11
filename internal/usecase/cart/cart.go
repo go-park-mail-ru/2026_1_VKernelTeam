@@ -10,6 +10,13 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
+const (
+	opAddToCart      = "usecase.cart.AddToCart"
+	opRemoveFromCart = "usecase.cart.RemoveFromCart"
+	opGetCart        = "usecase.cart.GetCart"
+	opCheckout       = "usecase.cart.Checkout"
+)
+
 // Sentinel-ошибки
 var (
 	ErrProductNotActive    = errors.New("product is not active")
@@ -49,56 +56,94 @@ func New(log *slog.Logger, cartStorage CartProvider, adsStorage AdsProvider) *Us
 
 // AddToCart добавляет товар в корзину с проверками.
 func (u *Usecase) AddToCart(ctx context.Context, userID, productID int64) error {
-	const op = "usecase.cart.AddToCart"
-	log := u.log.With(slog.String("op", op), slog.Int64("user_id", userID), slog.Int64("product_id", productID))
+	u.log.InfoContext(ctx, "adding product to cart",
+		slog.String("op", opAddToCart),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 
-	// Проверяем статус и владельца
 	ad, err := u.adsStorage.GetAdByID(ctx, productID)
 	if err != nil {
-		log.Error("failed to get product", "error", err)
+		u.log.ErrorContext(ctx, "failed to get product",
+			slog.String("op", opAddToCart),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("failed to get product: %w", err)
 	}
 
 	if ad.Status != "active" {
+		u.log.WarnContext(ctx, "product is not active",
+			slog.String("op", opAddToCart),
+			slog.Int64("product_id", productID),
+			slog.String("status", ad.Status),
+		)
 		return ErrProductNotActive
 	}
 
 	if ad.SellerID == userID {
+		u.log.WarnContext(ctx, "user tried to add own product to cart",
+			slog.String("op", opAddToCart),
+			slog.Int64("user_id", userID),
+			slog.Int64("product_id", productID),
+		)
 		return ErrCannotAddOwnProduct
 	}
 
 	err = u.cartStorage.Add(ctx, userID, productID)
 	if err != nil {
-		log.Error("failed to add product to cart", "error", err)
+		u.log.ErrorContext(ctx, "failed to add product to cart",
+			slog.String("op", opAddToCart),
+			slog.String("error", err.Error()),
+		)
 		return err
 	}
 
-	log.Info("product added to cart successfully")
+	u.log.InfoContext(ctx, "product added to cart successfully",
+		slog.String("op", opAddToCart),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 	return nil
 }
 
 // RemoveFromCart удаляет товар из корзины.
 func (u *Usecase) RemoveFromCart(ctx context.Context, userID, productID int64) error {
-	const op = "usecase.cart.RemoveFromCart"
-	log := u.log.With(slog.String("op", op), slog.Int64("user_id", userID), slog.Int64("product_id", productID))
+	u.log.InfoContext(ctx, "removing product from cart",
+		slog.String("op", opRemoveFromCart),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 
 	err := u.cartStorage.Remove(ctx, userID, productID)
 	if err != nil {
-		log.Error("failed to remove product from cart", "error", err)
+		u.log.ErrorContext(ctx, "failed to remove product from cart",
+			slog.String("op", opRemoveFromCart),
+			slog.String("error", err.Error()),
+		)
 		return err
 	}
 
+	u.log.InfoContext(ctx, "product removed from cart",
+		slog.String("op", opRemoveFromCart),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 	return nil
 }
 
 // GetCart возвращает корзину.
 func (u *Usecase) GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error) {
-	const op = "usecase.cart.GetCart"
-	log := u.log.With(slog.String("op", op), slog.Int64("user_id", userID))
+	u.log.DebugContext(ctx, "getting cart",
+		slog.String("op", opGetCart),
+		slog.Int64("user_id", userID),
+	)
 
 	items, err := u.cartStorage.GetByUserID(ctx, userID)
 	if err != nil {
-		log.Error("failed to get cart items", "error", err)
+		u.log.ErrorContext(ctx, "failed to get cart items",
+			slog.String("op", opGetCart),
+			slog.String("error", err.Error()),
+		)
 		return nil, err
 	}
 
@@ -107,6 +152,11 @@ func (u *Usecase) GetCart(ctx context.Context, userID int64) (*dto.CartResponse,
 		total += item.Price
 	}
 
+	u.log.DebugContext(ctx, "cart fetched",
+		slog.String("op", opGetCart),
+		slog.Int64("user_id", userID),
+		slog.Int("items_count", len(items)),
+	)
 	return &dto.CartResponse{
 		Items:      items,
 		TotalPrice: total,
@@ -115,17 +165,25 @@ func (u *Usecase) GetCart(ctx context.Context, userID int64) (*dto.CartResponse,
 
 // Checkout оформляет заказ на всю корзину.
 func (u *Usecase) Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error) {
-	const op = "usecase.cart.Checkout"
-	log := u.log.With(slog.String("op", op), slog.Int64("user_id", userID))
+	u.log.InfoContext(ctx, "starting checkout",
+		slog.String("op", opCheckout),
+		slog.Int64("user_id", userID),
+	)
 
 	orderIDs, sellers, err := u.cartStorage.Checkout(ctx, userID)
 	if err != nil {
-		log.Error("failed to checkout", "error", err)
+		u.log.ErrorContext(ctx, "failed to checkout",
+			slog.String("op", opCheckout),
+			slog.String("error", err.Error()),
+		)
 		return nil, err
 	}
 
-	log.Info("checkout completed successfully")
-
+	u.log.InfoContext(ctx, "checkout completed successfully",
+		slog.String("op", opCheckout),
+		slog.Int64("user_id", userID),
+		slog.Int("orders_count", len(orderIDs)),
+	)
 	return &dto.CheckoutResponse{
 		OrderIDs: orderIDs,
 		Sellers:  sellers,

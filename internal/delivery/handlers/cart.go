@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -30,6 +31,10 @@ func (h *CartHandlers) HandleGetCart(w http.ResponseWriter, r *http.Request) {
 
 	cart, err := h.services.Cart.GetCart(r.Context(), userID)
 	if err != nil {
+		h.log.ErrorContext(r.Context(), "failed to get cart",
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -70,7 +75,11 @@ func (h *CartHandlers) HandleAddToCart(w http.ResponseWriter, r *http.Request) {
 
 	err := h.services.Cart.AddToCart(r.Context(), userID, req.ProductID)
 	if err != nil {
-		// Любая бизнес-ошибка возвращается как 400
+		h.log.WarnContext(r.Context(), "failed to add to cart",
+			slog.Int64("user_id", userID),
+			slog.Int64("product_id", req.ProductID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -111,7 +120,11 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 
 	err = h.services.Cart.RemoveFromCart(r.Context(), userID, productID)
 	if err != nil {
-		// Ошибка возвращается с кодом 400
+		h.log.WarnContext(r.Context(), "failed to remove from cart",
+			slog.Int64("user_id", userID),
+			slog.Int64("product_id", productID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -139,6 +152,10 @@ func (h *CartHandlers) HandleCheckout(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.services.Cart.Checkout(r.Context(), userID)
 	if err != nil {
+		h.log.WarnContext(r.Context(), "checkout failed",
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}

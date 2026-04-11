@@ -2,6 +2,7 @@ package user_test
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -21,7 +22,7 @@ func TestUserStorage_SaveUser(t *testing.T) {
 	defer mock.Close()
 
 	// Инициализируем репозиторий
-	repo := user.NewUserStorage(mock)
+	repo := user.NewUserStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	email := "test@mail.ru"
@@ -54,7 +55,7 @@ func TestUserStorage_SaveUser(t *testing.T) {
 
 func TestUserStorage_User(t *testing.T) {
 	mock, _ := pgxmock.NewPool()
-	repo := user.NewUserStorage(mock)
+	repo := user.NewUserStorage(mock, slog.Default())
 	ctx := context.Background()
 	email := "test@mail.ru"
 
@@ -86,7 +87,7 @@ func TestUserStorage_User(t *testing.T) {
 
 func TestUserStorage_UserByID(t *testing.T) {
 	mock, _ := pgxmock.NewPool()
-	repo := user.NewUserStorage(mock)
+	repo := user.NewUserStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 
@@ -117,7 +118,7 @@ func TestUserStorage_UserByID(t *testing.T) {
 
 func TestUserStorage_UpdateUser(t *testing.T) {
 	mock, _ := pgxmock.NewPool()
-	repo := user.NewUserStorage(mock)
+	repo := user.NewUserStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("success_update", func(t *testing.T) {
@@ -137,7 +138,7 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 
 func TestUserStorage_UpdateAvatarPath(t *testing.T) {
 	mock, _ := pgxmock.NewPool()
-	repo := user.NewUserStorage(mock)
+	repo := user.NewUserStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 	newPath := "/static/img/avatars/1_12345.png"

@@ -35,10 +35,8 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Удаляем HTML-теги из имени (защита от XSS)
 	req.Name = sanitizer.StripHTML(req.Name)
 
-	// Собираем все ошибки валидации
 	validationErrors := dto.ValidationErrors{}
 
 	cleanEmail, err := validator.ValidateEmail(req.Email)
@@ -55,7 +53,6 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		validationErrors.Password = err.Error()
 	}
 
-	// Если есть хотя бы одна ошибка валидации, возвращаем их все
 	if validationErrors.Email != "" || validationErrors.Password != "" || validationErrors.Name != "" {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
@@ -68,21 +65,22 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		h.log.Error("failed to register user", slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to register user",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToRegisterUser)
 		return
 	}
 
-	h.log.Info(
-		"user registered successfully",
+	h.log.InfoContext(r.Context(), "user registered successfully",
 		slog.Int64("user_id", userID),
-		slog.String("email", req.Email),
 	)
 
-	// сразу логиним
 	token, refreshToken, user, err := h.services.Auth.Login(r.Context(), cleanEmail, req.Password)
 	if err != nil {
-		h.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "auto-login failed after registration",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
 		return
 	}
@@ -107,14 +105,11 @@ func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} dto.ErrorResponse "failed to login: Ошибка сервера при входе"
 // @Router /auth/login [post]
 func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
-	// сначала ищем токен в куке
 	if cookie, err := r.Cookie("token"); err == nil && cookie.Value != "" {
-		// есть токен, пытаемся его валидировать
 		h.handleTokenLogin(w, r, cookie.Value)
 		return
 	}
 
-	// иначе - вход по email/пароль из тела
 	var req dto.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
@@ -149,13 +144,9 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 		validationErrors.Password = err.Error()
 	}
 
-	// Если есть хотя бы одна ошибка валидации
 	if validationErrors.Email != "" || validationErrors.Password != "" {
-		h.log.Info(
-			"invalid login attempt",
+		h.log.WarnContext(r.Context(), "invalid login attempt",
 			slog.String("email", email),
-			slog.String("email_error", validationErrors.Email),
-			slog.String("password_error", validationErrors.Password),
 		)
 		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
 		return
@@ -168,7 +159,9 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		h.log.Error("failed to login", slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to login",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogin)
 		return
 	}
@@ -184,14 +177,15 @@ func (h *AuthHandlers) handleCredentialsLogin(w http.ResponseWriter, r *http.Req
 func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, tokenString string) {
 	user, err := h.services.Auth.ValidateTokenAndGetUser(r.Context(), tokenString)
 	if err != nil {
-		h.log.Info("invalid token attempt", slog.String("error", err.Error()))
+		h.log.WarnContext(r.Context(), "invalid token attempt",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusUnauthorized, "invalid or expired token")
 		return
 	}
 
 	csrfToken := middleware.GenerateCSRFToken()
 
-	// Устанавливаем куку с токенами
 	h.setAuthCookie(w, tokenString, csrfToken)
 	h.respondWithUser(w, user)
 }
@@ -207,12 +201,11 @@ func (h *AuthHandlers) handleTokenLogin(w http.ResponseWriter, r *http.Request, 
 // @Router /auth/logout [post]
 // @Security CookieAuth
 func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
-	h.log.Info("logout attempt", slog.String("op", "HandleLogout"))
+	h.log.InfoContext(r.Context(), "logout attempt")
 
-	// достаём jti из контекста
 	jti, ok := r.Context().Value(middleware.JtiKey).(string)
 	if !ok {
-		h.log.Error("jti not found in context")
+		h.log.ErrorContext(r.Context(), "jti not found in context")
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrInternalError)
 		return
 	}
@@ -223,12 +216,13 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.services.Auth.Logout(r.Context(), jti, time.Now().Add(h.tokenTTL), refreshToken); err != nil {
-		h.log.Error("failed to logout in service", slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to logout in service",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogout)
 		return
 	}
 
-	// удаляем JWT
 	http.SetCookie(w, &http.Cookie{
 		Name:     "token",
 		Value:    "",
@@ -238,7 +232,6 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Unix(0, 0),
 	})
 
-	// удаляем CSRF
 	http.SetCookie(w, &http.Cookie{
 		Name:     "csrf_token",
 		Value:    "",
@@ -273,14 +266,16 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil || cookie.Value == "" {
-		h.log.Info("refresh token missing")
+		h.log.WarnContext(r.Context(), "refresh token missing")
 		responser.RespondWithError(w, http.StatusUnauthorized, "refresh token required")
 		return
 	}
 
 	newAccess, newRefresh, err := h.services.Auth.Refresh(r.Context(), cookie.Value)
 	if err != nil {
-		h.log.Error("failed to refresh tokens", slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to refresh tokens",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusUnauthorized, "invalid refresh token")
 		return
 	}

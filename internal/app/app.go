@@ -48,8 +48,8 @@ func New(
 		}
 	}
 
-	userRepo := user.NewUserStorage(dbClient.Pool)
-	adRepo := ad.NewAdStorage(dbClient.Pool)
+	userRepo := user.NewUserStorage(dbClient.Pool, log)
+	adRepo := ad.NewAdStorage(dbClient.Pool, log)
 
 	// инициализируем redis
 	rc := redis.New(cfg.RedisAddr)
@@ -70,7 +70,7 @@ func New(
 	adsService := ads.New(log, adRepo, s3Storage)
 
 	// создаём сервис корзины
-	cartRepo := cart.NewCartStorage(dbClient.Pool)
+	cartRepo := cart.NewCartStorage(dbClient.Pool, log)
 	cartService := cartUC.New(log, cartRepo, adRepo)
 
 	services := httpapp.Services{
