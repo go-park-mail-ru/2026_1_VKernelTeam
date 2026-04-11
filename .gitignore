@@ -14,4 +14,4 @@ schema.md
 .agents
 skills-*.json
 
-*static/img/avatars
+static/
