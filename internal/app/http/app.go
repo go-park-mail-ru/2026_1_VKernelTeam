@@ -3,24 +3,23 @@
 // прав администратора, а также простую структуру сервера.
 package httpapp
 
+//go:generate mockgen -source=app.go -destination=mocks/mock_app.go
+
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/app/http/middleware"
+	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/delivery/handlers"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/responser"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/pkg/validator"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/services/auth"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/storage/blacklist"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 
-	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/docs"
+	_ "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -29,106 +28,77 @@ const (
 	opStop = "httpapp.Stop"
 )
 
-// ошибки HTTP-обработчиков
-var (
-	ErrInvalidRequestBody   = "invalid request body"
-	ErrUserAlreadyExists    = "user already exists"
-	ErrFailedToRegisterUser = "failed to register user"
-	ErrAutoLoginFailed      = "registered, but failed to login"
-	ErrFailedToLogin        = "failed to login"
-	ErrInternalError        = "internal error"
-	ErrFailedToLogout       = "failed to logout"
-	ErrMethodNotAllowed     = "Method not allowed"
-)
+// Auth описывает минимальный набор методов сервиса аутентификации
+type Auth interface {
+	Login(ctx context.Context, email string, password string) (string, string, models.User, error)
+	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
+	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
+	Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error
+	Refresh(ctx context.Context, refreshToken string) (string, string, error)
+	GetProfile(ctx context.Context, userID int64) (models.User, error)
+	UpdateProfile(ctx context.Context, userID int64, name string) (models.User, error)
+	UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error)
+}
+
+// Ads описывает методы сервиса объявлений
+type Ads interface {
+	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
+	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
+	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
+	DeleteAd(ctx context.Context, id int64, userID int64) error
+	CloseAd(ctx context.Context, id int64, userID int64) error
+	GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error)
+	AddFavorite(ctx context.Context, userID int64, adID int64) error
+	RemoveFavorite(ctx context.Context, userID int64, adID int64) error
+	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
+	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
+	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
+}
+
+type Cart interface {
+	AddToCart(ctx context.Context, userID, productID int64) error
+	RemoveFromCart(ctx context.Context, userID, productID int64) error
+	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
+	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
+}
+
+// TokenChecker интерфейс для проверки отозванных токенов
+type TokenChecker interface {
+	Check(jti string) bool
+}
+
+// Services объединяет все бизнес-сервисы приложения
+type Services struct {
+	Ads  Ads
+	Auth Auth
+	Cart Cart
+}
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
-	log       *slog.Logger
-	router    *http.ServeMux
-	port      int
-	srv       *http.Server
-	services  Services
-	blacklist auth.TokenRevoker
-	tokenTTL  time.Duration
-	secret    string
-}
-
-// Ads описывает методы сервиса объявлений.
-type Ads interface {
-	GetAll() []models.Ad
-}
-
-// Auth описывает минимальный набор методов сервиса аутентификации, который
-// использует HTTP-приложение.
-type Auth interface {
-	Login(ctx context.Context, email string, password string) (string, models.User, error)
-	ValidateTokenAndGetUser(ctx context.Context, tokenString string) (models.User, error)
-	RegisterNewUser(ctx context.Context, email string, password string, name string) (userID int64, err error)
-	// IsAdmin(ctx context.Context, userID int64) (bool, error)
-	Logout(ctx context.Context, jti string, exp time.Time) error
-}
-
-// Services объединяет все бизнес-сервисы приложения.
-type Services struct {
-	Ads  Ads
-	Auth Auth
-}
-
-// RegisterRequest представляет собой структуру для запроса на регистрацию пользователя.
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-}
-
-// RegisterResponse представляет собой структуру для ответа на запрос регистрации пользователя.
-type RegisterResponse struct {
-	UserID int64 `json:"user_id"`
-}
-
-// LoginRequest представляет собой структуру для запроса на вход в систему, содержащую email и пароль.
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// LoginResponse представляет собой структуру для ответа на запрос входа в систему, содержащую JWT-токен.
-type LoginResponse struct {
-	UserID int64  `json:"user_id"`
-	Email  string `json:"email"`
-	Name   string `json:"name"`
-}
-
-// // IsAdminRequest представляет собой структуру для запроса проверки прав администратора.
-// type IsAdminRequest struct {
-// 	UserID int64 `json:"user_id"`
-// }
-
-// // IsAdminResponse представляет собой структуру для ответа на запрос проверки прав администратора.
-// type IsAdminResponse struct {
-// 	IsAdmin bool `json:"is_admin"`
-// }
-
-// ErrorResponse представляет собой структуру для отправки ошибок в формате JSON.
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-// ValidationErrors представляет собой структуру для отправки ошибок валидации по полям.
-type ValidationErrors struct {
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-	Name     string `json:"name,omitempty"`
+	log          *slog.Logger
+	router       *http.ServeMux
+	port         int
+	srv          *http.Server
+	services     Services
+	blacklist    TokenChecker
+	tokenTTL     time.Duration
+	secret       string
+	authHandlers *handlers.AuthHandlers
+	adsHandlers  *handlers.AdsHandlers
+	cartHandlers *handlers.CartHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
 func New(
 	log *slog.Logger,
 	services Services,
-	bl auth.TokenRevoker,
+	bl TokenChecker,
 	port int,
 	tokenTTL time.Duration,
+	refreshTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
@@ -141,13 +111,34 @@ func New(
 		secret:    secret,
 	}
 
+	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+	}, tokenTTL, refreshTTL, secret)
+	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+	}, tokenTTL)
+	app.cartHandlers = handlers.NewCartHandlers(log, handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+	}, tokenTTL)
+
 	app.setupRoutes()
 
-	handlerWithCORS := middleware.CORSMiddleware(app.router)
+	// Цепочка middleware (снаружи → внутрь):
+	// CORS → RequestID → AccessLog → CSRF → Router
+	handlerWithCSRF := middleware.CSRFMiddleware(app.router)
+	handlerWithAccessLog := middleware.AccessLogMiddleware(log)(handlerWithCSRF)
+	handlerWithRequestID := middleware.RequestIDMiddleware(handlerWithAccessLog)
+	finalHandler := middleware.CORSMiddleware(handlerWithRequestID)
 
 	app.srv = &http.Server{
 		Addr:         fmt.Sprintf(":%d", port), // слушаем на всех интерфейсах
-		Handler:      handlerWithCORS,          // используем наш маршрутизатор с CORS
+		Handler:      finalHandler,             // передаем итоговую цепочку
 		ReadTimeout:  15 * time.Second,         // ограничиваем время чтения запроса
 		WriteTimeout: 15 * time.Second,         // ограничиваем время записи ответа
 		IdleTimeout:  60 * time.Second,         // время жизни соединения
@@ -156,29 +147,55 @@ func New(
 	return app
 }
 
-const apiPrefix = "/api/v1"
-
-func (a *App) setAuthCookie(w http.ResponseWriter, token string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: token,
-		// Domain: "clover-go.ru", // Убран хардкод домена для работы на localhost
-		HttpOnly: true, // JS не увидит куку
-		// Secure:   true,                      // передача только по HTTPS
-		Path:     "/",                       // доступна везде
-		SameSite: http.SameSiteLaxMode,      // защита от CSRF атак
-		MaxAge:   int(a.tokenTTL.Seconds()), // время жизни
-	})
-}
-
 // setupRoutes регистрирует HTTP-обработчики.
 func (a *App) setupRoutes() {
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/register", a.handleRegister)
-	a.router.HandleFunc("POST "+apiPrefix+"/auth/login", a.handleLogin)
+	prefix := api.ApiPrefix
 
-	// Защищенная ручка (оборачиваем в Middleware)
-	authMW := middleware.AuthMiddleware(a.log, a.blacklist.(*blacklist.InMemory), a.secret)
-	a.router.Handle("POST "+apiPrefix+"/auth/logout", authMW(http.HandlerFunc(a.handleLogout)))
+	// Публичные ручки
+	a.router.HandleFunc("POST "+prefix+"/auth/register", a.authHandlers.HandleRegister)
+	a.router.HandleFunc("POST "+prefix+"/auth/login", a.authHandlers.HandleLogin)
+	a.router.HandleFunc("POST "+prefix+"/auth/refresh", a.authHandlers.HandleRefresh)
+
+	// Обработчии объявлений
+	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
+
+	// Характеристики категорий (публичная ручка)
+	a.router.HandleFunc("GET "+prefix+"/categories/{id}/characteristics", a.adsHandlers.HandleGetCategoryCharacteristics)
+
+	// Публичный профиль продавца и его объявления
+	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)
+	a.router.HandleFunc("GET "+prefix+"/users/{id}/ads", a.adsHandlers.HandleGetUserAds)
+
+	// Защищенные ручки (нужен JWT)
+	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
+
+	// Обработчики объявлений
+	a.router.Handle("POST "+prefix+"/ads", authMW(http.HandlerFunc(a.adsHandlers.HandleCreateAd)))
+	a.router.Handle("PUT "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleUpdateAdByID)))
+	a.router.Handle("DELETE "+prefix+"/ads/{id}", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteAd)))
+	a.router.Handle("POST "+prefix+"/ads/{id}/close", authMW(http.HandlerFunc(a.adsHandlers.HandleCloseAdByID)))
+
+	// Корзина (защищено)
+	a.router.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleGetCart)))
+	a.router.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleAddToCart)))
+	a.router.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(a.cartHandlers.HandleRemoveFromCart)))
+	a.router.Handle("POST "+prefix+"/cart/checkout", authMW(http.HandlerFunc(a.cartHandlers.HandleCheckout)))
+
+	// Избранное
+	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
+	a.router.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteFromFavorites)))
+	a.router.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(a.adsHandlers.HandleGetFavorites)))
+
+	// Выход
+	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
+
+	// Личный профиль
+	a.router.Handle("GET "+prefix+"/profile", authMW(http.HandlerFunc(a.authHandlers.HandleGetProfile)))
+	a.router.Handle("PATCH "+prefix+"/profile", authMW(http.HandlerFunc(a.authHandlers.HandleUpdateProfile)))
+
+	// Аватар
+	a.router.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(a.authHandlers.HandleUploadAvatar)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
@@ -188,274 +205,6 @@ func (a *App) setupRoutes() {
 	fs := http.FileServer(http.Dir("static"))
 	// StripPrefix убирает "/static/" из пути, чтобы искать сразу в папке static
 	a.router.Handle("/static/", http.StripPrefix("/static/", fs))
-
-	// регистрируем обработчик объявлений
-	a.router.HandleFunc("GET "+apiPrefix+"/ads", a.handleGetAds)
-}
-
-// handleRegister обрабатывает запросы на регистрацию новых пользователей.
-// @Summary Регистрация пользователя
-// @Description Создаёт нового пользователя и автоматически выполняет вход
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body RegisterRequest true "Registration data"
-// @Success 200 {object} RegisterResponse "user registered successfully"
-// @Failure 400 {object} ValidationErrors "validation failed (email/password/name) or user already exists"
-// @Failure 500 {object} ErrorResponse "internal server error"
-// @Router /auth/register [post]
-func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
-	}
-
-	// Собираем все ошибки валидации
-	validationErrors := ValidationErrors{}
-	if err := validator.ValidateEmail(req.Email); err != nil {
-		validationErrors.Email = err.Error()
-	}
-	if err := validator.ValidatePassword(req.Password); err != nil {
-		validationErrors.Password = err.Error()
-	}
-	if err := validator.ValidateName(req.Name); err != nil {
-		validationErrors.Name = err.Error()
-	}
-
-	// Если есть хотя бы одна ошибка валидации, возвращаем их все
-	if validationErrors.Email != "" || validationErrors.Password != "" || validationErrors.Name != "" {
-		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
-		return
-	}
-
-	userID, err := a.services.Auth.RegisterNewUser(r.Context(), req.Email, req.Password, req.Name)
-	if err != nil {
-		if errors.Is(err, storage.ErrUserExists) {
-			responser.RespondWithError(w, http.StatusBadRequest, ErrUserAlreadyExists)
-			return
-		}
-
-		a.log.Error("failed to register user", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToRegisterUser)
-		return
-	}
-
-	a.log.Info(
-		"user registered successfully",
-		slog.Int64("user_id", userID),
-		slog.String("email", req.Email),
-	)
-
-	// сразу логиним
-	token, user, err := a.services.Auth.Login(r.Context(), req.Email, req.Password)
-	if err != nil {
-		a.log.Error("auto-login failed after registration", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrAutoLoginFailed)
-		return
-	}
-
-	a.setAuthCookie(w, token)
-
-	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-	})
-}
-
-// @Summary Вход пользователя
-// @Description Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param input body LoginRequest true "Login credentials"
-// @Success 200 {object} LoginResponse "login successful"
-// @Failure 400 {object} ErrorResponse "invalid request body or missing fields"
-// @Failure 401 {object} ValidationErrors "email/password validation errors or invalid credentials/token"
-// @Failure 500 {object} ErrorResponse "internal server error"
-// @Router /auth/login [post]
-func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
-	// сначала ищем токен в куке
-	if cookie, err := r.Cookie("token"); err == nil && cookie.Value != "" {
-		// есть токен, пытаемся его валидировать
-		a.handleTokenLogin(w, r, cookie.Value)
-		return
-	}
-
-	// иначе - вход по email/пароль из тела
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
-		return
-	}
-
-	if req.Email == "" || req.Password == "" {
-		validationErrors := ValidationErrors{}
-		if req.Email == "" {
-			validationErrors.Email = "email is required"
-		}
-		if req.Password == "" {
-			validationErrors.Password = "password is required"
-		}
-		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
-		return
-	}
-
-	a.handleCredentialsLogin(w, r, req.Email, req.Password)
-}
-
-// handleCredentialsLogin обрабатывает вход пользователя по email и паролю
-func (a *App) handleCredentialsLogin(w http.ResponseWriter, r *http.Request, email, password string) {
-	validationErrors := ValidationErrors{}
-	if err := validator.ValidateEmail(email); err != nil {
-		validationErrors.Email = err.Error()
-	}
-	if err := validator.ValidatePassword(password); err != nil {
-		validationErrors.Password = err.Error()
-	}
-
-	// Если есть хотя бы одна ошибка валидации
-	if validationErrors.Email != "" || validationErrors.Password != "" {
-		a.log.Info(
-			"invalid login attempt",
-			slog.String("email", email),
-			slog.String("email_error", validationErrors.Email),
-			slog.String("password_error", validationErrors.Password),
-		)
-		responser.RespondWithJSON(w, http.StatusUnauthorized, validationErrors)
-		return
-	}
-
-	token, user, err := a.services.Auth.Login(r.Context(), email, password)
-	if err != nil {
-		if errors.Is(err, auth.ErrInvalidCredentials) {
-			responser.RespondWithError(w, http.StatusUnauthorized, err.Error())
-			return
-		}
-
-		a.log.Error("failed to login", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogin)
-		return
-	}
-
-	a.setAuthCookie(w, token)
-	a.respondWithUser(w, user)
-}
-
-// handleTokenLogin обрабатывает вход пользователя путём валидации существующего токена
-func (a *App) handleTokenLogin(w http.ResponseWriter, r *http.Request, tokenString string) {
-	user, err := a.services.Auth.ValidateTokenAndGetUser(r.Context(), tokenString)
-	if err != nil {
-		a.log.Info("invalid token attempt", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusUnauthorized, "invalid or expired token")
-		return
-	}
-
-	// Устанавливаем куку с токеном
-	a.setAuthCookie(w, tokenString)
-	a.respondWithUser(w, user)
-}
-
-// respondWithUser отправляет успешный ответ с данными пользователя
-func (a *App) respondWithUser(w http.ResponseWriter, user models.User) {
-	responser.RespondWithJSON(w, http.StatusOK, LoginResponse{
-		UserID: user.ID,
-		Email:  user.Email,
-		Name:   user.Name,
-	})
-}
-
-// handleIsAdmin проверяет, является ли указанный пользователь администратором.
-// TODO: доставать токен из куки или бурать ручку совсем
-// func (a *App) handleIsAdmin(w http.ResponseWriter, r *http.Request) {
-// 	var req IsAdminRequest
-// 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-// 		utils.RespondWithError(w, http.StatusBadRequest, "invalid request body")
-// 		return
-// 	}
-
-// 	if req.UserID == 0 {
-// 		utils.RespondWithError(w, http.StatusBadRequest, "user_id is required")
-// 		return
-// 	}
-
-// 	isAdmin, err := a.auth.IsAdmin(r.Context(), req.UserID)
-// 	if err != nil {
-// 		if errors.Is(err, storage.ErrUserNotFound) {
-// 			utils.RespondWithError(w, http.StatusNotFound, "user not found")
-// 			return
-// 		}
-
-// 		a.log.Error("failed to check admin status", slog.String("error", err.Error()))
-// 		utils.RespondWithError(w, http.StatusInternalServerError, "failed to check admin status")
-// 		return
-// 	}
-
-// 	utils.RespondWithJSON(w, http.StatusOK, IsAdminResponse{IsAdmin: isAdmin})
-// }
-
-// handleLogout обрабатывает запросы на выход из системы, добавляя jti токена в черный список.
-// @Summary Выход пользователя
-// @Description Инвалидирует текущую сессию и очищает аутентификационную куку
-// @Tags auth
-// @Success 200 {object} map[string]string "logout successful"
-// @Failure 401 {object} ErrorResponse "invalid or expired token"
-// @Failure 500 {object} ErrorResponse "internal server error"
-// @Router /auth/logout [post]
-// @Security CookieAuth
-func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
-	a.log.Info("logout attempt", slog.String("op", "handleLogout"))
-
-	// достаём jti из контекста
-	jti, ok := r.Context().Value(middleware.JtiKey).(string)
-	if !ok {
-		a.log.Error("jti not found in context")
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
-		return
-	}
-
-	if err := a.services.Auth.Logout(r.Context(), jti, time.Now().Add(a.tokenTTL)); err != nil {
-		a.log.Error("failed to logout in service", slog.String("error", err.Error()))
-		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToLogout)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: "",
-		// Domain: "clover-go.ru", // Убран хардкод домена
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   -1,              // удаляем куку
-		Expires:  time.Unix(0, 0), // на всякий случай делаем просроченной
-	})
-
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
-
-// handleGetAds обрабатывает запросы на получение списка объявлений.
-// @Summary Получить список объявлений
-// @Description Возвращает список всех объявлений
-// @Tags ads
-// @Produce json
-// @Success 200 {array} models.Ad "список объявлений успешно получен"
-// @Failure 400 {object} ErrorResponse "method not allowed"
-// @Failure 500 {object} ErrorResponse "internal server error"
-// @Router /ads [get]
-func (a *App) handleGetAds(w http.ResponseWriter, r *http.Request) {
-	// обрабатываем только GET запросы
-	if r.Method != http.MethodGet {
-		// формируем и отправляем ошибку
-		responser.RespondWithError(w, http.StatusBadRequest, ErrMethodNotAllowed)
-		return
-	}
-
-	// копируем список объявлений без гонки данных
-	adsList := a.services.Ads.GetAll()
-
-	// формируем и отправляем ответ
-	responser.RespondWithJSON(w, http.StatusOK, adsList)
 }
 
 // MustRun запускает сервер и паникует при любой ошибке.
@@ -478,8 +227,10 @@ func (a *App) Run() error {
 
 // Stop корректно останавливает сервер.
 func (a *App) Stop() {
-	a.log.With(slog.String("opStop", opStop)).
-		Info("stopping http server", slog.Int("port", a.port))
+	a.log.Info("stopping http server",
+		slog.String("op", opStop),
+		slog.Int("port", a.port),
+	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

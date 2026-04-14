@@ -17,16 +17,27 @@ import (
 // @description API for the Clover service.
 // @host clover-go.ru
 // @BasePath /api/v1
+
 // @securityDefinitions.apikey CookieAuth
 // @in cookie
 // @name token
+// @description JWT session token
+
+// @securityDefinitions.apikey CsrfCookieAuth
+// @in cookie
+// @name csrf_token
+// @description CSRF token stored in cookies
+
+// @securityDefinitions.apikey CsrfHeaderAuth
+// @in header
+// @name X-CSRF-Token
+// @description CSRF token required in header
 func main() {
 	cfg := config.MustLoadConfig()
 
 	log := logger.SetupLogger(cfg.Env)
 
 	log.Info("starting applications")
-	// convert string to time.Duration
 
 	application := app.New(log, cfg)
 	go application.HTTPServer.MustRun()
