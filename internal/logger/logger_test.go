@@ -34,15 +34,21 @@ func TestSetupLogger_HandlerTypes(t *testing.T) {
 			logger := SetupLogger(tt.env)
 			handler := logger.Handler()
 
+			// SetupLogger оборачивает базовый handler в ContextHandler
+			ctxHandler, ok := handler.(*ContextHandler)
+			if !ok {
+				t.Fatalf("SetupLogger(%q) expected ContextHandler wrapper, got %T", tt.env, handler)
+			}
+
 			if tt.isJSON {
-				if _, ok := handler.(*slog.JSONHandler); !ok {
-					t.Errorf("SetupLogger(%q) expected JSONHandler, got %T", tt.env, handler)
+				if _, ok := ctxHandler.inner.(*slog.JSONHandler); !ok {
+					t.Errorf("SetupLogger(%q) expected inner JSONHandler, got %T", tt.env, ctxHandler.inner)
 				}
 			}
 
 			if tt.isText {
-				if _, ok := handler.(*slog.TextHandler); !ok {
-					t.Errorf("SetupLogger(%q) expected TextHandler, got %T", tt.env, handler)
+				if _, ok := ctxHandler.inner.(*slog.TextHandler); !ok {
+					t.Errorf("SetupLogger(%q) expected inner TextHandler, got %T", tt.env, ctxHandler.inner)
 				}
 			}
 		})

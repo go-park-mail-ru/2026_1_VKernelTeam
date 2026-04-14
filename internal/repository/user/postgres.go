@@ -4,11 +4,20 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	postgres "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const (
+	opSaveUser         = "db.user.SaveUser"
+	opGetUser          = "db.user.User"
+	opGetUserByID      = "db.user.UserByID"
+	opUpdateUser       = "db.user.UpdateUser"
+	opUpdateAvatarPath = "db.user.UpdateAvatarPath"
 )
 
 // Sentinel-ошибки — используются в юзкейсе для проверки через errors.Is.
@@ -25,10 +34,11 @@ type PgxIface interface {
 // UserStorage отвечает за операции с пользователями.
 type UserStorage struct {
 	pool PgxIface
+	log  *slog.Logger
 }
 
-func NewUserStorage(pool PgxIface) *UserStorage {
-	return &UserStorage{pool: pool}
+func NewUserStorage(pool PgxIface, log *slog.Logger) *UserStorage {
+	return &UserStorage{pool: pool, log: log}
 }
 
 // SaveUser сохраняет нового пользователя. Возвращает ErrUserExists, если email уже занят.
@@ -39,15 +49,32 @@ func (s *UserStorage) SaveUser(ctx context.Context, email string, passHash []byt
 		RETURNING id
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opSaveUser),
+		slog.String("email", email),
+	)
+
 	var id int64
 	err := s.pool.QueryRow(ctx, query, name, email, passHash).Scan(&id)
 	if err != nil {
 		if postgres.IsPgUniqueViolation(err) {
+			s.log.WarnContext(ctx, "user already exists",
+				slog.String("op", opSaveUser),
+				slog.String("email", email),
+			)
 			return 0, ErrUserExists
 		}
+		s.log.ErrorContext(ctx, "failed to save user",
+			slog.String("op", opSaveUser),
+			slog.String("error", err.Error()),
+		)
 		return 0, fmt.Errorf("SaveUser: %w", err)
 	}
 
+	s.log.InfoContext(ctx, "user saved successfully",
+		slog.String("op", opSaveUser),
+		slog.Int64("id", id),
+	)
 	return id, nil
 }
 
@@ -59,6 +86,11 @@ func (s *UserStorage) User(ctx context.Context, email string) (models.User, erro
 		WHERE email = $1
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUser),
+		slog.String("email", email),
+	)
+
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, email).Scan(
 		&u.ID, &u.Name, &u.Email, &u.PassHash,
@@ -66,11 +98,23 @@ func (s *UserStorage) User(ctx context.Context, email string) (models.User, erro
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.log.DebugContext(ctx, "user not found",
+				slog.String("op", opGetUser),
+				slog.String("email", email),
+			)
 			return models.User{}, ErrUserNotFound
 		}
+		s.log.ErrorContext(ctx, "failed to get user",
+			slog.String("op", opGetUser),
+			slog.String("error", err.Error()),
+		)
 		return models.User{}, fmt.Errorf("User: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "user fetched successfully",
+		slog.String("op", opGetUser),
+		slog.Int64("id", u.ID),
+	)
 	return u, nil
 }
 
@@ -92,6 +136,11 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
         WHERE u.id = $1
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUserByID),
+		slog.Int64("user_id", userID),
+	)
+
 	var u models.User
 	var cartCount *int
 
@@ -104,11 +153,24 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.log.DebugContext(ctx, "user not found",
+				slog.String("op", opGetUserByID),
+				slog.Int64("user_id", userID),
+			)
 			return models.User{}, ErrUserNotFound
 		}
+		s.log.ErrorContext(ctx, "failed to get user by id",
+			slog.String("op", opGetUserByID),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 		return models.User{}, fmt.Errorf("UserByID: %w", err)
 	}
 
+	s.log.DebugContext(ctx, "user fetched by id successfully",
+		slog.String("op", opGetUserByID),
+		slog.Int64("user_id", userID),
+	)
 	return u, nil
 }
 
@@ -121,6 +183,11 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 		RETURNING id, first_name, email, password_hash, created_at, updated_at
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opUpdateUser),
+		slog.Int64("user_id", userID),
+	)
+
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, name, userID).Scan(
 		&u.ID, &u.Name, &u.Email, &u.PassHash,
@@ -128,26 +195,57 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			s.log.WarnContext(ctx, "user not found for update",
+				slog.String("op", opUpdateUser),
+				slog.Int64("user_id", userID),
+			)
 			return models.User{}, ErrUserNotFound
 		}
+		s.log.ErrorContext(ctx, "failed to update user",
+			slog.String("op", opUpdateUser),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 		return models.User{}, fmt.Errorf("UpdateUser: %w", err)
 	}
 
+	s.log.InfoContext(ctx, "user updated successfully",
+		slog.String("op", opUpdateUser),
+		slog.Int64("user_id", userID),
+	)
 	return u, nil
 }
 
 // UpdateAvatarPath обновляет путь к аватару пользователя
-func (r *UserStorage) UpdateAvatarPath(ctx context.Context, userID int64, path string) error {
+func (s *UserStorage) UpdateAvatarPath(ctx context.Context, userID int64, path string) error {
 	const query = `UPDATE "user" SET avatar_path = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
 
-	res, err := r.pool.Exec(ctx, query, path, userID)
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opUpdateAvatarPath),
+		slog.Int64("user_id", userID),
+	)
+
+	res, err := s.pool.Exec(ctx, query, path, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to update avatar path",
+			slog.String("op", opUpdateAvatarPath),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("UpdateAvatarPath: %w", err)
 	}
 
 	if res.RowsAffected() == 0 {
+		s.log.WarnContext(ctx, "user not found for avatar update",
+			slog.String("op", opUpdateAvatarPath),
+			slog.Int64("user_id", userID),
+		)
 		return ErrUserNotFound
 	}
 
+	s.log.InfoContext(ctx, "avatar path updated successfully",
+		slog.String("op", opUpdateAvatarPath),
+		slog.Int64("user_id", userID),
+	)
 	return nil
 }

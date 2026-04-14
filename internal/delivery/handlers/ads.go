@@ -18,6 +18,15 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
+const (
+	opHandleCreateAd              = "handlers.HandleCreateAd"
+	opHandleUpdateAdByID          = "handlers.HandleUpdateAdByID"
+	opHandleGetUserAds            = "handlers.HandleGetUserAds"
+	opHandleAddToFavorites        = "handlers.HandleAddToFavorites"
+	opHandleDeleteFromFavorites   = "handlers.HandleDeleteFromFavorites"
+	opHandleGetFavorites          = "handlers.HandleGetFavorites"
+)
+
 // HandleGetAds обрабатывает запросы на получение списка объявлений
 // @Summary Получить список объявлений
 // @Description Возвращает список всех объявлений
@@ -26,24 +35,22 @@ import (
 // @Success 200 {array} models.Ad "список объявлений успешно получен"
 // @Failure 400 {object} dto.ErrorResponse "Method not allowed: Метод не поддерживается (ожидается GET)"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при получении объявлений"
-// @Failure 400 {object} dto.ErrorResponse "Method not allowed: Метод не поддерживается (ожидается GET)"
-// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при получении объявлений"
 // @Router /ads [get]
 func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
-	// обрабатываем только GET запросы
 	if r.Method != http.MethodGet {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrMethodNotAllowed)
 		return
 	}
 
-	// копируем список объявлений из сервиса и возвращаем его клиенту
 	adsList, err := h.services.Ads.GetAllAds(r.Context())
 	if err != nil {
+		h.log.ErrorContext(r.Context(), "failed to get ads list",
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
 
-	// формируем и отправляем ответ
 	responser.RespondWithJSON(w, http.StatusOK, adsList)
 }
 
@@ -72,6 +79,10 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
 			return
 		}
+		h.log.ErrorContext(r.Context(), "failed to get ad by id",
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -94,18 +105,18 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 // @Security CookieAuth
 // @Router /ads [post]
 func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleCreateAd"
-
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
 		responser.RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
-	// Ограничиваем размер запроса (50 MB на все фото)
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
 	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		h.log.Error("parse multipart form error", slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "parse multipart form error",
+			slog.String("op", opHandleCreateAd),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFileTooBig)
 		return
 	}
@@ -115,7 +126,6 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Парсим JSON-данные из поля "data"
 	var req dto.CreateAdRequest
 	dataField := r.FormValue("data")
 	if dataField == "" {
@@ -129,39 +139,41 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 
 	req.UserID = userID
 
-	// Удаляем HTML-теги из текстовых полей (защита от XSS)
 	req.Title = sanitizer.StripHTML(req.Title)
 	req.Description = sanitizer.StripHTML(req.Description)
 	req.Location = sanitizer.StripHTML(req.Location)
 
-	// Валидируем запрос
 	validationErrors := validator.ValidateCreateAdRequest(&req)
 	if validationErrors.HasErrors() {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
-	// Загружаем фотографии в S3
 	photoURLs, err := h.uploadPhotosFromForm(r)
 	if err != nil {
-		h.log.Error(ErrFailedToUploadPhotos, slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to upload photos",
+			slog.String("op", opHandleCreateAd),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFailedToUploadPhotos)
 		return
 	}
 	req.Photos = photoURLs
 
-	// Создаем новое объявление
 	adID, err := h.services.Ads.CreateAd(r.Context(), &req)
 	if err != nil {
 		if isCharacteristicValidationError(err) {
 			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		h.log.ErrorContext(r.Context(), "failed to create ad",
+			slog.String("op", opHandleCreateAd),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
 
-	// Возвращаем ID созданного объявления
 	responser.RespondWithJSON(w, http.StatusOK, map[string]int64{"ad_id": adID})
 }
 
@@ -182,8 +194,6 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Security CookieAuth
 // @Router /ads/{id} [put]
 func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleUpdateAdByID"
-
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
 		responser.RespondWithError(w, http.StatusUnauthorized, "unauthorized")
@@ -197,15 +207,16 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Ограничиваем размер запроса (50 MB на все фото)
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
 	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		h.log.Error("parse multipart form error", slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "parse multipart form error",
+			slog.String("op", opHandleUpdateAdByID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFileTooBig)
 		return
 	}
 
-	// Парсим JSON-данные из поля "data"
 	var req dto.UpdateAdRequest
 	dataField := r.FormValue("data")
 	if dataField == "" {
@@ -220,8 +231,6 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 	req.ID = id
 	req.UserID = userID
 
-	// Удаляем HTML-теги из текстовых полей (защита от XSS)
-	// Санитизуем только если поля были отправлены
 	if req.Title != nil {
 		*req.Title = sanitizer.StripHTML(*req.Title)
 	}
@@ -232,23 +241,23 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		*req.Location = sanitizer.StripHTML(*req.Location)
 	}
 
-	// Валидируем запрос
 	validationErrors := validator.ValidateUpdateAdRequest(&req)
 	if validationErrors.HasErrors() {
 		responser.RespondWithJSON(w, http.StatusBadRequest, validationErrors)
 		return
 	}
 
-	// Загружаем фотографии в S3 (если есть)
 	photoURLs, err := h.uploadPhotosFromForm(r)
 	if err != nil {
-		h.log.Error(ErrFailedToUploadPhotos, slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to upload photos",
+			slog.String("op", opHandleUpdateAdByID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFailedToUploadPhotos)
 		return
 	}
 	req.Photos = photoURLs
 
-	// Обновляем объявление
 	if err := h.services.Ads.UpdateAd(r.Context(), &req); err != nil {
 		if errors.Is(err, ad.ErrAdNotFound) {
 			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
@@ -262,6 +271,10 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		h.log.ErrorContext(r.Context(), "failed to update ad",
+			slog.String("op", opHandleUpdateAdByID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -332,6 +345,10 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
 			return
 		}
+		h.log.ErrorContext(r.Context(), "failed to delete ad",
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -375,6 +392,10 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
 			return
 		}
+		h.log.ErrorContext(r.Context(), "failed to close ad",
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -393,26 +414,27 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object} map[string]string "ошибка сервера"
 // @Router /users/{id}/ads [get]
 func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleGetUserAds"
-
-	// получаем ID из /api/v1/users/{id}/ads
 	idStr := r.PathValue("id")
 	userID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		h.log.Error(ErrInvalidUserID, slog.String("op", op), slog.String("id", idStr))
+		h.log.WarnContext(r.Context(), "invalid user id",
+			slog.String("op", opHandleGetUserAds),
+			slog.String("id", idStr),
+		)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidUserID)
 		return
 	}
 
-	// получаем список объявлений
 	ads, err := h.services.Ads.GetAdsByUserID(r.Context(), userID)
 	if err != nil {
-		h.log.Error(ErrFailedToGetUserAds, slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to get user ads",
+			slog.String("op", opHandleGetUserAds),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToGetUserAds)
 		return
 	}
 
-	// формируем ответ
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
 		"ads": ads,
 	})
@@ -431,17 +453,15 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 // @Security CookieAuth
 // @Router /ads/{id}/favorite [post]
 func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleAddToFavorites"
-
-	// извлекаем userID из контекста (туда его положил authMW)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
-		h.log.Error("user id not found in context", slog.String("op", op))
+		h.log.ErrorContext(r.Context(), "user id not found in context",
+			slog.String("op", opHandleAddToFavorites),
+		)
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	// получаем ID объявления
 	idStr := r.PathValue("id")
 	adID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -449,9 +469,11 @@ func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// добавляем объявление в избранное
 	if err := h.services.Ads.AddFavorite(r.Context(), userID, adID); err != nil {
-		h.log.Error("failed to add favorite", slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to add favorite",
+			slog.String("op", opHandleAddToFavorites),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -472,17 +494,15 @@ func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Reques
 // @Security CookieAuth
 // @Router /ads/{id}/favorite [delete]
 func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleDeleteFromFavorites"
-
-	// извлекаем userID из контекста (туда его положил authMW)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
-		h.log.Error("user id not found in context", slog.String("op", op))
+		h.log.ErrorContext(r.Context(), "user id not found in context",
+			slog.String("op", opHandleDeleteFromFavorites),
+		)
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	// получаем ID объявления
 	idStr := r.PathValue("id")
 	adID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -490,9 +510,11 @@ func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// удаляем объявление из избранного
 	if err := h.services.Ads.RemoveFavorite(r.Context(), userID, adID); err != nil {
-		h.log.Error("failed to remove favorite", slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to remove favorite",
+			slog.String("op", opHandleDeleteFromFavorites),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -511,20 +533,21 @@ func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.R
 // @Security CookieAuth
 // @Router /profile/favorites [get]
 func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request) {
-	const op = "handlers.HandleGetFavorites"
-
-	// извлекаем userID из контекста (туда его положил authMW)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
-		h.log.Error("user id not found in context", slog.String("op", op))
+		h.log.ErrorContext(r.Context(), "user id not found in context",
+			slog.String("op", opHandleGetFavorites),
+		)
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	// получаем список объявлений из избранного
 	favorites, err := h.services.Ads.GetUserFavorites(r.Context(), userID)
 	if err != nil {
-		h.log.Error("failed to get favorites", slog.String("op", op), slog.String("error", err.Error()))
+		h.log.ErrorContext(r.Context(), "failed to get favorites",
+			slog.String("op", opHandleGetFavorites),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}
@@ -554,6 +577,10 @@ func (h *AdsHandlers) HandleGetCategoryCharacteristics(w http.ResponseWriter, r 
 
 	chars, err := h.services.Ads.GetCategoryCharacteristics(r.Context(), categoryID)
 	if err != nil {
+		h.log.ErrorContext(r.Context(), "failed to get category characteristics",
+			slog.Int64("category_id", categoryID),
+			slog.String("error", err.Error()),
+		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
 		return
 	}

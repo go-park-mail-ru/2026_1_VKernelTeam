@@ -4,10 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const (
+	opCartAdd       = "db.cart.Add"
+	opCartRemove    = "db.cart.Remove"
+	opCartGetByUser = "db.cart.GetByUserID"
+	opCartClear     = "db.cart.Clear"
+	opCartCheckout  = "db.cart.Checkout"
 )
 
 // PgxPoolTx интерфейс для пула соединений с поддержкой транзакций
@@ -19,43 +28,61 @@ type PgxPoolTx interface {
 }
 
 var (
-	ErrCartItemNotFound     = errors.New("cart item not found")
-	ErrProductNotFound      = errors.New("product not found or not active")
-	ErrOwnProduct           = errors.New("cannot add own product to cart")
-	ErrProductReserved      = errors.New("one or more products are no longer available")
+	ErrCartItemNotFound    = errors.New("cart item not found")
+	ErrProductNotFound     = errors.New("product not found or not active")
+	ErrOwnProduct          = errors.New("cannot add own product to cart")
+	ErrProductReserved     = errors.New("one or more products are no longer available")
 	ErrProductAlreadyInCart = errors.New("product already in cart")
-	ErrCartEmpty            = errors.New("cart is empty")
+	ErrCartEmpty           = errors.New("cart is empty")
 )
 
 // CartStorage отвечает за операции с корзиной.
 type CartStorage struct {
 	pool PgxPoolTx
+	log  *slog.Logger
 }
 
-func NewCartStorage(pool PgxPoolTx) *CartStorage {
-	return &CartStorage{pool: pool}
+func NewCartStorage(pool PgxPoolTx, log *slog.Logger) *CartStorage {
+	return &CartStorage{pool: pool, log: log}
 }
 
 // Add добавляет товар в корзину пользователя.
 func (s *CartStorage) Add(ctx context.Context, userID, productID int64) error {
-	// Добавляем, игнорируя конфликт (если товар уже в корзине - ничего страшного,
-	// или можно возвращать ошибку. По дизайну "вернуть ошибку".
-	// В PostgreSQL добавим ON CONFLICT DO NOTHING и проверим RowsAffected.
 	const query = `
 		INSERT INTO cart_item (user_id, product_id, quantity)
 		VALUES ($1, $2, 1)
 		ON CONFLICT (user_id, product_id) DO NOTHING
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCartAdd),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
+
 	res, err := s.pool.Exec(ctx, query, userID, productID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to add to cart",
+			slog.String("op", opCartAdd),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("CartStorage.Add: exec: %w", err)
 	}
 
 	if res.RowsAffected() == 0 {
+		s.log.DebugContext(ctx, "product already in cart",
+			slog.String("op", opCartAdd),
+			slog.Int64("user_id", userID),
+			slog.Int64("product_id", productID),
+		)
 		return ErrProductAlreadyInCart
 	}
 
+	s.log.DebugContext(ctx, "product added to cart",
+		slog.String("op", opCartAdd),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 	return nil
 }
 
@@ -66,15 +93,35 @@ func (s *CartStorage) Remove(ctx context.Context, userID, productID int64) error
 		WHERE user_id = $1 AND product_id = $2
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCartRemove),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
+
 	res, err := s.pool.Exec(ctx, query, userID, productID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to remove from cart",
+			slog.String("op", opCartRemove),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("CartStorage.Remove: exec: %w", err)
 	}
 
 	if res.RowsAffected() == 0 {
+		s.log.DebugContext(ctx, "cart item not found",
+			slog.String("op", opCartRemove),
+			slog.Int64("user_id", userID),
+			slog.Int64("product_id", productID),
+		)
 		return ErrCartItemNotFound
 	}
 
+	s.log.DebugContext(ctx, "product removed from cart",
+		slog.String("op", opCartRemove),
+		slog.Int64("user_id", userID),
+		slog.Int64("product_id", productID),
+	)
 	return nil
 }
 
@@ -95,8 +142,17 @@ func (s *CartStorage) GetByUserID(ctx context.Context, userID int64) ([]dto.Cart
 		ORDER BY c.created_at DESC
 	`
 
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCartGetByUser),
+		slog.Int64("user_id", userID),
+	)
+
 	rows, err := s.pool.Query(ctx, query, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to get cart items",
+			slog.String("op", opCartGetByUser),
+			slog.String("error", err.Error()),
+		)
 		return nil, fmt.Errorf("CartStorage.GetByUserID: query: %w", err)
 	}
 	defer rows.Close()
@@ -108,6 +164,10 @@ func (s *CartStorage) GetByUserID(ctx context.Context, userID int64) ([]dto.Cart
 		if err := rows.Scan(
 			&item.ProductID, &item.Title, &item.Price, &item.SellerID, &item.SellerName, &imagePath,
 		); err != nil {
+			s.log.ErrorContext(ctx, "failed to scan cart item",
+				slog.String("op", opCartGetByUser),
+				slog.String("error", err.Error()),
+			)
 			return nil, fmt.Errorf("CartStorage.GetByUserID: scan: %w", err)
 		}
 		if imagePath != nil {
@@ -124,34 +184,59 @@ func (s *CartStorage) GetByUserID(ctx context.Context, userID int64) ([]dto.Cart
 		items = []dto.CartItemResponse{}
 	}
 
+	s.log.DebugContext(ctx, "cart items fetched",
+		slog.String("op", opCartGetByUser),
+		slog.Int64("user_id", userID),
+		slog.Int("count", len(items)),
+	)
 	return items, nil
 }
 
 // Clear полностью очищает корзину пользователя.
 func (s *CartStorage) Clear(ctx context.Context, userID int64) error {
 	const query = `DELETE FROM cart_item WHERE user_id = $1`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opCartClear),
+		slog.Int64("user_id", userID),
+	)
+
 	_, err := s.pool.Exec(ctx, query, userID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to clear cart",
+			slog.String("op", opCartClear),
+			slog.String("error", err.Error()),
+		)
 		return fmt.Errorf("CartStorage.Clear: exec: %w", err)
 	}
+
+	s.log.DebugContext(ctx, "cart cleared",
+		slog.String("op", opCartClear),
+		slog.Int64("user_id", userID),
+	)
 	return nil
 }
 
 // Checkout оформляет заказ на все товары в корзине.
 // Возвращает список ID заказов и контакты продавцов.
 func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map[int64]*dto.SellerContact, error) {
+	s.log.InfoContext(ctx, "starting checkout transaction",
+		slog.String("op", opCartCheckout),
+		slog.Int64("buyer_id", buyerID),
+	)
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to begin transaction",
+			slog.String("op", opCartCheckout),
+			slog.String("error", err.Error()),
+		)
 		return nil, nil, fmt.Errorf("Checkout: begin tx: %w", err)
 	}
-	// Делаем Rollback с обработкой паники
 	defer func() {
 		_ = tx.Rollback(ctx)
 	}()
 
-	// 1. Получаем все товары в корзине с эксклюзивной блокировкой (FOR UPDATE),
-	// чтобы никто другой не мог их изменить до завершения транзакции.
-	// Очередь сортировки помогает избежать DeadLock.
 	const queryItems = `
 		SELECT p.id, p.seller_id, p.price, p.status, u.id, u.first_name, u.email
 		FROM cart_item c
@@ -163,6 +248,10 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 
 	rows, err := tx.Query(ctx, queryItems, buyerID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query cart items for checkout",
+			slog.String("op", opCartCheckout),
+			slog.String("error", err.Error()),
+		)
 		return nil, nil, fmt.Errorf("Checkout: query cart items: %w", err)
 	}
 
@@ -182,6 +271,10 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 			&row.seller.ID, &row.seller.Name, &row.seller.Email,
 		); err != nil {
 			rows.Close()
+			s.log.ErrorContext(ctx, "failed to scan checkout item",
+				slog.String("op", opCartCheckout),
+				slog.String("error", err.Error()),
+			)
 			return nil, nil, fmt.Errorf("Checkout: scan cart item: %w", err)
 		}
 		items = append(items, row)
@@ -189,18 +282,30 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 	rows.Close()
 
 	if len(items) == 0 {
+		s.log.WarnContext(ctx, "checkout attempted with empty cart",
+			slog.String("op", opCartCheckout),
+			slog.Int64("buyer_id", buyerID),
+		)
 		return nil, nil, ErrCartEmpty
 	}
 
-	// 2. Проверяем статус всех товаров
+	s.log.DebugContext(ctx, "cart items locked for checkout",
+		slog.String("op", opCartCheckout),
+		slog.Int64("buyer_id", buyerID),
+		slog.Int("items_count", len(items)),
+	)
+
 	for _, item := range items {
 		if item.status != "active" {
-			// Откат транзакции произойдет автоматически из-за defer tx.Rollback
+			s.log.WarnContext(ctx, "product no longer available during checkout",
+				slog.String("op", opCartCheckout),
+				slog.Int64("product_id", item.productID),
+				slog.String("status", item.status),
+			)
 			return nil, nil, ErrProductReserved
 		}
 	}
 
-	// 3. Группируем товары по продавцам для создания заказов
 	ordersBySeller := make(map[int64][]cartRow)
 	sellers := make(map[int64]*dto.SellerContact)
 
@@ -214,7 +319,6 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 
 	var orderIDs []int64
 
-	// 4. Создаем заказы
 	for sellerID, sellerItems := range ordersBySeller {
 		var totalAmount int64
 		for _, item := range sellerItems {
@@ -229,12 +333,16 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 		`
 		err = tx.QueryRow(ctx, createOrderQuery, buyerID, totalAmount).Scan(&orderID)
 		if err != nil {
+			s.log.ErrorContext(ctx, "failed to create order",
+				slog.String("op", opCartCheckout),
+				slog.Int64("seller_id", sellerID),
+				slog.String("error", err.Error()),
+			)
 			return nil, nil, fmt.Errorf("Checkout: create order for seller %d: %w", sellerID, err)
 		}
 
 		orderIDs = append(orderIDs, orderID)
 
-		// 5. Создаем элементы заказа
 		for _, item := range sellerItems {
 			const createOrderItemQuery = `
 				INSERT INTO order_item (order_id, product_id, price_at_purchase, quantity)
@@ -242,32 +350,52 @@ func (s *CartStorage) Checkout(ctx context.Context, buyerID int64) ([]int64, map
 			`
 			_, err = tx.Exec(ctx, createOrderItemQuery, orderID, item.productID, item.price)
 			if err != nil {
+				s.log.ErrorContext(ctx, "failed to create order item",
+					slog.String("op", opCartCheckout),
+					slog.Int64("product_id", item.productID),
+					slog.String("error", err.Error()),
+				)
 				return nil, nil, fmt.Errorf("Checkout: create order item %d: %w", item.productID, err)
 			}
 
-			// 6. Обновляем статус товара
 			const updateProductQuery = `
 				UPDATE product SET status = 'reserved', updated_at = NOW()
 				WHERE id = $1
 			`
 			_, err = tx.Exec(ctx, updateProductQuery, item.productID)
 			if err != nil {
+				s.log.ErrorContext(ctx, "failed to update product status",
+					slog.String("op", opCartCheckout),
+					slog.Int64("product_id", item.productID),
+					slog.String("error", err.Error()),
+				)
 				return nil, nil, fmt.Errorf("Checkout: update product status %d: %w", item.productID, err)
 			}
 		}
 	}
 
-	// 7. Удаляем все товары из корзины данного пользователя
 	const clearCartQuery = `DELETE FROM cart_item WHERE user_id = $1`
 	_, err = tx.Exec(ctx, clearCartQuery, buyerID)
 	if err != nil {
+		s.log.ErrorContext(ctx, "failed to clear cart after checkout",
+			slog.String("op", opCartCheckout),
+			slog.String("error", err.Error()),
+		)
 		return nil, nil, fmt.Errorf("Checkout: clear cart: %w", err)
 	}
 
-	// 8. Комитим транзакцию
 	if err = tx.Commit(ctx); err != nil {
+		s.log.ErrorContext(ctx, "failed to commit checkout transaction",
+			slog.String("op", opCartCheckout),
+			slog.String("error", err.Error()),
+		)
 		return nil, nil, fmt.Errorf("Checkout: commit tx: %w", err)
 	}
 
+	s.log.InfoContext(ctx, "checkout completed successfully",
+		slog.String("op", opCartCheckout),
+		slog.Int64("buyer_id", buyerID),
+		slog.Int("orders_count", len(orderIDs)),
+	)
 	return orderIDs, sellers, nil
 }

@@ -1,5 +1,5 @@
 {
-  "env": "local",
+  "env": "prod",
   "token_ttl": "15m",
   "refresh_ttl": "168h",
   "http": {

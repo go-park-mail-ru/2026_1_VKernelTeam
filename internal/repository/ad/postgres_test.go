@@ -2,6 +2,7 @@ package ad
 
 import (
 	"context"
+	"log/slog"
 	"regexp"
 	"testing"
 	"time"
@@ -29,7 +30,7 @@ func TestAdStorage_GetAdByID(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	adID := int64(1)
 
@@ -76,7 +77,7 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
@@ -122,7 +123,7 @@ func TestAdStorage_CreateAd(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	req := &dto.CreateAdRequest{
 		UserID:      1,
@@ -160,7 +161,7 @@ func TestAdStorage_UpdateAd(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 
 	t.Run("Success with only title", func(t *testing.T) {
@@ -238,7 +239,7 @@ func TestAdStorage_DeleteAd(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	adID := int64(10)
 	userID := int64(1)
@@ -269,7 +270,7 @@ func TestAdStorage_CloseAd(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	adID := int64(10)
 	userID := int64(1)
@@ -300,7 +301,7 @@ func TestAdStorage_GetAdsByUserID(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 
@@ -337,7 +338,7 @@ func TestAdStorage_AddFavorite(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 	adID := int64(10)
@@ -377,7 +378,7 @@ func TestAdStorage_RemoveFavorite(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 	adID := int64(10)
@@ -418,7 +419,7 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 	}
 	defer mock.Close()
 
-	storage := NewAdStorage(mock)
+	storage := NewAdStorage(mock, slog.Default())
 	ctx := context.Background()
 	userID := int64(1)
 
