@@ -56,11 +56,18 @@ type Ads interface {
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
+// Cart описывает методы сервиса корзины
 type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
 	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
+}
+
+// Chat описывает методы сервиса чатов и заказов
+type Chat interface {
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) error
+	ConfirmPurchase(ctx context.Context, adID int64, userID int64) error
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -73,6 +80,7 @@ type Services struct {
 	Ads  Ads
 	Auth Auth
 	Cart Cart
+	Chat Chat
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -89,6 +97,7 @@ type App struct {
 	authHandlers *handlers.AuthHandlers
 	adsHandlers  *handlers.AdsHandlers
 	cartHandlers *handlers.CartHandlers
+	chatHandlers *handlers.ChatHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -116,16 +125,25 @@ func New(
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL, refreshTTL, secret)
+
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
 	app.cartHandlers = handlers.NewCartHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
+	app.chatHandlers = handlers.NewChatHandlers(log, &handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+		Chat: services.Chat,
+	})
 
 	app.setupRoutes()
 
@@ -186,6 +204,10 @@ func (a *App) setupRoutes() {
 	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
 	a.router.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteFromFavorites)))
 	a.router.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(a.adsHandlers.HandleGetFavorites)))
+
+	// Чаты и заказы
+	a.router.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(a.chatHandlers.HandleCreateOrder)))
+	a.router.Handle("POST "+prefix+"/ads/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

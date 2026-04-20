@@ -45,6 +45,7 @@ type Services struct {
 	Ads  Ads
 	Auth Auth
 	Cart Cart
+	Chat Chat
 }
 
 // Cart описывает методы сервиса корзины
@@ -83,6 +84,12 @@ type Auth interface {
 	UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error)
 }
 
+// Chat описывает методы сервиса чатов и заказов
+type Chat interface {
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) error
+	ConfirmPurchase(ctx context.Context, adID int64, userID int64) error
+}
+
 // AuthHandlers содержит обработчики для аутентификации
 type AuthHandlers struct {
 	log        *slog.Logger
@@ -104,6 +111,12 @@ type CartHandlers struct {
 	log      *slog.Logger
 	services Services
 	tokenTTL time.Duration
+}
+
+// ChatHandlers обрабатывает запросы, связанные с чатами и заказами
+type ChatHandlers struct {
+	log      *slog.Logger
+	services *Services
 }
 
 // NewAuthHandlers создает новый экземпляр AuthHandlers
@@ -132,6 +145,14 @@ func NewCartHandlers(log *slog.Logger, services Services, tokenTTL time.Duration
 		log:      log,
 		services: services,
 		tokenTTL: tokenTTL,
+	}
+}
+
+// NewChatHandlers создает новый экземпляр ChatHandlers
+func NewChatHandlers(log *slog.Logger, services *Services) *ChatHandlers {
+	return &ChatHandlers{
+		log:      log,
+		services: services,
 	}
 }
 
