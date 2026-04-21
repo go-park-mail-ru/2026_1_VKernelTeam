@@ -456,6 +456,44 @@ paths:
       summary: Закрыть объявление
       tags:
       - ads
+  /ads/{id}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Продавец подтверждает, что продал товар. Статус объявления меняется
+        на 'sold'
+      parameters:
+      - description: ID объявления (ad_id)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: покупка подтверждена успешно
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid ad id / forbidden: не продавец товара'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Подтвердить покупку товара
+      tags:
+      - orders
   /ads/{id}/favorite:
     delete:
       description: Удаляет объявление из списка избранного текущего пользователя
@@ -525,6 +563,43 @@ paths:
       summary: Добавить в избранное
       tags:
       - favorites
+  /ads/{id}/order:
+    post:
+      consumes:
+      - application/json
+      description: Отправляет уведомление продавцу о желании купить товар
+      parameters:
+      - description: ID объявления (ad_id)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: запрос на покупку создан успешно
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Создать запрос на покупку товара
+      tags:
+      - orders
   /auth/login:
     post:
       consumes:

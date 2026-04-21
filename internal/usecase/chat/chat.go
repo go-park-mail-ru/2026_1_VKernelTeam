@@ -4,16 +4,16 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
-// const (
-// 	opCreateOrderRequest = "usecase.chat.CreateOrderRequest"
-// 	opConfirmPurchase    = "usecase.chat.ConfirmPurchase"
-// )
+const (
+	opCreateOrderRequest = "usecase.chat.CreateOrderRequest"
+	opConfirmPurchase    = "usecase.chat.ConfirmPurchase"
+)
 
 // ChatProvider описывает интерфейс для работы с чатами в репозитории
 type ChatProvider interface {
@@ -25,7 +25,6 @@ type ChatProvider interface {
 // AdProvider описывает интерфейс для получения данных объявления
 type AdProvider interface {
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
-	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
 }
 
 // Chat описывает сервис для работы с чатами и заказами
@@ -48,37 +47,132 @@ func New(
 	}
 }
 
-// CreateOrderRequest создает запрос на покупку товара (отправляет системное уведомление продавцу).
-// Этап 1: Получает объявление по ID
-// Этап 2: Проверяет, что объявление в статусе 'active'
-// Этап 3: Убедится, что покупатель не равен продавцу
-// Этап 4: Получает/создает чат между покупателем и продавцом
-// Этап 5: Создает сообщение типа 'order' с текстом "Пользователь хочет купить ваш товар"
-// Этап 6: Опционально переводит объявление в статус 'reserved'
+// CreateOrderRequest создает запрос на покупку товара и чат между покупателем и продавцом.
 func (c *Chat) CreateOrderRequest(
 	ctx context.Context,
 	adID int64,
 	buyerID int64,
 ) error {
-	// TODO: Получить объявление по ID
-	// TODO: Проверить, что объявление в статусе 'active'
-	// TODO: Проверить, что buyerID != sellerID
-	// TODO: Получить/создать чат
-	// TODO: Создать сообщение типа 'order'
+	c.log.InfoContext(ctx, "creating order request",
+		slog.String("op", opCreateOrderRequest),
+		slog.Int64("ad_id", adID),
+		slog.Int64("buyer_id", buyerID),
+	)
+
+	// Получаем объявление
+	ad, err := c.adStorage.GetAdByID(ctx, adID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to get ad",
+			slog.String("op", opCreateOrderRequest),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	// Проверяем статус
+	if ad.Status != models.AdStatusActive {
+		c.log.WarnContext(ctx, "ad is not active",
+			slog.String("op", opCreateOrderRequest),
+			slog.String("status", ad.Status),
+		)
+		return fmt.Errorf("ad is not active")
+	}
+
+	// Проверяем, что покупатель не является продавцом
+	if buyerID == ad.SellerID {
+		c.log.WarnContext(ctx, "buyer and seller are the same",
+			slog.String("op", opCreateOrderRequest),
+		)
+		return fmt.Errorf("cannot buy own product")
+	}
+
+	// Получяем или создаём чат
+	chatID, err := c.chatStorage.GetOrCreateChat(ctx, adID, buyerID, ad.SellerID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to get or create chat",
+			slog.String("op", opCreateOrderRequest),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	// Создём сообщение типа 'order'
+	messageText := fmt.Sprintf(
+		"Покупатель хочет приобрести товар: %s (Цена: %d)",
+		ad.Title,
+		ad.Price,
+	)
+
+	msg := &models.Message{
+		ChatID:   chatID,
+		SenderID: buyerID,
+		Text:     messageText,
+		Type:     models.MessageTypeOrder,
+	}
+
+	_, err = c.chatStorage.CreateMessage(ctx, msg)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to create message",
+			slog.String("op", opCreateOrderRequest),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	c.log.InfoContext(ctx, "order request created successfully",
+		slog.String("op", opCreateOrderRequest),
+		slog.Int64("chat_id", chatID),
+	)
+
 	return nil
 }
 
 // ConfirmPurchase подтверждает покупку и изменяет статус объявления на 'sold'.
-// Этап 1: Получает объявление по ID
-// Этап 2: Проверяет, что userID является продавцом (sellerID)
-// Этап 3: Обновляет статус объявления на 'sold'
 func (c *Chat) ConfirmPurchase(
 	ctx context.Context,
 	adID int64,
 	userID int64,
 ) error {
-	// TODO: Получить объявление по ID
-	// TODO: Проверить, что userID == ad.SellerID (или вернуть ошибку Forbidden)
-	// TODO: Обновить статус объявления на 'sold'
+	c.log.InfoContext(ctx, "confirming purchase",
+		slog.String("op", opConfirmPurchase),
+		slog.Int64("ad_id", adID),
+		slog.Int64("user_id", userID),
+	)
+
+	// Получаем объявление
+	ad, err := c.adStorage.GetAdByID(ctx, adID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to get ad",
+			slog.String("op", opConfirmPurchase),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	// Проверяем, что пользователь - продавец
+	if userID != ad.SellerID {
+		c.log.WarnContext(ctx, "user is not the seller",
+			slog.String("op", opConfirmPurchase),
+			slog.Int64("user_id", userID),
+			slog.Int64("seller_id", ad.SellerID),
+		)
+		return fmt.Errorf("forbidden: not the seller")
+	}
+
+	// Обновляем статус объявления на 'sold'
+	err = c.chatStorage.UpdateAdStatus(ctx, adID, models.AdStatusSold)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to update ad status",
+			slog.String("op", opConfirmPurchase),
+			slog.String("error", err.Error()),
+		)
+		return err
+	}
+
+	c.log.InfoContext(ctx, "purchase confirmed successfully",
+		slog.String("op", opConfirmPurchase),
+		slog.Int64("ad_id", adID),
+	)
+
 	return nil
 }

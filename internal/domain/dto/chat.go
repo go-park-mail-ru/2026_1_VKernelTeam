@@ -34,6 +34,4 @@ type MessageResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type ConfirmPurchaseRequest struct {
-	// TODO: Добавить нужные поля при необходимости
-}
+// TODO: при дальнейшей разработке проверить используемость этих структур
