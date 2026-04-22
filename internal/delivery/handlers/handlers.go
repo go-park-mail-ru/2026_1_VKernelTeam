@@ -30,6 +30,7 @@ const (
 	ErrMethodNotAllowed     = "Method not allowed"
 	ErrAdNotFound           = "ad not found"
 	ErrInvalidAdID          = "invalid ad id"
+	ErrInvalidChatID        = "invalid chat id"
 	ErrForbidden            = "forbidden"
 	ErrInvalidUserID        = "invalid user id"
 	ErrFailedToGetUserAds   = "failed to get user ads"
@@ -53,7 +54,6 @@ type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
-	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -86,8 +86,8 @@ type Auth interface {
 
 // Chat описывает методы сервиса чатов и заказов
 type Chat interface {
-	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) error
-	ConfirmPurchase(ctx context.Context, adID int64, userID int64) error
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
+	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
 }
 
 // AuthHandlers содержит обработчики для аутентификации

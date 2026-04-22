@@ -29,18 +29,6 @@ definitions:
       total_price:
         type: integer
     type: object
-  dto.CheckoutResponse:
-    properties:
-      order_ids:
-        items:
-          type: integer
-        type: array
-      sellers:
-        additionalProperties:
-          $ref: '#/definitions/dto.SellerContact'
-        description: Ключ — ID продавца
-        type: object
-    type: object
   dto.ErrorResponse:
     properties:
       error:
@@ -61,6 +49,13 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.OrderResponse:
+    properties:
+      chat_id:
+        type: integer
+      message:
+        type: string
     type: object
   dto.PublicUserResponse:
     properties:
@@ -86,15 +81,6 @@ definitions:
       name:
         type: string
       password:
-        type: string
-    type: object
-  dto.SellerContact:
-    properties:
-      email:
-        type: string
-      id:
-        type: integer
-      name:
         type: string
     type: object
   dto.UpdateProfileRequest:
@@ -456,44 +442,6 @@ paths:
       summary: Закрыть объявление
       tags:
       - ads
-  /ads/{id}/confirm:
-    post:
-      consumes:
-      - application/json
-      description: Продавец подтверждает, что продал товар. Статус объявления меняется
-        на 'sold'
-      parameters:
-      - description: ID объявления (ad_id)
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: покупка подтверждена успешно
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: 'invalid ad id / forbidden: не продавец товара'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: unauthorized
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: internal error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Подтвердить покупку товара
-      tags:
-      - orders
   /ads/{id}/favorite:
     delete:
       description: Удаляет объявление из списка избранного текущего пользователя
@@ -567,7 +515,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Отправляет уведомление продавцу о желании купить товар
+      description: |-
+        Создаёт (или переиспользует существующий) чат между покупателем
+        и продавцом по объявлению и отправляет туда сообщение-заказ.
+        В ответе возвращается ID чата для редиректа на фронте.
       parameters:
       - description: ID объявления (ad_id)
         in: path
@@ -580,9 +531,7 @@ paths:
         "200":
           description: запрос на покупку создан успешно
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.OrderResponse'
         "400":
           description: invalid ad id
           schema:
@@ -817,35 +766,6 @@ paths:
       summary: Удалить из корзины
       tags:
       - cart
-  /cart/checkout:
-    post:
-      description: Совершает покупку всех товаров из корзины и возвращает контакты
-        продавцов
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: успешное оформление заказа
-          schema:
-            $ref: '#/definitions/dto.CheckoutResponse'
-        "400":
-          description: 'cart is empty / one or more products are no longer available:
-            Ошибка оформления заказа'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: 'unauthorized: Пользователь не авторизован'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: 'internal error: Ошибка сервера'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - CookieAuth: []
-      summary: Оформить заказ
-      tags:
-      - cart
   /categories/{id}/characteristics:
     get:
       description: Возвращает список предопределённых характеристик категории с допустимыми
@@ -876,6 +796,45 @@ paths:
       summary: Получить характеристики категории
       tags:
       - categories
+  /chats/{id}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,
+        объявление переводится в статус 'sold' и удаляется из корзин всех пользователей.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: покупка подтверждена успешно
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: 'invalid chat id / forbidden: not the seller / ad is not active'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Подтвердить покупку товара
+      tags:
+      - orders
   /profile:
     get:
       description: Возвращает данные профиля на основе userID из контекста (JWT)

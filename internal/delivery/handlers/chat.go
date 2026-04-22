@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
@@ -22,13 +23,15 @@ const (
 
 // HandleCreateOrder обрабатывает запрос на создание заказа (запрос покупки).
 // @Summary Создать запрос на покупку товара
-// @Description Отправляет уведомление продавцу о желании купить товар
+// @Description Создаёт (или переиспользует существующий) чат между покупателем
+// @Description и продавцом по объявлению и отправляет туда сообщение-заказ.
+// @Description В ответе возвращается ID чата для редиректа на фронте.
 // @Tags orders
 // @Accept json
 // @Produce json
 // @Security Bearer
 // @Param id path int true "ID объявления (ad_id)"
-// @Success 200 {object} map[string]string "запрос на покупку создан успешно"
+// @Success 200 {object} dto.OrderResponse "запрос на покупку создан успешно"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized"
 // @Failure 500 {object} dto.ErrorResponse "internal error"
@@ -58,8 +61,8 @@ func (h *ChatHandlers) HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Вызвываем usecase CreateOrderRequest
-	err = h.services.Chat.CreateOrderRequest(r.Context(), adID, userID)
+	// Получаем ID чата, создавая запрос на покупку (или переиспользуя существующий)
+	chatID, err := h.services.Chat.CreateOrderRequest(r.Context(), adID, userID)
 	if err != nil {
 		h.log.ErrorContext(r.Context(), "failed to create order request",
 			slog.String("op", opHandleCreateOrder),
@@ -69,24 +72,26 @@ func (h *ChatHandlers) HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "order request created successfully",
+	responser.RespondWithJSON(w, http.StatusOK, dto.OrderResponse{
+		ChatID:  chatID,
+		Message: "order request created successfully",
 	})
 }
 
-// HandleConfirmOrder обрабатывает подтверждение покупки продавцом.
+// HandleConfirmOrder обрабатывает подтверждение покупки продавцом в чате.
 // @Summary Подтвердить покупку товара
-// @Description Продавец подтверждает, что продал товар. Статус объявления меняется на 'sold'
+// @Description Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,
+// @Description объявление переводится в статус 'sold' и удаляется из корзин всех пользователей.
 // @Tags orders
 // @Accept json
 // @Produce json
 // @Security Bearer
-// @Param id path int true "ID объявления (ad_id)"
+// @Param id path int true "ID чата"
 // @Success 200 {object} map[string]string "покупка подтверждена успешно"
-// @Failure 400 {object} dto.ErrorResponse "invalid ad id / forbidden: не продавец товара"
+// @Failure 400 {object} dto.ErrorResponse "invalid chat id / forbidden: not the seller / ad is not active"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized"
 // @Failure 500 {object} dto.ErrorResponse "internal error"
-// @Router /ads/{id}/confirm [post]
+// @Router /chats/{id}/confirm [post]
 func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrMethodNotAllowed)
@@ -100,26 +105,26 @@ func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Получиаем adID из URL параметра
-	adIDStr := r.PathValue("id")
-	adID, err := strconv.ParseInt(adIDStr, 10, 64)
+	// Получаем chatID из URL параметра
+	chatIDStr := r.PathValue("id")
+	chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
 	if err != nil {
-		h.log.DebugContext(r.Context(), "failed to parse ad id from url",
+		h.log.DebugContext(r.Context(), "failed to parse chat id from url",
 			slog.String("op", opHandleConfirmOrder),
 			slog.String("error", err.Error()),
 		)
-		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidAdID)
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidChatID)
 		return
 	}
 
-	// Вызываем usecase ConfirmPurchase
-	err = h.services.Chat.ConfirmPurchase(r.Context(), adID, userID)
+	// Подтверждаем покупку в чате
+	err = h.services.Chat.ConfirmPurchase(r.Context(), chatID, userID)
 	if err != nil {
 		if err.Error() == "forbidden: not the seller" {
-			h.log.WarnContext(r.Context(), "user tried to confirm order not owned",
+			h.log.WarnContext(r.Context(), "user tried to confirm purchase in non-owned chat",
 				slog.String("op", opHandleConfirmOrder),
 				slog.Int64("user_id", userID),
-				slog.Int64("ad_id", adID),
+				slog.Int64("chat_id", chatID),
 			)
 			responser.RespondWithError(w, http.StatusBadRequest, ErrForbidden)
 			return
@@ -138,8 +143,5 @@ func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// TODO: добавить обработчики для получения чатов и сообщений (HandleGetChats, HandleGetChat)
+// TODO: добавить обработчики для получения чатов и сообщений (HandleGetAllChats, HandleGetChat)
 // и методы в usecase и репозитории для получения данных чата и сообщений.
-
-// TODO: проработать, чтобы при принятии покупки сделка состоялась ТОЛЬКО с конкретным продавцом,
-// т.е. запомнить, что купил именно он, чтобы эта сделка была в его истории покупок.

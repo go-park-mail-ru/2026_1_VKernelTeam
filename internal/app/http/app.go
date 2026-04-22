@@ -61,13 +61,12 @@ type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
-	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
 }
 
 // Chat описывает методы сервиса чатов и заказов
 type Chat interface {
-	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) error
-	ConfirmPurchase(ctx context.Context, adID int64, userID int64) error
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
+	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -198,7 +197,6 @@ func (a *App) setupRoutes() {
 	a.router.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleGetCart)))
 	a.router.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleAddToCart)))
 	a.router.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(a.cartHandlers.HandleRemoveFromCart)))
-	a.router.Handle("POST "+prefix+"/cart/checkout", authMW(http.HandlerFunc(a.cartHandlers.HandleCheckout)))
 
 	// Избранное
 	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
@@ -207,7 +205,7 @@ func (a *App) setupRoutes() {
 
 	// Чаты и заказы
 	a.router.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(a.chatHandlers.HandleCreateOrder)))
-	a.router.Handle("POST "+prefix+"/ads/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
+	a.router.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

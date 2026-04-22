@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -11,17 +12,21 @@ import (
 )
 
 const (
-	opGetOrCreateChat = "db.chat.GetOrCreateChat"
-	opCreateMessage   = "db.chat.CreateMessage"
-	opUpdateAdStatus  = "db.chat.UpdateAdStatus"
+	opGetOrCreateChat  = "db.chat.GetOrCreateChat"
+	opCreateMessage    = "db.chat.CreateMessage"
+	opGetChatByID      = "db.chat.GetChatByID"
+	opCompletePurchase = "db.chat.CompletePurchase"
 )
 
-// PgxPool интерфейс для пула соединений (или транзакции),
+var ErrChatNotFound = errors.New("chat not found")
+
+// PgxPool интерфейс для пула соединений с поддержкой транзакций,
 // позволяющий подменять его моком в тестах.
 type PgxPool interface {
 	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
 	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
 // ChatStorage отвечает за операции с чатами и сообщениями.
@@ -47,13 +52,13 @@ func (cs *ChatStorage) GetOrCreateChat(
 ) (int64, error) {
 	var chatID int64
 
-	// Сначала пытаемся получить существующий чат
 	const querySelect = `
 		SELECT id FROM chat
 		WHERE product_id = $1 AND buyer_id = $2 AND seller_id = $3
 		LIMIT 1
 	`
 
+	// Сначала пытаемся найти существующий чат
 	err := cs.pool.QueryRow(ctx, querySelect, adID, buyerID, sellerID).Scan(&chatID)
 	if err == nil {
 		// Чат уже существует
@@ -67,13 +72,13 @@ func (cs *ChatStorage) GetOrCreateChat(
 		return 0, err
 	}
 
-	// Если чата нет, создаем новый
 	const queryInsert = `
 		INSERT INTO chat (product_id, buyer_id, seller_id)
 		VALUES ($1, $2, $3)
 		RETURNING id
 	`
 
+	// Чата нет, создаем новый
 	err = cs.pool.QueryRow(ctx, queryInsert, adID, buyerID, sellerID).Scan(&chatID)
 	if err != nil {
 		cs.log.ErrorContext(ctx, "failed to create chat",
@@ -84,6 +89,37 @@ func (cs *ChatStorage) GetOrCreateChat(
 	}
 
 	return chatID, nil
+}
+
+// GetChatByID возвращает чат по его ID. Возвращает ErrChatNotFound, если чата нет.
+func (cs *ChatStorage) GetChatByID(ctx context.Context, chatID int64) (models.Chat, error) {
+	const query = `
+		SELECT id, product_id, buyer_id, seller_id, created_at, updated_at
+		FROM chat
+		WHERE id = $1
+	`
+
+	var chat models.Chat
+	err := cs.pool.QueryRow(ctx, query, chatID).Scan(
+		&chat.ID,
+		&chat.AdID,
+		&chat.BuyerID,
+		&chat.SellerID,
+		&chat.CreatedAt,
+		&chat.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return models.Chat{}, ErrChatNotFound
+		}
+		cs.log.ErrorContext(ctx, "failed to get chat by id",
+			slog.String("op", opGetChatByID),
+			slog.String("error", err.Error()),
+		)
+		return models.Chat{}, err
+	}
+
+	return chat, nil
 }
 
 // CreateMessage создает новое сообщение в чате.
@@ -116,33 +152,89 @@ func (cs *ChatStorage) CreateMessage(ctx context.Context, message *models.Messag
 	return msgID, nil
 }
 
-// UpdateAdStatus обновляет статус объявления.
-func (cs *ChatStorage) UpdateAdStatus(
+// CompletePurchase атомарно завершает сделку: создает заказ с позицией,
+// переводит товар в статус 'sold' и удаляет его из корзин всех пользователей.
+func (cs *ChatStorage) CompletePurchase(
 	ctx context.Context,
-	adID int64,
-	status string,
+	buyerID int64,
+	productID int64,
+	price int64,
 ) error {
-	const query = `
-		UPDATE product
-		SET status = $1, updated_at = NOW()
-		WHERE id = $2
-	`
-
-	commandTag, err := cs.pool.Exec(ctx, query, status, adID)
+	tx, err := cs.pool.Begin(ctx)
 	if err != nil {
-		cs.log.ErrorContext(ctx, "failed to update ad status",
-			slog.String("op", opUpdateAdStatus),
+		cs.log.ErrorContext(ctx, "failed to begin transaction",
+			slog.String("op", opCompletePurchase),
 			slog.String("error", err.Error()),
 		)
-		return err
+		return fmt.Errorf("CompletePurchase: begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var orderID int64
+	const createOrderQuery = `
+		INSERT INTO "order" (buyer_id, total_amount, status)
+		VALUES ($1, $2, 'completed')
+		RETURNING id
+	`
+
+	// Создаем заказ
+	if err = tx.QueryRow(ctx, createOrderQuery, buyerID, price).Scan(&orderID); err != nil {
+		cs.log.ErrorContext(ctx, "failed to create order",
+			slog.String("op", opCompletePurchase),
+			slog.String("error", err.Error()),
+		)
+		return fmt.Errorf("CompletePurchase: create order: %w", err)
 	}
 
-	if commandTag.RowsAffected() == 0 {
-		cs.log.WarnContext(ctx, "ad not found when updating status",
-			slog.String("op", opUpdateAdStatus),
-			slog.Int64("ad_id", adID),
+	const createItemQuery = `
+		INSERT INTO order_item (order_id, product_id, price_at_purchase, quantity)
+		VALUES ($1, $2, $3, 1)
+	`
+
+	// Создаем позицию заказа
+	if _, err = tx.Exec(ctx, createItemQuery, orderID, productID, price); err != nil {
+		cs.log.ErrorContext(ctx, "failed to create order item",
+			slog.String("op", opCompletePurchase),
+			slog.String("error", err.Error()),
 		)
+		return fmt.Errorf("CompletePurchase: create order item: %w", err)
+	}
+
+	const updateProductQuery = `
+		UPDATE product SET status = 'sold', updated_at = NOW()
+		WHERE id = $1
+	`
+
+	// Обновляем статус товара
+	res, err := tx.Exec(ctx, updateProductQuery, productID)
+	if err != nil {
+		cs.log.ErrorContext(ctx, "failed to update product status",
+			slog.String("op", opCompletePurchase),
+			slog.String("error", err.Error()),
+		)
+		return fmt.Errorf("CompletePurchase: update product: %w", err)
+	}
+	if res.RowsAffected() == 0 {
 		return errors.New("ad not found")
+	}
+
+	const clearCartsQuery = `DELETE FROM cart_item WHERE product_id = $1`
+
+	// Удаляем товар из всех корзин
+	if _, err = tx.Exec(ctx, clearCartsQuery, productID); err != nil {
+		cs.log.ErrorContext(ctx, "failed to clear product from carts",
+			slog.String("op", opCompletePurchase),
+			slog.String("error", err.Error()),
+		)
+		return fmt.Errorf("CompletePurchase: clear carts: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		cs.log.ErrorContext(ctx, "failed to commit transaction",
+			slog.String("op", opCompletePurchase),
+			slog.String("error", err.Error()),
+		)
+		return fmt.Errorf("CompletePurchase: commit: %w", err)
 	}
 
 	return nil

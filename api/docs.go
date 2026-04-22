@@ -337,64 +337,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/ads/{id}/confirm": {
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Продавец подтверждает, что продал товар. Статус объявления меняется на 'sold'",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "Подтвердить покупку товара",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID объявления (ad_id)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "покупка подтверждена успешно",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "invalid ad id / forbidden: не продавец товара",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/ads/{id}/favorite": {
             "post": {
                 "security": [
@@ -510,7 +452,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Отправляет уведомление продавцу о желании купить товар",
+                "description": "Создаёт (или переиспользует существующий) чат между покупателем\nи продавцом по объявлению и отправляет туда сообщение-заказ.\nВ ответе возвращается ID чата для редиректа на фронте.",
                 "consumes": [
                     "application/json"
                 ],
@@ -534,10 +476,7 @@ const docTemplate = `{
                     "200": {
                         "description": "запрос на покупку создан успешно",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.OrderResponse"
                         }
                     },
                     "400": {
@@ -832,49 +771,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cart/checkout": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Совершает покупку всех товаров из корзины и возвращает контакты продавцов",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cart"
-                ],
-                "summary": "Оформить заказ",
-                "responses": {
-                    "200": {
-                        "description": "успешное оформление заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.CheckoutResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "cart is empty / one or more products are no longer available: Ошибка оформления заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/cart/{id}": {
             "delete": {
                 "security": [
@@ -961,6 +857,64 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "invalid category id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,\nобъявление переводится в статус 'sold' и удаляется из корзин всех пользователей.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Подтвердить покупку товара",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "покупка подтверждена успешно",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid chat id / forbidden: not the seller / ad is not active",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1305,24 +1259,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CheckoutResponse": {
-            "type": "object",
-            "properties": {
-                "order_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "sellers": {
-                    "description": "Ключ — ID продавца",
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/dto.SellerContact"
-                    }
-                }
-            }
-        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1353,6 +1289,17 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },
@@ -1392,20 +1339,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.SellerContact": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
                     "type": "string"
                 }
             }
