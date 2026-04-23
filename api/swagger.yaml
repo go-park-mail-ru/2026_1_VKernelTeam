@@ -525,6 +525,36 @@ paths:
       summary: Добавить в избранное
       tags:
       - favorites
+  /ads/search:
+    get:
+      description: Поиск объявлений по заголовку и описанию с поддержкой триграмм,
+        транслитерации и смены раскладки
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: результаты поиска
+          schema:
+            items:
+              $ref: '#/definitions/models.Ad'
+            type: array
+        "400":
+          description: query parameter is required / search query is too short
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Поиск объявлений
+      tags:
+      - ads
   /auth/login:
     post:
       consumes:

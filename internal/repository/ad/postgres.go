@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	"github.com/jackc/pgx/v5"
@@ -16,6 +17,7 @@ import (
 const (
 	opGetAdByID                      = "db.ad.GetAdByID"
 	opGetAllAds                      = "db.ad.GetAllAds"
+	opSearchAds                      = "db.ad.SearchAds"
 	opCreateAd                       = "db.ad.CreateAd"
 	opAddProductImages               = "db.ad.AddProductImages"
 	opDeleteProductImages            = "db.ad.DeleteProductImages"
@@ -39,6 +41,7 @@ type PgxPool interface {
 	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
 	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
 // Sentinel-ошибки
@@ -940,6 +943,125 @@ func (s *AdStorage) SetProductCustomCharacteristics(ctx context.Context, product
 		}
 	}
 	return nil
+}
+
+// SearchAds выполняет поиск объявлений по триграммам с использованием pg_trgm.
+// Поиск ведётся по title (similarity) и description (word_similarity).
+// Пороги устанавливаются через SET LOCAL внутри транзакции.
+// variants содержит все варианты запроса (оригинал, транслит, раскладка, синонимы).
+func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config.SearchConfig) ([]models.Ad, error) {
+	s.log.DebugContext(ctx, "executing search",
+		slog.String("op", opSearchAds),
+		slog.Any("variants", variants),
+	)
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to begin transaction",
+			slog.String("op", opSearchAds),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("SearchAds: begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	// Устанавливаем пороги для текущей транзакции
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.similarity_threshold = %f", cfg.SimilarityThreshold))
+	if err != nil {
+		return nil, fmt.Errorf("SearchAds: set similarity_threshold: %w", err)
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.word_similarity_threshold = %f", cfg.WordSimilarityThreshold))
+	if err != nil {
+		return nil, fmt.Errorf("SearchAds: set word_similarity_threshold: %w", err)
+	}
+
+	const query = `
+		WITH variants AS (
+			SELECT unnest($1::text[]) AS term
+		),
+		matched AS (
+			SELECT p.id,
+				max(greatest(
+					word_similarity(v.term, p.title),
+					word_similarity(v.term, p.description)
+				)) AS rank
+			FROM product p
+			CROSS JOIN variants v
+			WHERE p.deleted_at IS NULL
+			  AND p.status = 'active'
+			  AND (v.term <% p.title OR v.term <% p.description)
+			GROUP BY p.id
+			ORDER BY rank DESC
+			LIMIT $2
+		)
+		SELECT p.id, p.seller_id, p.category_id, p.title, p.description,
+			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.created_at, p.updated_at,
+			COALESCE(
+				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
+				'{}'
+			) AS photos,
+			COUNT(DISTINCT pv.id)        AS views_count,
+			COUNT(DISTINCT f.product_id) AS favorites_count
+		FROM matched m
+		JOIN product p ON p.id = m.id
+		LEFT JOIN product_image pi ON pi.product_id = p.id
+		LEFT JOIN product_view  pv ON pv.product_id = p.id
+		LEFT JOIN favorite       f ON f.product_id  = p.id
+		GROUP BY p.id, m.rank
+		ORDER BY m.rank DESC
+	`
+
+	rows, err := tx.Query(ctx, query, variants, cfg.MaxResults)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to execute search query",
+			slog.String("op", opSearchAds),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("SearchAds: query: %w", err)
+	}
+	defer rows.Close()
+
+	var ads []models.Ad
+	for rows.Next() {
+		var ad models.Ad
+		var photos []string
+		if err := rows.Scan(
+			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
+			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
+			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+		); err != nil {
+			s.log.ErrorContext(ctx, "failed to scan search result",
+				slog.String("op", opSearchAds),
+				slog.String("error", err.Error()),
+			)
+			return nil, fmt.Errorf("SearchAds: scan: %w", err)
+		}
+		ad.Photos = photos
+		ads = append(ads, ad)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("SearchAds: rows: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("SearchAds: commit: %w", err)
+	}
+
+	if ads == nil {
+		ads = []models.Ad{}
+	}
+
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("SearchAds: load characteristics: %w", err)
+	}
+
+	s.log.DebugContext(ctx, "search completed",
+		slog.String("op", opSearchAds),
+		slog.Int("results", len(ads)),
+	)
+	return ads, nil
 }
 
 // GetCategoryCharacteristics возвращает определения характеристик для категории.
