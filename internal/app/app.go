@@ -67,7 +67,7 @@ func New(
 	authService := auth.New(log, userRepo, bl, ref, s3Storage, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	// создаём сервис Ads
-	adsService := ads.New(log, adRepo, s3Storage)
+	adsService := ads.New(log, adRepo, s3Storage, cfg.Search)
 
 	// создаём сервис корзины
 	cartRepo := cart.NewCartStorage(dbClient.Pool, log)

@@ -4,19 +4,28 @@ package ads
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"mime/multipart"
 	"net/http"
+	"unicode/utf8"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/synonyms"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/translit"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
 )
 
+// ErrQueryTooShort возвращается, когда поисковый запрос слишком короткий.
+var ErrQueryTooShort = errors.New("search query is too short")
+
 const (
 	opGetAllAds                 = "usecase.ads.GetAllAds"
+	opSearchAds                 = "usecase.ads.SearchAds"
 	opUploadAdPhotos            = "usecase.ads.UploadAdPhotos"
 	opCreateAd                  = "usecase.ads.CreateAd"
 	opGetAdByID                 = "usecase.ads.GetAdByID"
@@ -32,6 +41,7 @@ const (
 
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	SearchAds(ctx context.Context, variants []string, cfg config.SearchConfig) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 	AddProductImages(ctx context.Context, adID int64, photos []string) error
@@ -65,6 +75,7 @@ type Ads struct {
 	log         *slog.Logger
 	adsStorage  AdsProvider
 	fileStorage FileStorage
+	searchCfg   config.SearchConfig
 }
 
 // New создаёт новый экземпляр Ads с переданными зависимостями.
@@ -72,11 +83,13 @@ func New(
 	log *slog.Logger,
 	adsStorage AdsProvider,
 	fileStorage FileStorage,
+	searchCfg config.SearchConfig,
 ) *Ads {
 	return &Ads{
 		log:         log,
 		adsStorage:  adsStorage,
 		fileStorage: fileStorage,
+		searchCfg:   searchCfg,
 	}
 }
 
@@ -98,6 +111,56 @@ func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	a.log.InfoContext(ctx, "all ads fetched",
 		slog.String("op", opGetAllAds),
 		slog.Int("count", len(ads)),
+	)
+	return ads, nil
+}
+
+// SearchAds выполняет поиск по объявлениям с транслитерацией и сменой раскладки.
+func (a *Ads) SearchAds(ctx context.Context, query string) ([]models.Ad, error) {
+	a.log.InfoContext(ctx, "searching ads",
+		slog.String("op", opSearchAds),
+		slog.String("query", query),
+	)
+
+	if utf8.RuneCountInString(query) < a.searchCfg.MinQueryLength {
+		return nil, ErrQueryTooShort
+	}
+
+	original, translitVariant, layoutVariant := translit.GenerateVariants(query)
+
+	// Собираем уникальные варианты: оригинал, транслит, раскладка + синонимы
+	seen := make(map[string]struct{})
+	var variants []string
+	for _, v := range []string{original, translitVariant, layoutVariant} {
+		if _, ok := seen[v]; !ok && v != "" {
+			seen[v] = struct{}{}
+			variants = append(variants, v)
+		}
+	}
+	for _, s := range synonyms.ExpandAll(query) {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			variants = append(variants, s)
+		}
+	}
+
+	a.log.DebugContext(ctx, "search variants generated",
+		slog.String("op", opSearchAds),
+		slog.Any("variants", variants),
+	)
+
+	ads, err := a.adsStorage.SearchAds(ctx, variants, a.searchCfg)
+	if err != nil {
+		a.log.ErrorContext(ctx, "failed to search ads",
+			slog.String("op", opSearchAds),
+			slog.String("error", err.Error()),
+		)
+		return nil, err
+	}
+
+	a.log.InfoContext(ctx, "search completed",
+		slog.String("op", opSearchAds),
+		slog.Int("results", len(ads)),
 	)
 	return ads, nil
 }
