@@ -9,11 +9,7 @@ help:
 	@echo "  build             - Скомпилировать бинарный файл приложения"
 	@echo ""
 	@echo "  Тесты:"
-	@echo "  test              - Запустить все тесты"
-	@echo "  test-verbose      - Запустить все тесты с подробным выводом"
-	@echo "  test-coverage     - Запустить тесты и показать отчет о покрытии"
-	@echo "  test-auth         - Запустить тесты только для сервиса аутентификации"
-	@echo "  test-storage      - Запустить тесты только для слоя хранения (storage)"
+	@echo "  test              - Запустить тесты и показать отчет о покрытии"
 	@echo ""
 	@echo "  Деплой (только на сервере):"
 	@echo "  deploy            - Обновить код (git pull) и перезапустить все контейнеры"
@@ -43,15 +39,6 @@ build: swag
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
 test:
-	go test ./...
-
-test-verbose:
-	go test -v ./...
-
-test-auth:
-	go test -v ./internal/usecase/auth/...
-
-test-coverage:
 	@go test -coverprofile=coverage.tmp ./internal/... ./pkg/... > /dev/null
 	@grep -v -E "mocks|domain" coverage.tmp > coverage.out
 	@go test -cover ./internal/... ./pkg/... | grep -v -E "mocks|domain" | awk '{ \
