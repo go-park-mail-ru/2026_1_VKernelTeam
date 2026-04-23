@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
+	chatRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/chat"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
@@ -13,12 +15,17 @@ import (
 const (
 	opHandleCreateOrder  = "handlers.HandleCreateOrder"
 	opHandleConfirmOrder = "handlers.HandleConfirmOrder"
+	opHandleGetAllChats  = "handlers.HandleGetAllChats"
+	opHandleGetChat      = "handlers.HandleGetChat"
 )
 
 // ошибки для handlers чата
 const (
 	ErrFailedToCreateOrder  = "failed to create order"
 	ErrFailedToConfirmOrder = "failed to confirm order"
+	ErrFailedToGetChats     = "failed to get chats"
+	ErrFailedToGetChat      = "failed to get chat"
+	ErrChatNotFound         = "chat not found"
 )
 
 // HandleCreateOrder обрабатывает запрос на создание заказа (запрос покупки).
@@ -87,7 +94,7 @@ func (h *ChatHandlers) HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 // @Produce json
 // @Security Bearer
 // @Param id path int true "ID чата"
-// @Success 200 {object} map[string]string "покупка подтверждена успешно"
+// @Success 200 {object} dto.SuccessConfirmOrderResponse "покупка подтверждена успешно"
 // @Failure 400 {object} dto.ErrorResponse "invalid chat id / forbidden: not the seller / ad is not active"
 // @Failure 401 {object} dto.ErrorResponse "unauthorized"
 // @Failure 500 {object} dto.ErrorResponse "internal error"
@@ -138,10 +145,87 @@ func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{
-		"message": "purchase confirmed successfully",
+	responser.RespondWithJSON(w, http.StatusOK, dto.SuccessConfirmOrderResponse{
+		Message: "purchase confirmed successfully",
 	})
 }
 
-// TODO: добавить обработчики для получения чатов и сообщений (HandleGetAllChats, HandleGetChat)
-// и методы в usecase и репозитории для получения данных чата и сообщений.
+// HandleGetAllChats возвращает список чатов пользователя.
+// @Summary Получить список чатов
+// @Description Возвращает чаты, в которых участвует текущий пользователь,
+// @Description отсортированные по времени последнего сообщения.
+// @Tags chats
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} dto.ChatListResponse "список чатов"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized"
+// @Failure 500 {object} dto.ErrorResponse "internal error"
+// @Router /chats [get]
+func (h *ChatHandlers) HandleGetAllChats(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok || userID == 0 {
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	resp, err := h.services.Chat.GetAllChats(r.Context(), userID)
+	if err != nil {
+		h.log.ErrorContext(r.Context(), "failed to get user chats",
+			slog.String("op", opHandleGetAllChats),
+			slog.String("error", err.Error()),
+		)
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToGetChats)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, resp)
+}
+
+// HandleGetChat возвращает шапку и сообщения одного чата.
+// @Summary Получить чат
+// @Description Возвращает объявление, собеседника и все сообщения чата.
+// @Description Доступ только у участников чата — для остальных 400.
+// @Tags chats
+// @Produce json
+// @Security Bearer
+// @Param id path int true "ID чата"
+// @Success 200 {object} dto.ChatDetailResponse "детали чата"
+// @Failure 400 {object} dto.ErrorResponse "invalid chat id"
+// @Failure 400 {object} dto.ErrorResponse "chat not found"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized"
+// @Failure 500 {object} dto.ErrorResponse "internal error"
+// @Router /chats/{id} [get]
+func (h *ChatHandlers) HandleGetChat(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok || userID == 0 {
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	chatID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidChatID)
+		return
+	}
+
+	resp, err := h.services.Chat.GetChat(r.Context(), chatID, userID)
+	if err != nil {
+		if errors.Is(err, chatRepo.ErrChatNotFound) {
+			responser.RespondWithError(w, http.StatusBadRequest, ErrChatNotFound)
+			return
+		}
+		h.log.ErrorContext(r.Context(), "failed to get chat",
+			slog.String("op", opHandleGetChat),
+			slog.String("error", err.Error()),
+		)
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToGetChat)
+		return
+	}
+
+	// Убедимся, что messages не nil в JSON (фронт может упасть на null)
+	if resp.Messages == nil {
+		resp.Messages = []dto.MessageItem{}
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, resp)
+}

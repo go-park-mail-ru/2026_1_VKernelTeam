@@ -870,6 +870,95 @@ const docTemplate = `{
                 }
             }
         },
+        "/chats": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает чаты, в которых участвует текущий пользователь,\nотсортированные по времени последнего сообщения.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить список чатов",
+                "responses": {
+                    "200": {
+                        "description": "список чатов",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает объявление, собеседника и все сообщения чата.\nДоступ только у участников чата — для остальных 400.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить чат",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "детали чата",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "chat not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/chats/{id}/confirm": {
             "post": {
                 "security": [
@@ -901,10 +990,7 @@ const docTemplate = `{
                     "200": {
                         "description": "покупка подтверждена успешно",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.SuccessConfirmOrderResponse"
                         }
                     },
                     "400": {
@@ -1214,6 +1300,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdPreview": {
+            "type": "object",
+            "properties": {
+                "ad_id": {
+                    "type": "integer"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AddToCartRequest": {
             "type": "object",
             "properties": {
@@ -1259,10 +1365,72 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ChatDetailResponse": {
+            "type": "object",
+            "properties": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.MessageItem"
+                    }
+                },
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
+                }
+            }
+        },
+        "dto.ChatListResponse": {
+            "type": "object",
+            "properties": {
+                "chats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ChatPreview"
+                    }
+                }
+            }
+        },
+        "dto.ChatPreview": {
+            "type": "object",
+            "properties": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "last_message": {
+                    "$ref": "#/definitions/dto.LastMessagePreview"
+                },
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LastMessagePreview": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -1289,6 +1457,26 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.MessageItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "sender_id": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -1343,6 +1531,14 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.SuccessConfirmOrderResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.UpdateProfileRequest": {
             "type": "object",
             "required": [
@@ -1353,6 +1549,20 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 3
+                }
+            }
+        },
+        "dto.UserPreview": {
+            "type": "object",
+            "properties": {
+                "avatar_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

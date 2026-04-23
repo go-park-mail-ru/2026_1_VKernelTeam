@@ -88,6 +88,8 @@ type Auth interface {
 type Chat interface {
 	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
 	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
+	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
+	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации

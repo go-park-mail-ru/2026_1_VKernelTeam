@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
 const (
 	opCreateOrderRequest = "usecase.chat.CreateOrderRequest"
 	opConfirmPurchase    = "usecase.chat.ConfirmPurchase"
+	opGetAllChats        = "usecase.chat.GetAllChats"
+	opGetChat            = "usecase.chat.GetChat"
 )
 
 // ChatProvider описывает интерфейс для работы с чатами в репозитории
@@ -21,6 +24,8 @@ type ChatProvider interface {
 	CreateMessage(ctx context.Context, message *models.Message) (int64, error)
 	GetChatByID(ctx context.Context, chatID int64) (models.Chat, error)
 	CompletePurchase(ctx context.Context, buyerID int64, productID int64, price int64) error
+	GetChatsByUserID(ctx context.Context, userID int64) ([]dto.ChatPreview, error)
+	GetChatDetail(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
 // AdProvider описывает интерфейс для получения данных объявления
@@ -198,4 +203,44 @@ func (c *Chat) ConfirmPurchase(
 	)
 
 	return nil
+}
+
+// GetAllChats возвращает список чатов пользователя (превью).
+func (c *Chat) GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error) {
+	c.log.DebugContext(ctx, "getting user chats",
+		slog.String("op", opGetAllChats),
+		slog.Int64("user_id", userID),
+	)
+
+	chats, err := c.chatStorage.GetChatsByUserID(ctx, userID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to get user chats",
+			slog.String("op", opGetAllChats),
+			slog.String("error", err.Error()),
+		)
+		return dto.ChatListResponse{}, err
+	}
+
+	return dto.ChatListResponse{Chats: chats}, nil
+}
+
+// GetChat возвращает шапку и сообщения одного чата, если пользователь - его участник.
+// Иначе репозиторий отдаст ErrChatNotFound.
+func (c *Chat) GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error) {
+	c.log.DebugContext(ctx, "getting chat detail",
+		slog.String("op", opGetChat),
+		slog.Int64("chat_id", chatID),
+		slog.Int64("user_id", userID),
+	)
+
+	chat, err := c.chatStorage.GetChatDetail(ctx, chatID, userID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "failed to get chat detail",
+			slog.String("op", opGetChat),
+			slog.String("error", err.Error()),
+		)
+		return dto.ChatDetailResponse{}, err
+	}
+
+	return chat, nil
 }

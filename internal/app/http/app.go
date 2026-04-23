@@ -67,6 +67,8 @@ type Cart interface {
 type Chat interface {
 	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
 	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
+	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
+	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -206,6 +208,8 @@ func (a *App) setupRoutes() {
 	// Чаты и заказы
 	a.router.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(a.chatHandlers.HandleCreateOrder)))
 	a.router.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
+	a.router.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(a.chatHandlers.HandleGetAllChats)))
+	a.router.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(a.chatHandlers.HandleGetChat)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

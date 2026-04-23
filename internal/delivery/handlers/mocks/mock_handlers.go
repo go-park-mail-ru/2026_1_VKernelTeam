@@ -475,3 +475,33 @@ func (mr *MockChatMockRecorder) CreateOrderRequest(ctx, adID, buyerID interface{
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrderRequest", reflect.TypeOf((*MockChat)(nil).CreateOrderRequest), ctx, adID, buyerID)
 }
+
+// GetAllChats mocks base method.
+func (m *MockChat) GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllChats", ctx, userID)
+	ret0, _ := ret[0].(dto.ChatListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllChats indicates an expected call of GetAllChats.
+func (mr *MockChatMockRecorder) GetAllChats(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllChats", reflect.TypeOf((*MockChat)(nil).GetAllChats), ctx, userID)
+}
+
+// GetChat mocks base method.
+func (m *MockChat) GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChat", ctx, chatID, userID)
+	ret0, _ := ret[0].(dto.ChatDetailResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChat indicates an expected call of GetChat.
+func (mr *MockChatMockRecorder) GetChat(ctx, chatID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChat", reflect.TypeOf((*MockChat)(nil).GetChat), ctx, chatID, userID)
+}

@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  dto.AdPreview:
+    properties:
+      ad_id:
+        type: integer
+      photo:
+        type: string
+      price:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   dto.AddToCartRequest:
     properties:
       product_id:
@@ -29,9 +42,49 @@ definitions:
       total_price:
         type: integer
     type: object
+  dto.ChatDetailResponse:
+    properties:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      messages:
+        items:
+          $ref: '#/definitions/dto.MessageItem'
+        type: array
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
+    type: object
+  dto.ChatListResponse:
+    properties:
+      chats:
+        items:
+          $ref: '#/definitions/dto.ChatPreview'
+        type: array
+    type: object
+  dto.ChatPreview:
+    properties:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      last_message:
+        $ref: '#/definitions/dto.LastMessagePreview'
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
+    type: object
   dto.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  dto.LastMessagePreview:
+    properties:
+      created_at:
+        type: string
+      text:
+        type: string
+      type:
         type: string
     type: object
   dto.LoginRequest:
@@ -49,6 +102,19 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.MessageItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      sender_id:
+        type: integer
+      text:
+        type: string
+      type:
+        type: string
     type: object
   dto.OrderResponse:
     properties:
@@ -83,6 +149,11 @@ definitions:
       password:
         type: string
     type: object
+  dto.SuccessConfirmOrderResponse:
+    properties:
+      message:
+        type: string
+    type: object
   dto.UpdateProfileRequest:
     properties:
       name:
@@ -91,6 +162,15 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UserPreview:
+    properties:
+      avatar_path:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   dto.ValidationErrors:
     properties:
@@ -796,6 +876,66 @@ paths:
       summary: Получить характеристики категории
       tags:
       - categories
+  /chats:
+    get:
+      description: |-
+        Возвращает чаты, в которых участвует текущий пользователь,
+        отсортированные по времени последнего сообщения.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список чатов
+          schema:
+            $ref: '#/definitions/dto.ChatListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить список чатов
+      tags:
+      - chats
+  /chats/{id}:
+    get:
+      description: |-
+        Возвращает объявление, собеседника и все сообщения чата.
+        Доступ только у участников чата — для остальных 400.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: детали чата
+          schema:
+            $ref: '#/definitions/dto.ChatDetailResponse'
+        "400":
+          description: chat not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить чат
+      tags:
+      - chats
   /chats/{id}/confirm:
     post:
       consumes:
@@ -815,9 +955,7 @@ paths:
         "200":
           description: покупка подтверждена успешно
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.SuccessConfirmOrderResponse'
         "400":
           description: 'invalid chat id / forbidden: not the seller / ad is not active'
           schema:
