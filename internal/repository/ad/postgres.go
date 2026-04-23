@@ -966,11 +966,11 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config
 	defer tx.Rollback(ctx) //nolint:errcheck
 
 	// Устанавливаем пороги для текущей транзакции
-	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.similarity_threshold = %f", cfg.SimilarityThreshold))
+	_, err = tx.Exec(ctx, "SET LOCAL pg_trgm.similarity_threshold = $1", cfg.SimilarityThreshold)
 	if err != nil {
 		return nil, fmt.Errorf("SearchAds: set similarity_threshold: %w", err)
 	}
-	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.word_similarity_threshold = %f", cfg.WordSimilarityThreshold))
+	_, err = tx.Exec(ctx, "SET LOCAL pg_trgm.word_similarity_threshold = $1", cfg.WordSimilarityThreshold)
 	if err != nil {
 		return nil, fmt.Errorf("SearchAds: set word_similarity_threshold: %w", err)
 	}
