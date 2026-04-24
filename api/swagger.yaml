@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  dto.AdPreview:
+    properties:
+      ad_id:
+        type: integer
+      photo:
+        type: string
+      price:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   dto.AddToCartRequest:
     properties:
       product_id:
@@ -29,21 +42,49 @@ definitions:
       total_price:
         type: integer
     type: object
-  dto.CheckoutResponse:
+  dto.ChatDetailResponse:
     properties:
-      order_ids:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      messages:
         items:
-          type: integer
+          $ref: '#/definitions/dto.MessageItem'
         type: array
-      sellers:
-        additionalProperties:
-          $ref: '#/definitions/dto.SellerContact'
-        description: Ключ — ID продавца
-        type: object
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
+    type: object
+  dto.ChatListResponse:
+    properties:
+      chats:
+        items:
+          $ref: '#/definitions/dto.ChatPreview'
+        type: array
+    type: object
+  dto.ChatPreview:
+    properties:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      last_message:
+        $ref: '#/definitions/dto.LastMessagePreview'
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
     type: object
   dto.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  dto.LastMessagePreview:
+    properties:
+      created_at:
+        type: string
+      text:
+        type: string
+      type:
         type: string
     type: object
   dto.LoginRequest:
@@ -61,6 +102,26 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.MessageItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      sender_id:
+        type: integer
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.OrderResponse:
+    properties:
+      chat_id:
+        type: integer
+      message:
+        type: string
     type: object
   dto.PublicUserResponse:
     properties:
@@ -88,13 +149,9 @@ definitions:
       password:
         type: string
     type: object
-  dto.SellerContact:
+  dto.SuccessConfirmOrderResponse:
     properties:
-      email:
-        type: string
-      id:
-        type: integer
-      name:
+      message:
         type: string
     type: object
   dto.UpdateProfileRequest:
@@ -105,6 +162,15 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UserPreview:
+    properties:
+      avatar_path:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   dto.ValidationErrors:
     properties:
@@ -525,6 +591,44 @@ paths:
       summary: Добавить в избранное
       tags:
       - favorites
+  /ads/{id}/order:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Создаёт (или переиспользует существующий) чат между покупателем
+        и продавцом по объявлению и отправляет туда сообщение-заказ.
+        В ответе возвращается ID чата для редиректа на фронте.
+      parameters:
+      - description: ID объявления (ad_id)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: запрос на покупку создан успешно
+          schema:
+            $ref: '#/definitions/dto.OrderResponse'
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Создать запрос на покупку товара
+      tags:
+      - orders
   /auth/login:
     post:
       consumes:
@@ -742,35 +846,6 @@ paths:
       summary: Удалить из корзины
       tags:
       - cart
-  /cart/checkout:
-    post:
-      description: Совершает покупку всех товаров из корзины и возвращает контакты
-        продавцов
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: успешное оформление заказа
-          schema:
-            $ref: '#/definitions/dto.CheckoutResponse'
-        "400":
-          description: 'cart is empty / one or more products are no longer available:
-            Ошибка оформления заказа'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: 'unauthorized: Пользователь не авторизован'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: 'internal error: Ошибка сервера'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - CookieAuth: []
-      summary: Оформить заказ
-      tags:
-      - cart
   /categories/{id}/characteristics:
     get:
       description: Возвращает список предопределённых характеристик категории с допустимыми
@@ -801,6 +876,103 @@ paths:
       summary: Получить характеристики категории
       tags:
       - categories
+  /chats:
+    get:
+      description: |-
+        Возвращает чаты, в которых участвует текущий пользователь,
+        отсортированные по времени последнего сообщения.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список чатов
+          schema:
+            $ref: '#/definitions/dto.ChatListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить список чатов
+      tags:
+      - chats
+  /chats/{id}:
+    get:
+      description: |-
+        Возвращает объявление, собеседника и все сообщения чата.
+        Доступ только у участников чата — для остальных 400.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: детали чата
+          schema:
+            $ref: '#/definitions/dto.ChatDetailResponse'
+        "400":
+          description: chat not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить чат
+      tags:
+      - chats
+  /chats/{id}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,
+        объявление переводится в статус 'sold' и удаляется из корзин всех пользователей.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: покупка подтверждена успешно
+          schema:
+            $ref: '#/definitions/dto.SuccessConfirmOrderResponse'
+        "400":
+          description: 'invalid chat id / forbidden: not the seller / ad is not active'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Подтвердить покупку товара
+      tags:
+      - orders
   /profile:
     get:
       description: Возвращает данные профиля на основе userID из контекста (JWT)

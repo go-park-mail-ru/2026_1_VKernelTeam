@@ -445,6 +445,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/ads/{id}/order": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Создаёт (или переиспользует существующий) чат между покупателем\nи продавцом по объявлению и отправляет туда сообщение-заказ.\nВ ответе возвращается ID чата для редиректа на фронте.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Создать запрос на покупку товара",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления (ad_id)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "запрос на покупку создан успешно",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid ad id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен",
@@ -716,49 +771,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cart/checkout": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Совершает покупку всех товаров из корзины и возвращает контакты продавцов",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cart"
-                ],
-                "summary": "Оформить заказ",
-                "responses": {
-                    "200": {
-                        "description": "успешное оформление заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.CheckoutResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "cart is empty / one or more products are no longer available: Ошибка оформления заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/cart/{id}": {
             "delete": {
                 "security": [
@@ -845,6 +857,150 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "invalid category id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает чаты, в которых участвует текущий пользователь,\nотсортированные по времени последнего сообщения.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить список чатов",
+                "responses": {
+                    "200": {
+                        "description": "список чатов",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает объявление, собеседника и все сообщения чата.\nДоступ только у участников чата — для остальных 400.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить чат",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "детали чата",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "chat not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,\nобъявление переводится в статус 'sold' и удаляется из корзин всех пользователей.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Подтвердить покупку товара",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "покупка подтверждена успешно",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SuccessConfirmOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid chat id / forbidden: not the seller / ad is not active",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1144,6 +1300,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdPreview": {
+            "type": "object",
+            "properties": {
+                "ad_id": {
+                    "type": "integer"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AddToCartRequest": {
             "type": "object",
             "properties": {
@@ -1189,21 +1365,51 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CheckoutResponse": {
+        "dto.ChatDetailResponse": {
             "type": "object",
             "properties": {
-                "order_ids": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "messages": {
                     "type": "array",
                     "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/dto.MessageItem"
                     }
                 },
-                "sellers": {
-                    "description": "Ключ — ID продавца",
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/dto.SellerContact"
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
+                }
+            }
+        },
+        "dto.ChatListResponse": {
+            "type": "object",
+            "properties": {
+                "chats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ChatPreview"
                     }
+                }
+            }
+        },
+        "dto.ChatPreview": {
+            "type": "object",
+            "properties": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "last_message": {
+                    "$ref": "#/definitions/dto.LastMessagePreview"
+                },
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
                 }
             }
         },
@@ -1211,6 +1417,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LastMessagePreview": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -1237,6 +1457,37 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.MessageItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "sender_id": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },
@@ -1280,16 +1531,10 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.SellerContact": {
+        "dto.SuccessConfirmOrderResponse": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
+                "message": {
                     "type": "string"
                 }
             }
@@ -1304,6 +1549,20 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 3
+                }
+            }
+        },
+        "dto.UserPreview": {
+            "type": "object",
+            "properties": {
+                "avatar_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
