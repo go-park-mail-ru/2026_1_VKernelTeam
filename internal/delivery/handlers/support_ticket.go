@@ -69,6 +69,10 @@ func (h *SupportTicketHandlers) HandleCreateTicket(w http.ResponseWriter, r *htt
 			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		if errors.Is(err, supportticketRepo.ErrUserNotFound) {
+			responser.RespondWithError(w, http.StatusNotFound, "user not found")
+			return
+		}
 		h.log.ErrorContext(r.Context(), "failed to create ticket",
 			slog.Int64("user_id", userID),
 			slog.String("error", err.Error()),
