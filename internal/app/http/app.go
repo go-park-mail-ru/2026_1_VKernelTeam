@@ -71,6 +71,14 @@ type Chat interface {
 	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
+}
+
 // TokenChecker интерфейс для проверки отозванных токенов
 type TokenChecker interface {
 	Check(jti string) bool
@@ -78,10 +86,11 @@ type TokenChecker interface {
 
 // Services объединяет все бизнес-сервисы приложения
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
-	Chat Chat
+	Ads           Ads
+	Auth          Auth
+	Cart          Cart
+	Chat          Chat
+	SupportTicket SupportTicket
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -95,10 +104,11 @@ type App struct {
 	blacklist    TokenChecker
 	tokenTTL     time.Duration
 	secret       string
-	authHandlers *handlers.AuthHandlers
-	adsHandlers  *handlers.AdsHandlers
-	cartHandlers *handlers.CartHandlers
-	chatHandlers *handlers.ChatHandlers
+	authHandlers          *handlers.AuthHandlers
+	adsHandlers           *handlers.AdsHandlers
+	cartHandlers          *handlers.CartHandlers
+	chatHandlers          *handlers.ChatHandlers
+	supportTicketHandlers *handlers.SupportTicketHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -144,6 +154,10 @@ func New(
 		Ads:  services.Ads,
 		Cart: services.Cart,
 		Chat: services.Chat,
+	})
+
+	app.supportTicketHandlers = handlers.NewSupportTicketHandlers(log, &handlers.Services{
+		SupportTicket: services.SupportTicket,
 	})
 
 	app.setupRoutes()
@@ -220,6 +234,12 @@ func (a *App) setupRoutes() {
 
 	// Аватар
 	a.router.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(a.authHandlers.HandleUploadAvatar)))
+
+	// Техподдержка (обращения)
+	a.router.Handle("POST "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleCreateTicket)))
+	a.router.Handle("GET "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMyTickets)))
+	a.router.Handle("GET "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetTicket)))
+	a.router.Handle("PUT "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleUpdateTicket)))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html

@@ -73,6 +73,15 @@ definitions:
       partner:
         $ref: '#/definitions/dto.UserPreview'
     type: object
+  dto.CreateTicketRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
+    type: object
   dto.ErrorResponse:
     properties:
       error:
@@ -154,6 +163,25 @@ definitions:
       message:
         type: string
     type: object
+  dto.TicketResponse:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
   dto.UpdateProfileRequest:
     properties:
       name:
@@ -162,6 +190,15 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UpdateTicketRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
     type: object
   dto.UserPreview:
     properties:
@@ -1095,6 +1132,155 @@ paths:
       summary: Обновить профиль
       tags:
       - auth
+  /support/tickets:
+    get:
+      description: Возвращает список обращений текущего пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список обращений получен
+          schema:
+            items:
+              $ref: '#/definitions/dto.TicketResponse'
+            type: array
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Мои обращения
+      tags:
+      - support
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новое обращение в техподдержку
+      parameters:
+      - description: Данные обращения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: обращение успешно создано
+          schema:
+            $ref: '#/definitions/dto.TicketResponse'
+        "400":
+          description: 'bad request: Ошибка валидации или неверный JSON'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать обращение
+      tags:
+      - support
+  /support/tickets/{id}:
+    get:
+      description: Возвращает детали одного обращения по ID
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: обращение получено
+          schema:
+            $ref: '#/definitions/dto.TicketResponse'
+        "400":
+          description: 'bad request: Некорректный ID'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: 'forbidden: Нет доступа к чужому обращению'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'not found: Обращение не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить обращение
+      tags:
+      - support
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные обращения (только в статусе open)
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные обращения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: обращение успешно обновлено
+          schema:
+            $ref: '#/definitions/dto.TicketResponse'
+        "400":
+          description: 'bad request: Ошибка валидации, неверный статус или JSON'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: 'forbidden: Нет доступа к чужому обращению'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'not found: Обращение не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Обновить обращение
+      tags:
+      - support
   /users/{id}:
     get:
       description: 'Возвращает только общедоступную информацию: имя, рейтинг, кол-во

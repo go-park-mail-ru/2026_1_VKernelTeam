@@ -13,6 +13,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/cart"
 	chatRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/chat"
+	supportTicketRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_ticket"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
@@ -22,6 +23,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	cartUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/cart"
 	chatUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/chat"
+	supportTicketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/support_ticket"
 )
 
 type App struct {
@@ -79,11 +81,16 @@ func New(
 	chatStorage := chatRepo.NewChatStorage(dbClient.Pool, log)
 	chatService := chatUC.New(log, chatStorage, adRepo)
 
+	// создаём сервис техподдержки
+	ticketStorage := supportTicketRepo.NewSupportTicketStorage(dbClient.Pool, log)
+	ticketService := supportTicketUC.New(log, ticketStorage)
+
 	services := httpapp.Services{
-		Ads:  adsService,
-		Auth: authService,
-		Cart: cartService,
-		Chat: chatService,
+		Ads:           adsService,
+		Auth:          authService,
+		Cart:          cartService,
+		Chat:          chatService,
+		SupportTicket: ticketService,
 	}
 
 	// создаём HTTP-приложение

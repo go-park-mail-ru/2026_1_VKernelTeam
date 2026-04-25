@@ -43,10 +43,11 @@ const (
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
-	Chat Chat
+	Ads           Ads
+	Auth          Auth
+	Cart          Cart
+	Chat          Chat
+	SupportTicket SupportTicket
 }
 
 // Cart описывает методы сервиса корзины
@@ -90,6 +91,14 @@ type Chat interface {
 	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
 	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
 	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
+}
+
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
