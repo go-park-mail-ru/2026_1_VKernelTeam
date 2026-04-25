@@ -103,6 +103,7 @@ type SupportTicket interface {
 	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
 	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
 	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
 }
 
 // SupportMessage описывает методы сервиса сообщений в чате обращения

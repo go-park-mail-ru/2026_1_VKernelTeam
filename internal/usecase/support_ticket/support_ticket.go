@@ -19,6 +19,9 @@ var (
 	ErrTicketNotOpen    = errors.New("can only update tickets with status open")
 	ErrForbidden        = errors.New("forbidden: not the ticket author")
 	ErrInvalidStatus    = errors.New("invalid status: must be open, in_progress or closed")
+	ErrInvalidRating    = errors.New("rating must be between 1 and 5")
+	ErrTicketNotClosed  = errors.New("can only rate closed tickets")
+	ErrAlreadyRated     = errors.New("ticket already rated")
 )
 
 var allowedCategories = map[string]bool{
@@ -41,6 +44,7 @@ type TicketStorage interface {
 	GetAll(ctx context.Context) ([]models.SupportTicket, error)
 	UpdateStatus(ctx context.Context, ticketID int64, status string) (time.Time, error)
 	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	SetRating(ctx context.Context, ticketID int64, rating int) error
 }
 
 type SupportTicketService struct {
@@ -181,6 +185,38 @@ func (s *SupportTicketService) GetStats(ctx context.Context) (*dto.StatsResponse
 	return stats, nil
 }
 
+// RateTicket выставляет оценку обращению.
+func (s *SupportTicketService) RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error) {
+	if rating < 1 || rating > 5 {
+		return nil, ErrInvalidRating
+	}
+
+	ticket, err := s.storage.GetByID(ctx, ticketID)
+	if err != nil {
+		return nil, err
+	}
+
+	if ticket.UserID != userID {
+		return nil, ErrForbidden
+	}
+
+	if ticket.Status != "closed" {
+		return nil, ErrTicketNotClosed
+	}
+
+	if ticket.Rating != nil {
+		return nil, ErrAlreadyRated
+	}
+
+	if err := s.storage.SetRating(ctx, ticketID, rating); err != nil {
+		s.log.ErrorContext(ctx, "failed to set ticket rating", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	ticket.Rating = &rating
+	return toTicketResponse(ticket), nil
+}
+
 func validateTicketInput(category, title, description string) error {
 	if category == "" {
 		return ErrCategoryRequired
@@ -208,6 +244,7 @@ func toTicketResponse(t *models.SupportTicket) *dto.TicketResponse {
 		Status:      t.Status,
 		Title:       t.Title,
 		Description: t.Description,
+		Rating:      t.Rating,
 		CreatedAt:   t.CreatedAt,
 		UpdatedAt:   t.UpdatedAt,
 	}

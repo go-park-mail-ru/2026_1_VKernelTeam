@@ -80,6 +80,7 @@ type SupportTicket interface {
 	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
 	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
 	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
 }
 
 // SupportMessage описывает методы сервиса сообщений в чате обращения
@@ -259,6 +260,7 @@ func (a *App) setupRoutes() {
 	a.router.Handle("GET "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMyTickets)))
 	a.router.Handle("GET "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetTicket)))
 	a.router.Handle("PUT "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleUpdateTicket)))
+	a.router.Handle("POST "+prefix+"/support/tickets/{id}/rate", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleRateTicket)))
 
 	// Чат обращения (сообщения)
 	a.router.Handle("POST "+prefix+"/support/tickets/{id}/messages", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleSendMessage)))

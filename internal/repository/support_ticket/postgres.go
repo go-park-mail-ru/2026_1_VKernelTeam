@@ -21,6 +21,7 @@ const (
 	opGetAll       = "db.support_ticket.GetAll"
 	opUpdateStatus = "db.support_ticket.UpdateStatus"
 	opGetStats     = "db.support_ticket.GetStats"
+	opSetRating    = "db.support_ticket.SetRating"
 )
 
 type PgxPool interface {
@@ -47,7 +48,7 @@ func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.Suppor
 	const query = `
 		INSERT INTO support_ticket (user_id, category, title, description)
 		VALUES ($1, $2, $3, $4)
-		RETURNING id, status, created_at, updated_at
+		RETURNING id, status, rating, created_at, updated_at
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -57,7 +58,7 @@ func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.Suppor
 
 	err := s.pool.QueryRow(ctx, query,
 		ticket.UserID, ticket.Category, ticket.Title, ticket.Description,
-	).Scan(&ticket.ID, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt)
+	).Scan(&ticket.ID, &ticket.Status, &ticket.Rating, &ticket.CreatedAt, &ticket.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
@@ -75,7 +76,7 @@ func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.Suppor
 
 func (s *SupportTicketStorage) GetByID(ctx context.Context, id int64) (*models.SupportTicket, error) {
 	const query = `
-		SELECT id, user_id, category, status, title, description, created_at, updated_at
+		SELECT id, user_id, category, status, title, description, rating, created_at, updated_at
 		FROM support_ticket
 		WHERE id = $1
 	`
@@ -88,7 +89,7 @@ func (s *SupportTicketStorage) GetByID(ctx context.Context, id int64) (*models.S
 	var t models.SupportTicket
 	err := s.pool.QueryRow(ctx, query, id).Scan(
 		&t.ID, &t.UserID, &t.Category, &t.Status,
-		&t.Title, &t.Description, &t.CreatedAt, &t.UpdatedAt,
+		&t.Title, &t.Description, &t.Rating, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -106,7 +107,7 @@ func (s *SupportTicketStorage) GetByID(ctx context.Context, id int64) (*models.S
 
 func (s *SupportTicketStorage) GetByUserID(ctx context.Context, userID int64) ([]models.SupportTicket, error) {
 	const query = `
-		SELECT id, user_id, category, status, title, description, created_at, updated_at
+		SELECT id, user_id, category, status, title, description, rating, created_at, updated_at
 		FROM support_ticket
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -132,7 +133,7 @@ func (s *SupportTicketStorage) GetByUserID(ctx context.Context, userID int64) ([
 		var t models.SupportTicket
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Category, &t.Status,
-			&t.Title, &t.Description, &t.CreatedAt, &t.UpdatedAt,
+			&t.Title, &t.Description, &t.Rating, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan ticket",
 				slog.String("op", opGetByUserID),
@@ -157,7 +158,7 @@ func (s *SupportTicketStorage) GetByUserID(ctx context.Context, userID int64) ([
 // GetAll возвращает все обращения всех пользователей, отсортированные по дате создания.
 func (s *SupportTicketStorage) GetAll(ctx context.Context) ([]models.SupportTicket, error) {
 	const query = `
-		SELECT id, user_id, category, status, title, description, created_at, updated_at
+		SELECT id, user_id, category, status, title, description, rating, created_at, updated_at
 		FROM support_ticket
 		ORDER BY created_at DESC
 	`
@@ -179,7 +180,7 @@ func (s *SupportTicketStorage) GetAll(ctx context.Context) ([]models.SupportTick
 		var t models.SupportTicket
 		if err := rows.Scan(
 			&t.ID, &t.UserID, &t.Category, &t.Status,
-			&t.Title, &t.Description, &t.CreatedAt, &t.UpdatedAt,
+			&t.Title, &t.Description, &t.Rating, &t.CreatedAt, &t.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("SupportTicketStorage.GetAll: scan: %w", err)
 		}
@@ -278,6 +279,35 @@ func scanCounts(ctx context.Context, pool PgxPool, query string, dst map[string]
 		dst[key] = count
 	}
 	return rows.Err()
+}
+
+// SetRating устанавливает оценку обращения.
+func (s *SupportTicketStorage) SetRating(ctx context.Context, ticketID int64, rating int) error {
+	const query = `
+		UPDATE support_ticket
+		SET rating = $1, updated_at = NOW()
+		WHERE id = $2
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opSetRating),
+		slog.Int64("ticket_id", ticketID),
+		slog.Int("rating", rating),
+	)
+
+	ct, err := s.pool.Exec(ctx, query, rating, ticketID)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to set ticket rating",
+			slog.String("op", opSetRating),
+			slog.String("error", err.Error()),
+		)
+		return fmt.Errorf("SupportTicketStorage.SetRating: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrTicketNotFound
+	}
+
+	return nil
 }
 
 func (s *SupportTicketStorage) Update(ctx context.Context, ticket *models.SupportTicket) error {

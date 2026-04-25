@@ -169,6 +169,11 @@ definitions:
       reviews_count:
         type: integer
     type: object
+  dto.RateTicketRequest:
+    properties:
+      rating:
+        type: integer
+    type: object
   dto.RegisterRequest:
     properties:
       email:
@@ -210,6 +215,8 @@ definitions:
       description:
         type: string
       id:
+        type: integer
+      rating:
         type: integer
       status:
         type: string
@@ -1407,6 +1414,57 @@ paths:
       security:
       - CookieAuth: []
       summary: Отправить сообщение в чат обращения
+      tags:
+      - support
+  /support/tickets/{id}/rate:
+    post:
+      consumes:
+      - application/json
+      description: Позволяет автору обращения выставить оценку от 1 до 5 для закрытого
+        тикета
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Оценка
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RateTicketRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: оценка выставлена
+          schema:
+            $ref: '#/definitions/dto.TicketResponse'
+        "400":
+          description: 'bad request: Некорректная оценка, тикет не закрыт или уже
+            оценён'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: Пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: 'forbidden: Пользователь не является автором'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: 'not found: Обращение не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Оценить обращение
       tags:
       - support
   /support/tickets/{id}/status:

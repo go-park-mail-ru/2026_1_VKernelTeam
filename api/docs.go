@@ -1631,6 +1631,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/support/tickets/{id}/rate": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Позволяет автору обращения выставить оценку от 1 до 5 для закрытого тикета",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Оценить обращение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Оценка",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RateTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "оценка выставлена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TicketResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: Некорректная оценка, тикет не закрыт или уже оценён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden: Пользователь не является автором",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "not found: Обращение не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/support/tickets/{id}/status": {
             "patch": {
                 "security": [
@@ -2053,6 +2129,14 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RateTicketRequest": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -2116,6 +2200,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "rating": {
                     "type": "integer"
                 },
                 "status": {

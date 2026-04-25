@@ -24,6 +24,12 @@ type TicketResponse struct {
 	Status      string    `json:"status"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
+	Rating      *int      `json:"rating"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// RateTicketRequest — запрос на оценку обращения
+type RateTicketRequest struct {
+	Rating int `json:"rating"`
 }

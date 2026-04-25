@@ -21,6 +21,7 @@ const (
 	ErrFailedGetTickets   = "failed to get tickets"
 	ErrFailedGetTicket    = "failed to get ticket"
 	ErrFailedUpdateTicket = "failed to update ticket"
+	ErrFailedRateTicket   = "failed to rate ticket"
 )
 
 // SupportTicketHandlers обрабатывает запросы техподдержки
@@ -220,6 +221,74 @@ func (h *SupportTicketHandlers) HandleUpdateTicket(w http.ResponseWriter, r *htt
 			slog.String("error", err.Error()),
 		)
 		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedUpdateTicket)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, resp)
+}
+
+// HandleRateTicket выставляет оценку обращению в техподдержку
+// @Summary Оценить обращение
+// @Description Позволяет автору обращения выставить оценку от 1 до 5 для закрытого тикета
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Param request body dto.RateTicketRequest true "Оценка"
+// @Success 200 {object} dto.TicketResponse "оценка выставлена"
+// @Failure 400 {object} dto.ErrorResponse "bad request: Некорректная оценка, тикет не закрыт или уже оценён"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 403 {object} dto.ErrorResponse "forbidden: Пользователь не является автором"
+// @Failure 404 {object} dto.ErrorResponse "not found: Обращение не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id}/rate [post]
+func (h *SupportTicketHandlers) HandleRateTicket(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+	if !ok {
+		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	ticketID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidTicketID)
+		return
+	}
+
+	var req dto.RateTicketRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
+		return
+	}
+
+	resp, err := h.services.SupportTicket.RateTicket(r.Context(), userID, ticketID, req.Rating)
+	if err != nil {
+		if errors.Is(err, supportticketUC.ErrInvalidRating) {
+			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, supportticketRepo.ErrTicketNotFound) {
+			responser.RespondWithError(w, http.StatusNotFound, ErrTicketNotFound)
+			return
+		}
+		if errors.Is(err, supportticketUC.ErrForbidden) {
+			responser.RespondWithError(w, http.StatusForbidden, ErrForbidden)
+			return
+		}
+		if errors.Is(err, supportticketUC.ErrTicketNotClosed) {
+			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, supportticketUC.ErrAlreadyRated) {
+			responser.RespondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		h.log.ErrorContext(r.Context(), "failed to rate ticket",
+			slog.Int64("ticket_id", ticketID),
+			slog.String("error", err.Error()),
+		)
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedRateTicket)
 		return
 	}
 
