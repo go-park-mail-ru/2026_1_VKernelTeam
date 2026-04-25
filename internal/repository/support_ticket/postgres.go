@@ -31,6 +31,7 @@ type PgxPool interface {
 
 var (
 	ErrTicketNotFound = errors.New("ticket not found")
+	ErrUserNotFound   = errors.New("user not found")
 )
 
 type SupportTicketStorage struct {
@@ -58,6 +59,10 @@ func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.Suppor
 		ticket.UserID, ticket.Category, ticket.Title, ticket.Description,
 	).Scan(&ticket.ID, &ticket.Status, &ticket.CreatedAt, &ticket.UpdatedAt)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return 0, ErrUserNotFound
+		}
 		s.log.ErrorContext(ctx, "failed to create ticket",
 			slog.String("op", opCreate),
 			slog.String("error", err.Error()),
