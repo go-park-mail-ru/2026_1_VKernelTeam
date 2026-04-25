@@ -1968,6 +1968,9 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "role": {
+                    "type": "string"
+                },
                 "user_id": {
                     "type": "integer"
                 }
@@ -2371,6 +2374,9 @@ const docTemplate = `{
                 },
                 "reviews_count": {
                     "type": "integer"
+                },
+                "role": {
+                    "type": "string"
                 },
                 "unread_messages_count": {
                     "type": "integer"

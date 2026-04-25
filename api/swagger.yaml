@@ -114,6 +114,8 @@ definitions:
         type: string
       name:
         type: string
+      role:
+        type: string
       user_id:
         type: integer
     type: object
@@ -378,6 +380,8 @@ definitions:
         type: number
       reviews_count:
         type: integer
+      role:
+        type: string
       unread_messages_count:
         type: integer
       updated_at:

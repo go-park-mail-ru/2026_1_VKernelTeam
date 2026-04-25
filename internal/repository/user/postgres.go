@@ -82,7 +82,7 @@ func (s *UserStorage) SaveUser(ctx context.Context, email string, passHash []byt
 // User возвращает пользователя по email. Возвращает ErrUserNotFound, если он не найден.
 func (s *UserStorage) User(ctx context.Context, email string) (models.User, error) {
 	const query = `
-		SELECT id, first_name, email, password_hash, created_at, updated_at
+		SELECT id, first_name, email, password_hash, role, created_at, updated_at
 		FROM "user"
 		WHERE email = $1
 	`
@@ -94,7 +94,7 @@ func (s *UserStorage) User(ctx context.Context, email string) (models.User, erro
 
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, email).Scan(
-		&u.ID, &u.Name, &u.Email, &u.PassHash,
+		&u.ID, &u.Name, &u.Email, &u.PassHash, &u.Role,
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 		SELECT
             u.id, u.first_name, u.email, u.password_hash,
             COALESCE(u.avatar_path, '') as avatar_path,
-            u.rating, u.created_at, u.updated_at,
+            u.rating, u.role, u.created_at, u.updated_at,
             (SELECT COUNT(*) FROM review WHERE receiver_id = u.id) as reviews_count,
             (SELECT COUNT(*) FROM product WHERE seller_id = u.id AND deleted_at IS NULL) as ads_count,
             (SELECT COUNT(*) FROM favorite WHERE user_id = u.id) as favorites_count,
@@ -147,7 +147,7 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 
 	err := s.pool.QueryRow(ctx, query, userID).Scan(
 		&u.ID, &u.Name, &u.Email, &u.PassHash,
-		&u.AvatarPath, &u.Rating, &u.CreatedAt, &u.UpdatedAt,
+		&u.AvatarPath, &u.Rating, &u.Role, &u.CreatedAt, &u.UpdatedAt,
 		&u.ReviewsCount, &u.AdsCount, &u.FavoritesCount,
 		&cartCount, &u.MessagesCount,
 	)
@@ -181,7 +181,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 		UPDATE "user"
 		SET first_name = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
-		RETURNING id, first_name, email, password_hash, created_at, updated_at
+		RETURNING id, first_name, email, password_hash, role, created_at, updated_at
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -191,7 +191,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, name, userID).Scan(
-		&u.ID, &u.Name, &u.Email, &u.PassHash,
+		&u.ID, &u.Name, &u.Email, &u.PassHash, &u.Role,
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {

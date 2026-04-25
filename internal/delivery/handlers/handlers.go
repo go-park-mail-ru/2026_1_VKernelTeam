@@ -225,5 +225,6 @@ func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) 
 		UserID: user.ID,
 		Email:  user.Email,
 		Name:   user.Name,
+		Role:   user.Role,
 	})
 }
