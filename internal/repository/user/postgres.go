@@ -18,6 +18,7 @@ const (
 	opGetUserByID      = "db.user.UserByID"
 	opUpdateUser       = "db.user.UpdateUser"
 	opUpdateAvatarPath = "db.user.UpdateAvatarPath"
+	opGetUserRole      = "db.user.GetUserRole"
 )
 
 // Sentinel-ошибки — используются в юзкейсе для проверки через errors.Is.
@@ -214,6 +215,32 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 		slog.Int64("user_id", userID),
 	)
 	return u, nil
+}
+
+// GetUserRole возвращает роль пользователя по его ID.
+func (s *UserStorage) GetUserRole(ctx context.Context, userID int64) (string, error) {
+	const query = `SELECT role FROM "user" WHERE id = $1`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUserRole),
+		slog.Int64("user_id", userID),
+	)
+
+	var role string
+	err := s.pool.QueryRow(ctx, query, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrUserNotFound
+		}
+		s.log.ErrorContext(ctx, "failed to get user role",
+			slog.String("op", opGetUserRole),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
+		return "", fmt.Errorf("GetUserRole: %w", err)
+	}
+
+	return role, nil
 }
 
 // UpdateAvatarPath обновляет путь к аватару пользователя

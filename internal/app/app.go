@@ -13,16 +13,18 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/cart"
 	chatRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/chat"
-	supportTicketRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_ticket"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/s3"
+	supportMessageRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_message"
+	supportTicketRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_ticket"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	cartUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/cart"
 	chatUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/chat"
+	supportMessageUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/support_message"
 	supportTicketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/support_ticket"
 )
 
@@ -85,16 +87,21 @@ func New(
 	ticketStorage := supportTicketRepo.NewSupportTicketStorage(dbClient.Pool, log)
 	ticketService := supportTicketUC.New(log, ticketStorage)
 
+	// создаём сервис сообщений в чате обращения
+	messageStorage := supportMessageRepo.NewSupportMessageStorage(dbClient.Pool, log)
+	messageService := supportMessageUC.New(log, messageStorage, ticketStorage, userRepo)
+
 	services := httpapp.Services{
-		Ads:           adsService,
-		Auth:          authService,
-		Cart:          cartService,
-		Chat:          chatService,
-		SupportTicket: ticketService,
+		Ads:            adsService,
+		Auth:           authService,
+		Cart:           cartService,
+		Chat:           chatService,
+		SupportTicket:  ticketService,
+		SupportMessage: messageService,
 	}
 
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, services, bl, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
+	httpApp := httpapp.New(log, services, bl, userRepo, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	return &App{
 		HTTPServer: httpApp,

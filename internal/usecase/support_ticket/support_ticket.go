@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
@@ -17,6 +18,7 @@ var (
 	ErrCategoryRequired = errors.New("category is required")
 	ErrTicketNotOpen    = errors.New("can only update tickets with status open")
 	ErrForbidden        = errors.New("forbidden: not the ticket author")
+	ErrInvalidStatus    = errors.New("invalid status: must be open, in_progress or closed")
 )
 
 var allowedCategories = map[string]bool{
@@ -25,11 +27,20 @@ var allowedCategories = map[string]bool{
 	"complaint":  true,
 }
 
+var allowedStatuses = map[string]bool{
+	"open":        true,
+	"in_progress": true,
+	"closed":      true,
+}
+
 type TicketStorage interface {
 	Create(ctx context.Context, ticket *models.SupportTicket) (int64, error)
 	GetByID(ctx context.Context, id int64) (*models.SupportTicket, error)
 	GetByUserID(ctx context.Context, userID int64) ([]models.SupportTicket, error)
 	Update(ctx context.Context, ticket *models.SupportTicket) error
+	GetAll(ctx context.Context) ([]models.SupportTicket, error)
+	UpdateStatus(ctx context.Context, ticketID int64, status string) (time.Time, error)
+	GetStats(ctx context.Context) (*dto.StatsResponse, error)
 }
 
 type SupportTicketService struct {
@@ -118,6 +129,56 @@ func (s *SupportTicketService) UpdateTicket(ctx context.Context, ticketID, userI
 	}
 
 	return toTicketResponse(ticket), nil
+}
+
+// GetAllTickets возвращает все обращения всех пользователей.
+// Доступ контролируется на уровне middleware (только support/admin).
+func (s *SupportTicketService) GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error) {
+	tickets, err := s.storage.GetAll(ctx)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to get all tickets", slog.String("error", err.Error()))
+		return nil, err
+	}
+
+	result := make([]dto.TicketResponse, len(tickets))
+	for i, t := range tickets {
+		result[i] = *toTicketResponse(&t)
+	}
+	return result, nil
+}
+
+// ChangeStatus меняет статус обращения.
+// Доступ контролируется на уровне middleware (только support/admin).
+func (s *SupportTicketService) ChangeStatus(
+	ctx context.Context,
+	ticketID int64,
+	req *dto.ChangeStatusRequest,
+) (*dto.TicketStatusResponse, error) {
+	if !allowedStatuses[req.Status] {
+		return nil, ErrInvalidStatus
+	}
+
+	updatedAt, err := s.storage.UpdateStatus(ctx, ticketID, req.Status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.TicketStatusResponse{
+		ID:        ticketID,
+		Status:    req.Status,
+		UpdatedAt: updatedAt,
+	}, nil
+}
+
+// GetStats возвращает сводную статистику по обращениям.
+// Доступ контролируется на уровне middleware (только support/admin).
+func (s *SupportTicketService) GetStats(ctx context.Context) (*dto.StatsResponse, error) {
+	stats, err := s.storage.GetStats(ctx)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to get tickets stats", slog.String("error", err.Error()))
+		return nil, err
+	}
+	return stats, nil
 }
 
 func validateTicketInput(category, title, description string) error {

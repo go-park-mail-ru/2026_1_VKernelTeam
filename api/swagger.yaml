@@ -42,6 +42,11 @@ definitions:
       total_price:
         type: integer
     type: object
+  dto.ChangeStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
   dto.ChatDetailResponse:
     properties:
       ad:
@@ -125,6 +130,19 @@ definitions:
       type:
         type: string
     type: object
+  dto.MessageResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      text:
+        type: string
+      ticket_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
   dto.OrderResponse:
     properties:
       chat_id:
@@ -158,6 +176,24 @@ definitions:
       password:
         type: string
     type: object
+  dto.SendMessageRequest:
+    properties:
+      text:
+        type: string
+    type: object
+  dto.StatsResponse:
+    properties:
+      by_category:
+        additionalProperties:
+          type: integer
+        type: object
+      by_status:
+        additionalProperties:
+          type: integer
+        type: object
+      total:
+        type: integer
+    type: object
   dto.SuccessConfirmOrderResponse:
     properties:
       message:
@@ -181,6 +217,15 @@ definitions:
         type: string
       user_id:
         type: integer
+    type: object
+  dto.TicketStatusResponse:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
     type: object
   dto.UpdateProfileRequest:
     properties:
@@ -1279,6 +1324,180 @@ paths:
       security:
       - CookieAuth: []
       summary: Обновить обращение
+      tags:
+      - support
+  /support/tickets/{id}/messages:
+    get:
+      description: |-
+        Возвращает все сообщения чата обращения. Доступно автору обращения,
+        а также пользователям с ролью support/admin.
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список сообщений
+          schema:
+            items:
+              $ref: '#/definitions/dto.MessageResponse'
+            type: array
+        "400":
+          description: 'bad request: неверный ID или нет доступа'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить сообщения обращения
+      tags:
+      - support
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Отправляет сообщение в чат обращения. Доступно автору обращения,
+        а также пользователям с ролью support/admin.
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Текст сообщения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: сообщение отправлено
+          schema:
+            $ref: '#/definitions/dto.MessageResponse'
+        "400":
+          description: 'bad request: пустой текст, неверный ID или нет доступа'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Отправить сообщение в чат обращения
+      tags:
+      - support
+  /support/tickets/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Меняет статус обращения. Доступно только пользователям с ролью support/admin.
+        Допустимые статусы: open, in_progress, closed.
+      parameters:
+      - description: ID обращения
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новый статус
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangeStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: статус обновлён
+          schema:
+            $ref: '#/definitions/dto.TicketStatusResponse'
+        "400":
+          description: 'bad request: неверный ID, статус или обращение не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Сменить статус обращения
+      tags:
+      - support
+  /support/tickets/all:
+    get:
+      description: |-
+        Возвращает список всех обращений всех пользователей.
+        Доступно только пользователям с ролью support/admin.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список обращений
+          schema:
+            items:
+              $ref: '#/definitions/dto.TicketResponse'
+            type: array
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Все обращения
+      tags:
+      - support
+  /support/tickets/stats:
+    get:
+      description: |-
+        Возвращает сводную статистику по обращениям: общее количество,
+        разбивку по статусу и категории. Доступно только support/admin.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: статистика обращений
+          schema:
+            $ref: '#/definitions/dto.StatsResponse'
+        "401":
+          description: 'unauthorized: пользователь не авторизован'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Статистика обращений
       tags:
       - support
   /users/{id}:
