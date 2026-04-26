@@ -591,19 +591,6 @@ paths:
       summary: Добавить в избранное
       tags:
       - favorites
-  /ads/search:
-    get:
-      description: Поиск объявлений по заголовку и описанию с поддержкой триграмм,
-        транслитерации и смены раскладки
-      parameters:
-      - description: Поисковый запрос
-        in: query
-        name: query
-        required: true
-        type: string
-      - description: ID категории (фильтр)
-        in: query
-        name: category_id
   /ads/{id}/order:
     post:
       consumes:
@@ -617,6 +604,44 @@ paths:
         in: path
         name: id
         required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: запрос на покупку создан успешно
+          schema:
+            $ref: '#/definitions/dto.OrderResponse'
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Создать запрос на покупку товара
+      tags:
+      - orders
+  /ads/search:
+    get:
+      description: Поиск объявлений по заголовку и описанию с поддержкой триграмм,
+        транслитерации и смены раскладки
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: ID категории (фильтр)
+        in: query
+        name: category_id
         type: integer
       produces:
       - application/json
@@ -638,26 +663,6 @@ paths:
       summary: Поиск объявлений
       tags:
       - ads
-          description: запрос на покупку создан успешно
-          schema:
-            $ref: '#/definitions/dto.OrderResponse'
-        "400":
-          description: invalid ad id
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: unauthorized
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: internal error
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Создать запрос на покупку товара
-      tags:
-      - orders
   /auth/login:
     post:
       consumes:
