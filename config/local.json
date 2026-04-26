@@ -5,5 +5,11 @@
   "http": {
     "port": 8000
   },
-  "cleanup_interval": "5m"
+  "cleanup_interval": "5m",
+  "search": {
+    "max_results": 50,
+    "min_query_length": 2,
+    "similarity_threshold": 0.3,
+    "word_similarity_threshold": 0.3
+  }
 }

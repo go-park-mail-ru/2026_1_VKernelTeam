@@ -107,6 +107,56 @@
                 }
             }
         },
+        "/ads/search": {
+            "get": {
+                "description": "Поиск объявлений по заголовку и описанию с поддержкой триграмм, транслитерации и смены раскладки",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "Поиск объявлений",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID категории (фильтр)",
+                        "name": "category_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "результаты поиска",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Ad"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "query parameter is required / search query is too short",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ads/{id}": {
             "get": {
                 "description": "Возвращает объявление по заданному ID",

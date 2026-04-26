@@ -43,6 +43,7 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
@@ -177,6 +178,7 @@ func (a *App) setupRoutes() {
 
 	// Обработчии объявлений
 	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/search", a.adsHandlers.HandleSearchAds)
 	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
 
 	// Характеристики категорий (публичная ручка)
