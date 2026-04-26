@@ -949,7 +949,7 @@ func (s *AdStorage) SetProductCustomCharacteristics(ctx context.Context, product
 // Поиск ведётся по title (similarity) и description (word_similarity).
 // Пороги устанавливаются через SET LOCAL внутри транзакции.
 // variants содержит все варианты запроса (оригинал, транслит, раскладка, синонимы).
-func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config.SearchConfig) ([]models.Ad, error) {
+func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error) {
 	s.log.DebugContext(ctx, "executing search",
 		slog.String("op", opSearchAds),
 		slog.Any("variants", variants),
@@ -965,12 +965,13 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	// Устанавливаем пороги для текущей транзакции
-	_, err = tx.Exec(ctx, "SET LOCAL pg_trgm.similarity_threshold = $1", cfg.SimilarityThreshold)
+	// SET LOCAL не поддерживает параметризованные запросы ($1) в PostgreSQL,
+	// поэтому используем fmt.Sprintf. Значения — float64 из конфига, не пользовательский ввод.
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.similarity_threshold = %f", cfg.SimilarityThreshold))
 	if err != nil {
 		return nil, fmt.Errorf("SearchAds: set similarity_threshold: %w", err)
 	}
-	_, err = tx.Exec(ctx, "SET LOCAL pg_trgm.word_similarity_threshold = $1", cfg.WordSimilarityThreshold)
+	_, err = tx.Exec(ctx, fmt.Sprintf("SET LOCAL pg_trgm.word_similarity_threshold = %f", cfg.WordSimilarityThreshold))
 	if err != nil {
 		return nil, fmt.Errorf("SearchAds: set word_similarity_threshold: %w", err)
 	}
@@ -990,6 +991,7 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config
 			WHERE p.deleted_at IS NULL
 			  AND p.status = 'active'
 			  AND (v.term <% p.title OR v.term <% p.description)
+			  AND ($3::bigint = 0 OR p.category_id = $3)
 			GROUP BY p.id
 			ORDER BY rank DESC
 			LIMIT $2
@@ -1012,7 +1014,7 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, cfg config
 		ORDER BY m.rank DESC
 	`
 
-	rows, err := tx.Query(ctx, query, variants, cfg.MaxResults)
+	rows, err := tx.Query(ctx, query, variants, cfg.MaxResults, categoryID)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to execute search query",
 			slog.String("op", opSearchAds),

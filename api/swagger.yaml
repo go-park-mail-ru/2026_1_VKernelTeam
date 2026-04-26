@@ -535,6 +535,10 @@ paths:
         name: query
         required: true
         type: string
+      - description: ID категории (фильтр)
+        in: query
+        name: category_id
+        type: integer
       produces:
       - application/json
       responses:
