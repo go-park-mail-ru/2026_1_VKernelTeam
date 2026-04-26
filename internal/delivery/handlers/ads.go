@@ -65,6 +65,7 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 // @Tags ads
 // @Produce json
 // @Param query query string true "Поисковый запрос"
+// @Param category_id query int false "ID категории (фильтр)"
 // @Success 200 {array} models.Ad "результаты поиска"
 // @Failure 400 {object} dto.ErrorResponse "query parameter is required / search query is too short"
 // @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
@@ -76,7 +77,17 @@ func (h *AdsHandlers) HandleSearchAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ads, err := h.services.Ads.SearchAds(r.Context(), query)
+	var categoryID int64
+	if catStr := r.URL.Query().Get("category_id"); catStr != "" {
+		catID, err := strconv.ParseInt(catStr, 10, 64)
+		if err != nil {
+			responser.RespondWithError(w, http.StatusBadRequest, "invalid category_id parameter")
+			return
+		}
+		categoryID = catID
+	}
+
+	ads, err := h.services.Ads.SearchAds(r.Context(), query, categoryID)
 	if err != nil {
 		if errors.Is(err, adsUC.ErrQueryTooShort) {
 			responser.RespondWithError(w, http.StatusBadRequest, ErrSearchQueryTooShort)

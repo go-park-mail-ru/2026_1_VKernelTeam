@@ -41,7 +41,7 @@ const (
 
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
-	SearchAds(ctx context.Context, variants []string, cfg config.SearchConfig) ([]models.Ad, error)
+	SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 	AddProductImages(ctx context.Context, adID int64, photos []string) error
@@ -116,10 +116,12 @@ func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 }
 
 // SearchAds выполняет поиск по объявлениям с транслитерацией и сменой раскладки.
-func (a *Ads) SearchAds(ctx context.Context, query string) ([]models.Ad, error) {
+// categoryID == 0 означает поиск по всем категориям.
+func (a *Ads) SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error) {
 	a.log.InfoContext(ctx, "searching ads",
 		slog.String("op", opSearchAds),
 		slog.String("query", query),
+		slog.Int64("category_id", categoryID),
 	)
 
 	if utf8.RuneCountInString(query) < a.searchCfg.MinQueryLength {
@@ -149,7 +151,7 @@ func (a *Ads) SearchAds(ctx context.Context, query string) ([]models.Ad, error) 
 		slog.Any("variants", variants),
 	)
 
-	ads, err := a.adsStorage.SearchAds(ctx, variants, a.searchCfg)
+	ads, err := a.adsStorage.SearchAds(ctx, variants, categoryID, a.searchCfg)
 	if err != nil {
 		a.log.ErrorContext(ctx, "failed to search ads",
 			slog.String("op", opSearchAds),

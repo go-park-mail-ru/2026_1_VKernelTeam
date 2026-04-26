@@ -130,6 +130,12 @@ const docTemplate = `{
                         "name": "query",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID категории (фильтр)",
+                        "name": "category_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {

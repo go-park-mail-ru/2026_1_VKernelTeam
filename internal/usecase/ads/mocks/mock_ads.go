@@ -213,18 +213,18 @@ func (mr *MockAdsProviderMockRecorder) RemoveFavorite(ctx, userID, adID interfac
 }
 
 // SearchAds mocks base method.
-func (m *MockAdsProvider) SearchAds(ctx context.Context, variants []string, cfg config.SearchConfig) ([]models.Ad, error) {
+func (m *MockAdsProvider) SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SearchAds", ctx, variants, cfg)
+	ret := m.ctrl.Call(m, "SearchAds", ctx, variants, categoryID, cfg)
 	ret0, _ := ret[0].([]models.Ad)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // SearchAds indicates an expected call of SearchAds.
-func (mr *MockAdsProviderMockRecorder) SearchAds(ctx, variants, cfg interface{}) *gomock.Call {
+func (mr *MockAdsProviderMockRecorder) SearchAds(ctx, variants, categoryID, cfg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAds", reflect.TypeOf((*MockAdsProvider)(nil).SearchAds), ctx, variants, cfg)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAds", reflect.TypeOf((*MockAdsProvider)(nil).SearchAds), ctx, variants, categoryID, cfg)
 }
 
 // SetProductCharacteristics mocks base method.
