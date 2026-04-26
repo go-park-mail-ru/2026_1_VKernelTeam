@@ -194,7 +194,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ads/search?query=макбук",
+							"raw": "{{baseUrl}}/ads/search?query=макбук&category_id=1",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads", "search"],
 							"query": [
@@ -202,10 +202,16 @@
 									"key": "query",
 									"value": "макбук",
 									"description": "Поисковый запрос (мин. 2 символа). Поддерживает транслитерацию и смену раскладки"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"description": "ID категории для фильтрации (опционально, если не указан — поиск по всем категориям)",
+									"disabled": true
 								}
 							]
 						},
-						"description": "Поиск по title + description (pg_trgm триграммы, транслитерация, смена раскладки)"
+						"description": "Поиск по title + description (pg_trgm триграммы, транслитерация, смена раскладки). Опционально фильтрация по категории"
 					}
 				},
 				{

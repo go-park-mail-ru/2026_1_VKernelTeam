@@ -13,5 +13,6 @@ bin/
 schema.md
 .agents
 skills-*.json
+.claude
 
 static/
