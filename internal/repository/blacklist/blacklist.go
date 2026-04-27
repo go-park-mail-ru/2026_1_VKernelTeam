@@ -1,3 +1,4 @@
+
 package blacklist
 
 import (
