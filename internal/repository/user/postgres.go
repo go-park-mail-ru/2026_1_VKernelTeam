@@ -18,6 +18,7 @@ const (
 	opGetUserByID      = "db.user.UserByID"
 	opUpdateUser       = "db.user.UpdateUser"
 	opUpdateAvatarPath = "db.user.UpdateAvatarPath"
+	opGetUserRole      = "db.user.GetUserRole"
 )
 
 // Sentinel-ошибки — используются в юзкейсе для проверки через errors.Is.
@@ -81,7 +82,7 @@ func (s *UserStorage) SaveUser(ctx context.Context, email string, passHash []byt
 // User возвращает пользователя по email. Возвращает ErrUserNotFound, если он не найден.
 func (s *UserStorage) User(ctx context.Context, email string) (models.User, error) {
 	const query = `
-		SELECT id, first_name, email, password_hash, created_at, updated_at
+		SELECT id, first_name, email, password_hash, role, created_at, updated_at
 		FROM "user"
 		WHERE email = $1
 	`
@@ -93,7 +94,7 @@ func (s *UserStorage) User(ctx context.Context, email string) (models.User, erro
 
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, email).Scan(
-		&u.ID, &u.Name, &u.Email, &u.PassHash,
+		&u.ID, &u.Name, &u.Email, &u.PassHash, &u.Role,
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
@@ -124,7 +125,7 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 		SELECT
             u.id, u.first_name, u.email, u.password_hash,
             COALESCE(u.avatar_path, '') as avatar_path,
-            u.rating, u.created_at, u.updated_at,
+            u.rating, u.role, u.created_at, u.updated_at,
             (SELECT COUNT(*) FROM review WHERE receiver_id = u.id) as reviews_count,
             (SELECT COUNT(*) FROM product WHERE seller_id = u.id AND deleted_at IS NULL) as ads_count,
             (SELECT COUNT(*) FROM favorite WHERE user_id = u.id) as favorites_count,
@@ -146,7 +147,7 @@ func (s *UserStorage) UserByID(ctx context.Context, userID int64) (models.User, 
 
 	err := s.pool.QueryRow(ctx, query, userID).Scan(
 		&u.ID, &u.Name, &u.Email, &u.PassHash,
-		&u.AvatarPath, &u.Rating, &u.CreatedAt, &u.UpdatedAt,
+		&u.AvatarPath, &u.Rating, &u.Role, &u.CreatedAt, &u.UpdatedAt,
 		&u.ReviewsCount, &u.AdsCount, &u.FavoritesCount,
 		&cartCount, &u.MessagesCount,
 	)
@@ -180,7 +181,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 		UPDATE "user"
 		SET first_name = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
-		RETURNING id, first_name, email, password_hash, created_at, updated_at
+		RETURNING id, first_name, email, password_hash, role, created_at, updated_at
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -190,7 +191,7 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 
 	var u models.User
 	err := s.pool.QueryRow(ctx, query, name, userID).Scan(
-		&u.ID, &u.Name, &u.Email, &u.PassHash,
+		&u.ID, &u.Name, &u.Email, &u.PassHash, &u.Role,
 		&u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
@@ -214,6 +215,32 @@ func (s *UserStorage) UpdateUser(ctx context.Context, userID int64, name string)
 		slog.Int64("user_id", userID),
 	)
 	return u, nil
+}
+
+// GetUserRole возвращает роль пользователя по его ID.
+func (s *UserStorage) GetUserRole(ctx context.Context, userID int64) (string, error) {
+	const query = `SELECT role FROM "user" WHERE id = $1`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUserRole),
+		slog.Int64("user_id", userID),
+	)
+
+	var role string
+	err := s.pool.QueryRow(ctx, query, userID).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrUserNotFound
+		}
+		s.log.ErrorContext(ctx, "failed to get user role",
+			slog.String("op", opGetUserRole),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
+		return "", fmt.Errorf("GetUserRole: %w", err)
+	}
+
+	return role, nil
 }
 
 // UpdateAvatarPath обновляет путь к аватару пользователя

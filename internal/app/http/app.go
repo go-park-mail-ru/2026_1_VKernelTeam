@@ -56,11 +56,37 @@ type Ads interface {
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
+// Cart описывает методы сервиса корзины
 type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
-	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
+}
+
+// Chat описывает методы сервиса чатов и заказов
+type Chat interface {
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
+	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
+	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
+	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
+}
+
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
+	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
+	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
+	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
+}
+
+// SupportMessage описывает методы сервиса сообщений в чате обращения
+type SupportMessage interface {
+	SendMessage(ctx context.Context, ticketID, userID int64, req *dto.SendMessageRequest) (*dto.MessageResponse, error)
+	GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error)
 }
 
 // TokenChecker интерфейс для проверки отозванных токенов
@@ -68,27 +94,38 @@ type TokenChecker interface {
 	Check(jti string) bool
 }
 
+// RoleProvider возвращает роль пользователя по его ID (для role middleware).
+type RoleProvider interface {
+	GetUserRole(ctx context.Context, userID int64) (string, error)
+}
+
 // Services объединяет все бизнес-сервисы приложения
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
+	Ads            Ads
+	Auth           Auth
+	Cart           Cart
+	Chat           Chat
+	SupportTicket  SupportTicket
+	SupportMessage SupportMessage
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
-	log          *slog.Logger
-	router       *http.ServeMux
-	port         int
-	srv          *http.Server
-	services     Services
-	blacklist    TokenChecker
-	tokenTTL     time.Duration
-	secret       string
-	authHandlers *handlers.AuthHandlers
-	adsHandlers  *handlers.AdsHandlers
-	cartHandlers *handlers.CartHandlers
+	log                   *slog.Logger
+	router                *http.ServeMux
+	port                  int
+	srv                   *http.Server
+	services              Services
+	blacklist             TokenChecker
+	roleProvider          RoleProvider
+	tokenTTL              time.Duration
+	secret                string
+	authHandlers          *handlers.AuthHandlers
+	adsHandlers           *handlers.AdsHandlers
+	cartHandlers          *handlers.CartHandlers
+	chatHandlers          *handlers.ChatHandlers
+	supportTicketHandlers *handlers.SupportTicketHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -96,19 +133,21 @@ func New(
 	log *slog.Logger,
 	services Services,
 	bl TokenChecker,
+	roleProvider RoleProvider,
 	port int,
 	tokenTTL time.Duration,
 	refreshTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
-		log:       log,
-		router:    http.NewServeMux(),
-		port:      port,
-		services:  services,
-		tokenTTL:  tokenTTL,
-		blacklist: bl,
-		secret:    secret,
+		log:          log,
+		router:       http.NewServeMux(),
+		port:         port,
+		services:     services,
+		tokenTTL:     tokenTTL,
+		blacklist:    bl,
+		roleProvider: roleProvider,
+		secret:       secret,
 	}
 
 	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
@@ -116,16 +155,30 @@ func New(
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL, refreshTTL, secret)
+
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
 	app.cartHandlers = handlers.NewCartHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
+	app.chatHandlers = handlers.NewChatHandlers(log, &handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+		Chat: services.Chat,
+	})
+
+	app.supportTicketHandlers = handlers.NewSupportTicketHandlers(log, &handlers.Services{
+		SupportTicket:  services.SupportTicket,
+		SupportMessage: services.SupportMessage,
+	})
 
 	app.setupRoutes()
 
@@ -180,12 +233,17 @@ func (a *App) setupRoutes() {
 	a.router.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleGetCart)))
 	a.router.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleAddToCart)))
 	a.router.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(a.cartHandlers.HandleRemoveFromCart)))
-	a.router.Handle("POST "+prefix+"/cart/checkout", authMW(http.HandlerFunc(a.cartHandlers.HandleCheckout)))
 
 	// Избранное
 	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
 	a.router.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteFromFavorites)))
 	a.router.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(a.adsHandlers.HandleGetFavorites)))
+
+	// Чаты и заказы
+	a.router.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(a.chatHandlers.HandleCreateOrder)))
+	a.router.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
+	a.router.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(a.chatHandlers.HandleGetAllChats)))
+	a.router.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(a.chatHandlers.HandleGetChat)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))
@@ -196,6 +254,23 @@ func (a *App) setupRoutes() {
 
 	// Аватар
 	a.router.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(a.authHandlers.HandleUploadAvatar)))
+
+	// Техподдержка (обращения)
+	a.router.Handle("POST "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleCreateTicket)))
+	a.router.Handle("GET "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMyTickets)))
+	a.router.Handle("GET "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetTicket)))
+	a.router.Handle("PUT "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleUpdateTicket)))
+	a.router.Handle("POST "+prefix+"/support/tickets/{id}/rate", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleRateTicket)))
+
+	// Чат обращения (сообщения)
+	a.router.Handle("POST "+prefix+"/support/tickets/{id}/messages", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleSendMessage)))
+	a.router.Handle("GET "+prefix+"/support/tickets/{id}/messages", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMessages)))
+
+	// Админка техподдержки (только support/admin)
+	staffMW := middleware.RoleMiddleware(a.log, a.roleProvider, "support", "admin")
+	a.router.Handle("PATCH "+prefix+"/support/tickets/{id}/status", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleChangeStatus))))
+	a.router.Handle("GET "+prefix+"/support/tickets/all", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetAllTickets))))
+	a.router.Handle("GET "+prefix+"/support/tickets/stats", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetStats))))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html

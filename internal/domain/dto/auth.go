@@ -20,6 +20,7 @@ type LoginResponse struct {
 	UserID int64  `json:"user_id"`
 	Email  string `json:"email"`
 	Name   string `json:"name"`
+	Role   string `json:"role"`
 }
 
 // UpdateProfileRequest представляет собой структуру для запроса на обновленеи профиля

@@ -132,33 +132,3 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
 
-// HandleCheckout оформляет заказ на товары в корзине
-// @Summary Оформить заказ
-// @Description Совершает покупку всех товаров из корзины и возвращает контакты продавцов
-// @Tags cart
-// @Produce json
-// @Success 200 {object} dto.CheckoutResponse "успешное оформление заказа"
-// @Failure 400 {object} dto.ErrorResponse "cart is empty / one or more products are no longer available: Ошибка оформления заказа"
-// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
-// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
-// @Security CookieAuth
-// @Router /cart/checkout [post]
-func (h *CartHandlers) HandleCheckout(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
-	if !ok {
-		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
-		return
-	}
-
-	res, err := h.services.Cart.Checkout(r.Context(), userID)
-	if err != nil {
-		h.log.WarnContext(r.Context(), "checkout failed",
-			slog.Int64("user_id", userID),
-			slog.String("error", err.Error()),
-		)
-		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	responser.RespondWithJSON(w, http.StatusOK, res)
-}

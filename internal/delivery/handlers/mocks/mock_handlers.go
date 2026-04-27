@@ -52,21 +52,6 @@ func (mr *MockCartMockRecorder) AddToCart(ctx, userID, productID interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToCart", reflect.TypeOf((*MockCart)(nil).AddToCart), ctx, userID, productID)
 }
 
-// Checkout mocks base method.
-func (m *MockCart) Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Checkout", ctx, userID)
-	ret0, _ := ret[0].(*dto.CheckoutResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Checkout indicates an expected call of Checkout.
-func (mr *MockCartMockRecorder) Checkout(ctx, userID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Checkout", reflect.TypeOf((*MockCart)(nil).Checkout), ctx, userID)
-}
-
 // GetCart mocks base method.
 func (m *MockCart) GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error) {
 	m.ctrl.T.Helper()
@@ -221,6 +206,21 @@ func (mr *MockAdsMockRecorder) GetAllAds(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAds)(nil).GetAllAds), ctx)
 }
 
+// GetCategoryCharacteristics mocks base method.
+func (m *MockAds) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
+	ret0, _ := ret[0].([]models.CategoryCharacteristic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
+func (mr *MockAdsMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAds)(nil).GetCategoryCharacteristics), ctx, categoryID)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAds) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -277,21 +277,6 @@ func (m *MockAds) UploadAdPhotos(ctx context.Context, files []multipart.File, fi
 func (mr *MockAdsMockRecorder) UploadAdPhotos(ctx, files, filenames interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadAdPhotos", reflect.TypeOf((*MockAds)(nil).UploadAdPhotos), ctx, files, filenames)
-}
-
-// GetCategoryCharacteristics mocks base method.
-func (m *MockAds) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
-	ret0, _ := ret[0].([]models.CategoryCharacteristic)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
-func (mr *MockAdsMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAds)(nil).GetCategoryCharacteristics), ctx, categoryID)
 }
 
 // MockAuth is a mock of Auth interface.
@@ -437,4 +422,282 @@ func (m *MockAuth) ValidateTokenAndGetUser(ctx context.Context, tokenString stri
 func (mr *MockAuthMockRecorder) ValidateTokenAndGetUser(ctx, tokenString interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateTokenAndGetUser", reflect.TypeOf((*MockAuth)(nil).ValidateTokenAndGetUser), ctx, tokenString)
+}
+
+// MockChat is a mock of Chat interface.
+type MockChat struct {
+	ctrl     *gomock.Controller
+	recorder *MockChatMockRecorder
+}
+
+// MockChatMockRecorder is the mock recorder for MockChat.
+type MockChatMockRecorder struct {
+	mock *MockChat
+}
+
+// NewMockChat creates a new mock instance.
+func NewMockChat(ctrl *gomock.Controller) *MockChat {
+	mock := &MockChat{ctrl: ctrl}
+	mock.recorder = &MockChatMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockChat) EXPECT() *MockChatMockRecorder {
+	return m.recorder
+}
+
+// ConfirmPurchase mocks base method.
+func (m *MockChat) ConfirmPurchase(ctx context.Context, chatID, userID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConfirmPurchase", ctx, chatID, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ConfirmPurchase indicates an expected call of ConfirmPurchase.
+func (mr *MockChatMockRecorder) ConfirmPurchase(ctx, chatID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfirmPurchase", reflect.TypeOf((*MockChat)(nil).ConfirmPurchase), ctx, chatID, userID)
+}
+
+// CreateOrderRequest mocks base method.
+func (m *MockChat) CreateOrderRequest(ctx context.Context, adID, buyerID int64) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrderRequest", ctx, adID, buyerID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateOrderRequest indicates an expected call of CreateOrderRequest.
+func (mr *MockChatMockRecorder) CreateOrderRequest(ctx, adID, buyerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrderRequest", reflect.TypeOf((*MockChat)(nil).CreateOrderRequest), ctx, adID, buyerID)
+}
+
+// GetAllChats mocks base method.
+func (m *MockChat) GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllChats", ctx, userID)
+	ret0, _ := ret[0].(dto.ChatListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllChats indicates an expected call of GetAllChats.
+func (mr *MockChatMockRecorder) GetAllChats(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllChats", reflect.TypeOf((*MockChat)(nil).GetAllChats), ctx, userID)
+}
+
+// GetChat mocks base method.
+func (m *MockChat) GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetChat", ctx, chatID, userID)
+	ret0, _ := ret[0].(dto.ChatDetailResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetChat indicates an expected call of GetChat.
+func (mr *MockChatMockRecorder) GetChat(ctx, chatID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChat", reflect.TypeOf((*MockChat)(nil).GetChat), ctx, chatID, userID)
+}
+
+// MockSupportTicket is a mock of SupportTicket interface.
+type MockSupportTicket struct {
+	ctrl     *gomock.Controller
+	recorder *MockSupportTicketMockRecorder
+}
+
+// MockSupportTicketMockRecorder is the mock recorder for MockSupportTicket.
+type MockSupportTicketMockRecorder struct {
+	mock *MockSupportTicket
+}
+
+// NewMockSupportTicket creates a new mock instance.
+func NewMockSupportTicket(ctrl *gomock.Controller) *MockSupportTicket {
+	mock := &MockSupportTicket{ctrl: ctrl}
+	mock.recorder = &MockSupportTicketMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSupportTicket) EXPECT() *MockSupportTicketMockRecorder {
+	return m.recorder
+}
+
+// ChangeStatus mocks base method.
+func (m *MockSupportTicket) ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeStatus", ctx, ticketID, req)
+	ret0, _ := ret[0].(*dto.TicketStatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ChangeStatus indicates an expected call of ChangeStatus.
+func (mr *MockSupportTicketMockRecorder) ChangeStatus(ctx, ticketID, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeStatus", reflect.TypeOf((*MockSupportTicket)(nil).ChangeStatus), ctx, ticketID, req)
+}
+
+// CreateTicket mocks base method.
+func (m *MockSupportTicket) CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTicket", ctx, userID, req)
+	ret0, _ := ret[0].(*dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateTicket indicates an expected call of CreateTicket.
+func (mr *MockSupportTicketMockRecorder) CreateTicket(ctx, userID, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTicket", reflect.TypeOf((*MockSupportTicket)(nil).CreateTicket), ctx, userID, req)
+}
+
+// GetAllTickets mocks base method.
+func (m *MockSupportTicket) GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAllTickets", ctx)
+	ret0, _ := ret[0].([]dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAllTickets indicates an expected call of GetAllTickets.
+func (mr *MockSupportTicketMockRecorder) GetAllTickets(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllTickets", reflect.TypeOf((*MockSupportTicket)(nil).GetAllTickets), ctx)
+}
+
+// GetMyTickets mocks base method.
+func (m *MockSupportTicket) GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMyTickets", ctx, userID)
+	ret0, _ := ret[0].([]dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMyTickets indicates an expected call of GetMyTickets.
+func (mr *MockSupportTicketMockRecorder) GetMyTickets(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMyTickets", reflect.TypeOf((*MockSupportTicket)(nil).GetMyTickets), ctx, userID)
+}
+
+// GetStats mocks base method.
+func (m *MockSupportTicket) GetStats(ctx context.Context) (*dto.StatsResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStats", ctx)
+	ret0, _ := ret[0].(*dto.StatsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStats indicates an expected call of GetStats.
+func (mr *MockSupportTicketMockRecorder) GetStats(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStats", reflect.TypeOf((*MockSupportTicket)(nil).GetStats), ctx)
+}
+
+// GetTicket mocks base method.
+func (m *MockSupportTicket) GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTicket", ctx, ticketID, userID)
+	ret0, _ := ret[0].(*dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTicket indicates an expected call of GetTicket.
+func (mr *MockSupportTicketMockRecorder) GetTicket(ctx, ticketID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTicket", reflect.TypeOf((*MockSupportTicket)(nil).GetTicket), ctx, ticketID, userID)
+}
+
+// RateTicket mocks base method.
+func (m *MockSupportTicket) RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RateTicket", ctx, userID, ticketID, rating)
+	ret0, _ := ret[0].(*dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RateTicket indicates an expected call of RateTicket.
+func (mr *MockSupportTicketMockRecorder) RateTicket(ctx, userID, ticketID, rating interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RateTicket", reflect.TypeOf((*MockSupportTicket)(nil).RateTicket), ctx, userID, ticketID, rating)
+}
+
+// UpdateTicket mocks base method.
+func (m *MockSupportTicket) UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTicket", ctx, ticketID, userID, req)
+	ret0, _ := ret[0].(*dto.TicketResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateTicket indicates an expected call of UpdateTicket.
+func (mr *MockSupportTicketMockRecorder) UpdateTicket(ctx, ticketID, userID, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTicket", reflect.TypeOf((*MockSupportTicket)(nil).UpdateTicket), ctx, ticketID, userID, req)
+}
+
+// MockSupportMessage is a mock of SupportMessage interface.
+type MockSupportMessage struct {
+	ctrl     *gomock.Controller
+	recorder *MockSupportMessageMockRecorder
+}
+
+// MockSupportMessageMockRecorder is the mock recorder for MockSupportMessage.
+type MockSupportMessageMockRecorder struct {
+	mock *MockSupportMessage
+}
+
+// NewMockSupportMessage creates a new mock instance.
+func NewMockSupportMessage(ctrl *gomock.Controller) *MockSupportMessage {
+	mock := &MockSupportMessage{ctrl: ctrl}
+	mock.recorder = &MockSupportMessageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSupportMessage) EXPECT() *MockSupportMessageMockRecorder {
+	return m.recorder
+}
+
+// GetMessages mocks base method.
+func (m *MockSupportMessage) GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMessages", ctx, ticketID, userID)
+	ret0, _ := ret[0].([]dto.MessageResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMessages indicates an expected call of GetMessages.
+func (mr *MockSupportMessageMockRecorder) GetMessages(ctx, ticketID, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessages", reflect.TypeOf((*MockSupportMessage)(nil).GetMessages), ctx, ticketID, userID)
+}
+
+// SendMessage mocks base method.
+func (m *MockSupportMessage) SendMessage(ctx context.Context, ticketID, userID int64, req *dto.SendMessageRequest) (*dto.MessageResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendMessage", ctx, ticketID, userID, req)
+	ret0, _ := ret[0].(*dto.MessageResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendMessage indicates an expected call of SendMessage.
+func (mr *MockSupportMessageMockRecorder) SendMessage(ctx, ticketID, userID, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMessage", reflect.TypeOf((*MockSupportMessage)(nil).SendMessage), ctx, ticketID, userID, req)
 }

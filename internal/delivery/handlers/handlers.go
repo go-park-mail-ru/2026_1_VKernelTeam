@@ -30,6 +30,7 @@ const (
 	ErrMethodNotAllowed     = "Method not allowed"
 	ErrAdNotFound           = "ad not found"
 	ErrInvalidAdID          = "invalid ad id"
+	ErrInvalidChatID        = "invalid chat id"
 	ErrForbidden            = "forbidden"
 	ErrInvalidUserID        = "invalid user id"
 	ErrFailedToGetUserAds   = "failed to get user ads"
@@ -42,9 +43,12 @@ const (
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
+	Ads            Ads
+	Auth           Auth
+	Cart           Cart
+	Chat           Chat
+	SupportTicket  SupportTicket
+	SupportMessage SupportMessage
 }
 
 // Cart описывает методы сервиса корзины
@@ -52,7 +56,6 @@ type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
-	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
 }
 
 // Ads описывает методы сервиса объявлений
@@ -83,6 +86,32 @@ type Auth interface {
 	UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error)
 }
 
+// Chat описывает методы сервиса чатов и заказов
+type Chat interface {
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
+	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
+	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
+	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
+}
+
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
+	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
+	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
+	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
+}
+
+// SupportMessage описывает методы сервиса сообщений в чате обращения
+type SupportMessage interface {
+	SendMessage(ctx context.Context, ticketID, userID int64, req *dto.SendMessageRequest) (*dto.MessageResponse, error)
+	GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error)
+}
+
 // AuthHandlers содержит обработчики для аутентификации
 type AuthHandlers struct {
 	log        *slog.Logger
@@ -104,6 +133,12 @@ type CartHandlers struct {
 	log      *slog.Logger
 	services Services
 	tokenTTL time.Duration
+}
+
+// ChatHandlers обрабатывает запросы, связанные с чатами и заказами
+type ChatHandlers struct {
+	log      *slog.Logger
+	services *Services
 }
 
 // NewAuthHandlers создает новый экземпляр AuthHandlers
@@ -132,6 +167,14 @@ func NewCartHandlers(log *slog.Logger, services Services, tokenTTL time.Duration
 		log:      log,
 		services: services,
 		tokenTTL: tokenTTL,
+	}
+}
+
+// NewChatHandlers создает новый экземпляр ChatHandlers
+func NewChatHandlers(log *slog.Logger, services *Services) *ChatHandlers {
+	return &ChatHandlers{
+		log:      log,
+		services: services,
 	}
 }
 
@@ -183,5 +226,6 @@ func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) 
 		UserID: user.ID,
 		Email:  user.Email,
 		Name:   user.Name,
+		Role:   user.Role,
 	})
 }
