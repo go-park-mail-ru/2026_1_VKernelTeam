@@ -78,11 +78,10 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
 				'{}'
 			) AS photos,
-			COUNT(DISTINCT pv.id)        AS views_count,
+			p.views_count,
 			COUNT(DISTINCT f.product_id) AS favorites_count
 		FROM product p
 		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view  pv ON pv.product_id = p.id
 		LEFT JOIN favorite       f ON f.product_id  = p.id
 		WHERE p.id = $1
 		  AND p.deleted_at IS NULL
@@ -172,11 +171,10 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
 				'{}'
 			) AS photos,
-			COUNT(DISTINCT pv.id)        AS views_count,
+			p.views_count,
 			COUNT(DISTINCT f.product_id) AS favorites_count
 		FROM product p
 		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view  pv ON pv.product_id = p.id
 		LEFT JOIN favorite       f ON f.product_id  = p.id
 		WHERE p.deleted_at IS NULL
 		  AND p.status = 'active'
@@ -535,11 +533,10 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 			p.id, p.seller_id, p.category_id, p.title, p.description,
 			p.price, p.status, COALESCE(p.location, '') AS location, p.created_at, p.updated_at,
 			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
-			COUNT(DISTINCT pv.id) AS views_count,
+			p.views_count,
 			COUNT(DISTINCT f.product_id) AS favorites_count
 		FROM product p
 		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view pv ON pv.product_id = p.id
 		LEFT JOIN favorite f ON f.product_id = p.id
 		WHERE p.seller_id = $1 AND p.deleted_at IS NULL
 		GROUP BY p.id
@@ -677,12 +674,11 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
 				'{}'
 			) AS photos,
-			COUNT(DISTINCT pv.id)        AS views_count,
+			p.views_count,
 			COUNT(DISTINCT f_all.user_id) AS favorites_count
 		FROM favorite f
 		JOIN product p ON f.product_id = p.id
 		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view  pv ON pv.product_id = p.id
 		LEFT JOIN favorite   f_all ON f_all.product_id = p.id
 		WHERE f.user_id = $1
 		  AND p.deleted_at IS NULL

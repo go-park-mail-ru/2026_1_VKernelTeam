@@ -72,6 +72,11 @@ type Chat interface {
 	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
+// Views описывает методы сервиса просмотров
+type Views interface {
+	RecordView(ctx context.Context, productID int64, userID *int64, deviceID string) (int64, error)
+}
+
 // TokenChecker интерфейс для проверки отозванных токенов
 type TokenChecker interface {
 	Check(jti string) bool
@@ -79,27 +84,29 @@ type TokenChecker interface {
 
 // Services объединяет все бизнес-сервисы приложения
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
+	Ads   Ads
+	Auth  Auth
+	Cart  Cart
 	Chat Chat
+	Views Views
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
-	log          *slog.Logger
-	router       *http.ServeMux
-	port         int
-	srv          *http.Server
-	services     Services
-	blacklist    TokenChecker
-	tokenTTL     time.Duration
-	secret       string
-	authHandlers *handlers.AuthHandlers
-	adsHandlers  *handlers.AdsHandlers
-	cartHandlers *handlers.CartHandlers
+	log           *slog.Logger
+	router        *http.ServeMux
+	port          int
+	srv           *http.Server
+	services      Services
+	blacklist     TokenChecker
+	tokenTTL      time.Duration
+	secret        string
+	authHandlers  *handlers.AuthHandlers
+	adsHandlers   *handlers.AdsHandlers
+	cartHandlers  *handlers.CartHandlers
 	chatHandlers *handlers.ChatHandlers
+	viewsHandlers *handlers.ViewsHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -146,6 +153,7 @@ func New(
 		Cart: services.Cart,
 		Chat: services.Chat,
 	})
+	app.viewsHandlers = handlers.NewViewsHandlers(log, services.Views)
 
 	app.setupRoutes()
 
@@ -187,6 +195,10 @@ func (a *App) setupRoutes() {
 	// Публичный профиль продавца и его объявления
 	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)
 	a.router.HandleFunc("GET "+prefix+"/users/{id}/ads", a.adsHandlers.HandleGetUserAds)
+
+	// Просмотры объявлений (опциональная авторизация)
+	optionalAuthMW := middleware.OptionalAuthMiddleware(a.log, a.blacklist, a.secret)
+	a.router.Handle("POST "+prefix+"/ads/{id}/view", optionalAuthMW(http.HandlerFunc(a.viewsHandlers.HandleRecordView)))
 
 	// Защищенные ручки (нужен JWT)
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)
