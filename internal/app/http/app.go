@@ -43,6 +43,7 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
@@ -56,11 +57,19 @@ type Ads interface {
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 }
 
+// Cart описывает методы сервиса корзины
 type Cart interface {
 	AddToCart(ctx context.Context, userID, productID int64) error
 	RemoveFromCart(ctx context.Context, userID, productID int64) error
 	GetCart(ctx context.Context, userID int64) (*dto.CartResponse, error)
-	Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error)
+}
+
+// Chat описывает методы сервиса чатов и заказов
+type Chat interface {
+	CreateOrderRequest(ctx context.Context, adID int64, buyerID int64) (int64, error)
+	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
+	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
+	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
 // Views описывает методы сервиса просмотров
@@ -78,6 +87,7 @@ type Services struct {
 	Ads   Ads
 	Auth  Auth
 	Cart  Cart
+	Chat Chat
 	Views Views
 }
 
@@ -95,6 +105,7 @@ type App struct {
 	authHandlers  *handlers.AuthHandlers
 	adsHandlers   *handlers.AdsHandlers
 	cartHandlers  *handlers.CartHandlers
+	chatHandlers *handlers.ChatHandlers
 	viewsHandlers *handlers.ViewsHandlers
 }
 
@@ -123,16 +134,25 @@ func New(
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL, refreshTTL, secret)
+
 	app.adsHandlers = handlers.NewAdsHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
 	app.cartHandlers = handlers.NewCartHandlers(log, handlers.Services{
 		Auth: services.Auth,
 		Ads:  services.Ads,
 		Cart: services.Cart,
 	}, tokenTTL)
+
+	app.chatHandlers = handlers.NewChatHandlers(log, &handlers.Services{
+		Auth: services.Auth,
+		Ads:  services.Ads,
+		Cart: services.Cart,
+		Chat: services.Chat,
+	})
 	app.viewsHandlers = handlers.NewViewsHandlers(log, services.Views)
 
 	app.setupRoutes()
@@ -166,6 +186,7 @@ func (a *App) setupRoutes() {
 
 	// Обработчии объявлений
 	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/search", a.adsHandlers.HandleSearchAds)
 	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
 
 	// Характеристики категорий (публичная ручка)
@@ -192,12 +213,17 @@ func (a *App) setupRoutes() {
 	a.router.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleGetCart)))
 	a.router.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(a.cartHandlers.HandleAddToCart)))
 	a.router.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(a.cartHandlers.HandleRemoveFromCart)))
-	a.router.Handle("POST "+prefix+"/cart/checkout", authMW(http.HandlerFunc(a.cartHandlers.HandleCheckout)))
 
 	// Избранное
 	a.router.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleAddToFavorites)))
 	a.router.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(a.adsHandlers.HandleDeleteFromFavorites)))
 	a.router.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(a.adsHandlers.HandleGetFavorites)))
+
+	// Чаты и заказы
+	a.router.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(a.chatHandlers.HandleCreateOrder)))
+	a.router.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(a.chatHandlers.HandleConfirmOrder)))
+	a.router.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(a.chatHandlers.HandleGetAllChats)))
+	a.router.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(a.chatHandlers.HandleGetChat)))
 
 	// Выход
 	a.router.Handle("POST "+prefix+"/auth/logout", authMW(http.HandlerFunc(a.authHandlers.HandleLogout)))

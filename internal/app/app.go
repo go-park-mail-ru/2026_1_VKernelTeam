@@ -12,6 +12,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/blacklist"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/cart"
+	chatRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/chat"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/postgres"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
@@ -23,6 +24,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/ads"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	cartUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/cart"
+	chatUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/chat"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/views"
 )
 
@@ -73,11 +75,15 @@ func New(
 	authService := auth.New(log, userRepo, bl, ref, s3Storage, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	// создаём сервис Ads
-	adsService := ads.New(log, adRepo, s3Storage)
+	adsService := ads.New(log, adRepo, s3Storage, cfg.Search)
 
 	// создаём сервис корзины
 	cartRepo := cart.NewCartStorage(dbClient.Pool, log)
 	cartService := cartUC.New(log, cartRepo, adRepo)
+
+	// создаём сервис чатов и заказов
+	chatStorage := chatRepo.NewChatStorage(dbClient.Pool, log)
+	chatService := chatUC.New(log, chatStorage, adRepo)
 
 	// создаём компоненты просмотров
 	viewStorage := view.NewViewStorage(dbClient.Pool, log)
@@ -106,6 +112,7 @@ func New(
 		Ads:   adsService,
 		Auth:  authService,
 		Cart:  cartService,
+		Chat: chatService,
 		Views: viewsService,
 	}
 

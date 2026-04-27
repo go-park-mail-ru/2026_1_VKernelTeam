@@ -14,7 +14,6 @@ const (
 	opAddToCart      = "usecase.cart.AddToCart"
 	opRemoveFromCart = "usecase.cart.RemoveFromCart"
 	opGetCart        = "usecase.cart.GetCart"
-	opCheckout       = "usecase.cart.Checkout"
 )
 
 // Sentinel-ошибки
@@ -31,7 +30,6 @@ type CartProvider interface {
 	Remove(ctx context.Context, userID, productID int64) error
 	GetByUserID(ctx context.Context, userID int64) ([]dto.CartItemResponse, error)
 	Clear(ctx context.Context, userID int64) error
-	Checkout(ctx context.Context, buyerID int64) ([]int64, map[int64]*dto.SellerContact, error)
 }
 
 // AdsProvider нужен для получения инфы об объявлении при добавлении в корзину
@@ -163,29 +161,3 @@ func (u *Usecase) GetCart(ctx context.Context, userID int64) (*dto.CartResponse,
 	}, nil
 }
 
-// Checkout оформляет заказ на всю корзину.
-func (u *Usecase) Checkout(ctx context.Context, userID int64) (*dto.CheckoutResponse, error) {
-	u.log.InfoContext(ctx, "starting checkout",
-		slog.String("op", opCheckout),
-		slog.Int64("user_id", userID),
-	)
-
-	orderIDs, sellers, err := u.cartStorage.Checkout(ctx, userID)
-	if err != nil {
-		u.log.ErrorContext(ctx, "failed to checkout",
-			slog.String("op", opCheckout),
-			slog.String("error", err.Error()),
-		)
-		return nil, err
-	}
-
-	u.log.InfoContext(ctx, "checkout completed successfully",
-		slog.String("op", opCheckout),
-		slog.Int64("user_id", userID),
-		slog.Int("orders_count", len(orderIDs)),
-	)
-	return &dto.CheckoutResponse{
-		OrderIDs: orderIDs,
-		Sellers:  sellers,
-	}, nil
-}

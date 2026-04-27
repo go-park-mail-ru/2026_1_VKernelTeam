@@ -9,6 +9,7 @@ import (
 	multipart "mime/multipart"
 	reflect "reflect"
 
+	config "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
 	dto "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
 	models "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 	gomock "github.com/golang/mock/gomock"
@@ -167,6 +168,21 @@ func (mr *MockAdsProviderMockRecorder) GetAllAds(ctx interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAdsProvider)(nil).GetAllAds), ctx)
 }
 
+// GetCategoryCharacteristics mocks base method.
+func (m *MockAdsProvider) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
+	ret0, _ := ret[0].([]models.CategoryCharacteristic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
+func (mr *MockAdsProviderMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).GetCategoryCharacteristics), ctx, categoryID)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAdsProvider) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -196,18 +212,19 @@ func (mr *MockAdsProviderMockRecorder) RemoveFavorite(ctx, userID, adID interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFavorite", reflect.TypeOf((*MockAdsProvider)(nil).RemoveFavorite), ctx, userID, adID)
 }
 
-// UpdateAd mocks base method.
-func (m *MockAdsProvider) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
+// SearchAds mocks base method.
+func (m *MockAdsProvider) SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateAd", ctx, req)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "SearchAds", ctx, variants, categoryID, cfg)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// UpdateAd indicates an expected call of UpdateAd.
-func (mr *MockAdsProviderMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
+// SearchAds indicates an expected call of SearchAds.
+func (mr *MockAdsProviderMockRecorder) SearchAds(ctx, variants, categoryID, cfg interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAdsProvider)(nil).UpdateAd), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAds", reflect.TypeOf((*MockAdsProvider)(nil).SearchAds), ctx, variants, categoryID, cfg)
 }
 
 // SetProductCharacteristics mocks base method.
@@ -238,19 +255,18 @@ func (mr *MockAdsProviderMockRecorder) SetProductCustomCharacteristics(ctx, prod
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetProductCustomCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).SetProductCustomCharacteristics), ctx, productID, inputs)
 }
 
-// GetCategoryCharacteristics mocks base method.
-func (m *MockAdsProvider) GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error) {
+// UpdateAd mocks base method.
+func (m *MockAdsProvider) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCategoryCharacteristics", ctx, categoryID)
-	ret0, _ := ret[0].([]models.CategoryCharacteristic)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "UpdateAd", ctx, req)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// GetCategoryCharacteristics indicates an expected call of GetCategoryCharacteristics.
-func (mr *MockAdsProviderMockRecorder) GetCategoryCharacteristics(ctx, categoryID interface{}) *gomock.Call {
+// UpdateAd indicates an expected call of UpdateAd.
+func (mr *MockAdsProviderMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).GetCategoryCharacteristics), ctx, categoryID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAdsProvider)(nil).UpdateAd), ctx, req)
 }
 
 // MockFileStorage is a mock of FileStorage interface.

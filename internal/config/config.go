@@ -24,7 +24,16 @@ type Config struct {
 	CleanupInterval time.Duration
 	HTTP            HTTPConfig
 	S3Storage       S3Config
+	Search          SearchConfig
 	Views           ViewsConfig
+}
+
+// SearchConfig содержит настройки поиска по объявлениям.
+type SearchConfig struct {
+	MaxResults              int     `json:"max_results"`
+	MinQueryLength          int     `json:"min_query_length"`
+	SimilarityThreshold     float64 `json:"similarity_threshold"`
+	WordSimilarityThreshold float64 `json:"word_similarity_threshold"`
 }
 
 // ViewsConfig содержит настройки счётчика просмотров.
@@ -77,11 +86,12 @@ func MustLoadConfig() *Config {
 
 	// Анонимная прокси-структура, которая в точности JSON.
 	var rawConfig struct {
-		Env             string     `json:"env"`
-		RefreshTTL      string     `json:"refresh_ttl"`
-		TokenTTL        string     `json:"token_ttl"`
-		HTTP            HTTPConfig `json:"http"`
-		CleanupInterval string     `json:"cleanup_interval"`
+		Env             string       `json:"env"`
+		RefreshTTL      string       `json:"refresh_ttl"`
+		TokenTTL        string       `json:"token_ttl"`
+		HTTP            HTTPConfig   `json:"http"`
+		CleanupInterval string       `json:"cleanup_interval"`
+		Search          SearchConfig `json:"search"`
 		Views           struct {
 			DedupTTL      string `json:"dedup_ttl"`
 			StreamKey     string `json:"stream_key"`
@@ -140,6 +150,20 @@ func MustLoadConfig() *Config {
 
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
+	searchCfg := rawConfig.Search
+	if searchCfg.MaxResults == 0 {
+		searchCfg.MaxResults = 50
+	}
+	if searchCfg.MinQueryLength == 0 {
+		searchCfg.MinQueryLength = 2
+	}
+	if searchCfg.SimilarityThreshold == 0 {
+		searchCfg.SimilarityThreshold = 0.3
+	}
+	if searchCfg.WordSimilarityThreshold == 0 {
+		searchCfg.WordSimilarityThreshold = 0.3
+	}
+
 	return &Config{
 		Env:             rawConfig.Env,
 		DatabaseDSN:     dsn,
@@ -156,6 +180,7 @@ func MustLoadConfig() *Config {
 			SecretAccessKey: s3SecretAccessKey,
 		},
 		TokenSecret: secret,
+		Search:      searchCfg,
 		Views:       defaultViewsConfig(rawConfig.Views),
 	}
 }
