@@ -43,6 +43,7 @@ type Auth interface {
 // Ads описывает методы сервиса объявлений
 type Ads interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
 	UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error
@@ -89,6 +90,11 @@ type SupportMessage interface {
 	GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error)
 }
 
+// Views описывает методы сервиса просмотров
+type Views interface {
+	RecordView(ctx context.Context, productID int64, userID *int64, deviceID string) (int64, error)
+}
+
 // TokenChecker интерфейс для проверки отозванных токенов
 type TokenChecker interface {
 	Check(jti string) bool
@@ -107,6 +113,7 @@ type Services struct {
 	Chat           Chat
 	SupportTicket  SupportTicket
 	SupportMessage SupportMessage
+	Views          Views
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
@@ -126,6 +133,7 @@ type App struct {
 	cartHandlers          *handlers.CartHandlers
 	chatHandlers          *handlers.ChatHandlers
 	supportTicketHandlers *handlers.SupportTicketHandlers
+	viewsHandlers         *handlers.ViewsHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -174,6 +182,7 @@ func New(
 		Cart: services.Cart,
 		Chat: services.Chat,
 	})
+	app.viewsHandlers = handlers.NewViewsHandlers(log, services.Views)
 
 	app.supportTicketHandlers = handlers.NewSupportTicketHandlers(log, &handlers.Services{
 		SupportTicket:  services.SupportTicket,
@@ -211,6 +220,7 @@ func (a *App) setupRoutes() {
 
 	// Обработчии объявлений
 	a.router.HandleFunc("GET "+prefix+"/ads", a.adsHandlers.HandleGetAds)
+	a.router.HandleFunc("GET "+prefix+"/ads/search", a.adsHandlers.HandleSearchAds)
 	a.router.HandleFunc("GET "+prefix+"/ads/{id}", a.adsHandlers.HandleGetAdByID)
 
 	// Характеристики категорий (публичная ручка)
@@ -219,6 +229,10 @@ func (a *App) setupRoutes() {
 	// Публичный профиль продавца и его объявления
 	a.router.HandleFunc("GET "+prefix+"/users/{id}", a.authHandlers.HandleGetPublicProfile)
 	a.router.HandleFunc("GET "+prefix+"/users/{id}/ads", a.adsHandlers.HandleGetUserAds)
+
+	// Просмотры объявлений (опциональная авторизация)
+	optionalAuthMW := middleware.OptionalAuthMiddleware(a.log, a.blacklist, a.secret)
+	a.router.Handle("POST "+prefix+"/ads/{id}/view", optionalAuthMW(http.HandlerFunc(a.viewsHandlers.HandleRecordView)))
 
 	// Защищенные ручки (нужен JWT)
 	authMW := middleware.AuthMiddleware(a.log, a.blacklist, a.secret)

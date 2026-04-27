@@ -24,6 +24,28 @@ type Config struct {
 	CleanupInterval time.Duration
 	HTTP            HTTPConfig
 	S3Storage       S3Config
+	Search          SearchConfig
+	Views           ViewsConfig
+}
+
+// SearchConfig содержит настройки поиска по объявлениям.
+type SearchConfig struct {
+	MaxResults              int     `json:"max_results"`
+	MinQueryLength          int     `json:"min_query_length"`
+	SimilarityThreshold     float64 `json:"similarity_threshold"`
+	WordSimilarityThreshold float64 `json:"word_similarity_threshold"`
+}
+
+// ViewsConfig содержит настройки счётчика просмотров.
+type ViewsConfig struct {
+	DedupTTL      time.Duration
+	StreamKey     string
+	ConsumerGroup string
+	BatchSize     int64
+	FlushInterval time.Duration
+	BlockTimeout  time.Duration
+	CountCacheTTL time.Duration
+	ClaimTimeout  time.Duration
 }
 
 // HTTPConfig содержит настройки HTTP-сервера.
@@ -64,11 +86,22 @@ func MustLoadConfig() *Config {
 
 	// Анонимная прокси-структура, которая в точности JSON.
 	var rawConfig struct {
-		Env             string     `json:"env"`
-		RefreshTTL      string     `json:"refresh_ttl"`
-		TokenTTL        string     `json:"token_ttl"`
-		HTTP            HTTPConfig `json:"http"`
-		CleanupInterval string     `json:"cleanup_interval"`
+		Env             string       `json:"env"`
+		RefreshTTL      string       `json:"refresh_ttl"`
+		TokenTTL        string       `json:"token_ttl"`
+		HTTP            HTTPConfig   `json:"http"`
+		CleanupInterval string       `json:"cleanup_interval"`
+		Search          SearchConfig `json:"search"`
+		Views           struct {
+			DedupTTL      string `json:"dedup_ttl"`
+			StreamKey     string `json:"stream_key"`
+			ConsumerGroup string `json:"consumer_group"`
+			BatchSize     int64  `json:"batch_size"`
+			FlushInterval string `json:"flush_interval"`
+			BlockTimeout  string `json:"block_timeout"`
+			CountCacheTTL string `json:"count_cache_ttl"`
+			ClaimTimeout  string `json:"claim_timeout"`
+		} `json:"views"`
 	}
 
 	if err := json.NewDecoder(file).Decode(&rawConfig); err != nil {
@@ -117,6 +150,20 @@ func MustLoadConfig() *Config {
 
 	// Перекладываем данные в "чистую" бизнес-модель,
 	// попутно преобразуя типы с помощью хелпера.
+	searchCfg := rawConfig.Search
+	if searchCfg.MaxResults == 0 {
+		searchCfg.MaxResults = 50
+	}
+	if searchCfg.MinQueryLength == 0 {
+		searchCfg.MinQueryLength = 2
+	}
+	if searchCfg.SimilarityThreshold == 0 {
+		searchCfg.SimilarityThreshold = 0.3
+	}
+	if searchCfg.WordSimilarityThreshold == 0 {
+		searchCfg.WordSimilarityThreshold = 0.3
+	}
+
 	return &Config{
 		Env:             rawConfig.Env,
 		DatabaseDSN:     dsn,
@@ -133,7 +180,57 @@ func MustLoadConfig() *Config {
 			SecretAccessKey: s3SecretAccessKey,
 		},
 		TokenSecret: secret,
+		Search:      searchCfg,
+		Views:       defaultViewsConfig(rawConfig.Views),
 	}
+}
+
+// defaultViewsConfig возвращает ViewsConfig с дефолтами для незаполненных полей.
+func defaultViewsConfig(raw struct {
+	DedupTTL      string `json:"dedup_ttl"`
+	StreamKey     string `json:"stream_key"`
+	ConsumerGroup string `json:"consumer_group"`
+	BatchSize     int64  `json:"batch_size"`
+	FlushInterval string `json:"flush_interval"`
+	BlockTimeout  string `json:"block_timeout"`
+	CountCacheTTL string `json:"count_cache_ttl"`
+	ClaimTimeout  string `json:"claim_timeout"`
+}) ViewsConfig {
+	cfg := ViewsConfig{
+		DedupTTL:      24 * time.Hour,
+		StreamKey:     "views:events",
+		ConsumerGroup: "views-consumer",
+		BatchSize:     100,
+		FlushInterval: 2 * time.Second,
+		BlockTimeout:  1 * time.Second,
+		CountCacheTTL: 48 * time.Hour,
+		ClaimTimeout:  30 * time.Second,
+	}
+	if raw.DedupTTL != "" {
+		cfg.DedupTTL = parseDuration(raw.DedupTTL, "views.dedup_ttl")
+	}
+	if raw.StreamKey != "" {
+		cfg.StreamKey = raw.StreamKey
+	}
+	if raw.ConsumerGroup != "" {
+		cfg.ConsumerGroup = raw.ConsumerGroup
+	}
+	if raw.BatchSize > 0 {
+		cfg.BatchSize = raw.BatchSize
+	}
+	if raw.FlushInterval != "" {
+		cfg.FlushInterval = parseDuration(raw.FlushInterval, "views.flush_interval")
+	}
+	if raw.BlockTimeout != "" {
+		cfg.BlockTimeout = parseDuration(raw.BlockTimeout, "views.block_timeout")
+	}
+	if raw.CountCacheTTL != "" {
+		cfg.CountCacheTTL = parseDuration(raw.CountCacheTTL, "views.count_cache_ttl")
+	}
+	if raw.ClaimTimeout != "" {
+		cfg.ClaimTimeout = parseDuration(raw.ClaimTimeout, "views.claim_timeout")
+	}
+	return cfg
 }
 
 // parseDuration — универсальная функция для парсинга времени из строк в конфиге.

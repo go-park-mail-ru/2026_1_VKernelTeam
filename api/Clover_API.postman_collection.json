@@ -1,0 +1,467 @@
+{
+	"info": {
+		"name": "Clover API",
+		"description": "API маркетплейса Клевер — все эндпоинты",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000/api/v1"
+		},
+		{
+			"key": "adId",
+			"value": "1"
+		},
+		{
+			"key": "userId",
+			"value": "1"
+		},
+		{
+			"key": "categoryId",
+			"value": "1"
+		},
+		{
+			"key": "productId",
+			"value": "1"
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Иван\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "refresh"]
+						},
+						"description": "Обновление access token по refresh token из cookie"
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/logout",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "logout"]
+						},
+						"description": "Требует JWT cookie + CSRF token"
+					}
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile Name",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Новое имя\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["profile"]
+						}
+					}
+				},
+				{
+					"name": "Upload Avatar",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "avatar",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/profile/avatar",
+							"host": ["{{baseUrl}}"],
+							"path": ["profile", "avatar"]
+						},
+						"description": "Загрузка аватара (JPEG/PNG/WebP/GIF, max 5MB)"
+					}
+				},
+				{
+					"name": "Get Public Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "{{userId}}"]
+						},
+						"description": "Публичный профиль продавца (без авторизации)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Ads",
+			"item": [
+				{
+					"name": "Get All Ads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads"]
+						},
+						"description": "Все активные объявления"
+					}
+				},
+				{
+					"name": "Search Ads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads/search?query=макбук&category_id=1",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "search"],
+							"query": [
+								{
+									"key": "query",
+									"value": "макбук",
+									"description": "Поисковый запрос (мин. 2 символа). Поддерживает транслитерацию и смену раскладки"
+								},
+								{
+									"key": "category_id",
+									"value": "1",
+									"description": "ID категории для фильтрации (опционально, если не указан — поиск по всем категориям)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Поиск по title + description (pg_trgm триграммы, транслитерация, смена раскладки). Опционально фильтрация по категории"
+					}
+				},
+				{
+					"name": "Get Ad by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Ad",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "data",
+									"value": "{\n  \"category_id\": 1,\n  \"title\": \"iPhone 15 Pro Max 256GB\",\n  \"description\": \"Новый, запечатанный. Полный комплект, гарантия 1 год.\",\n  \"price\": 120000,\n  \"status\": \"active\",\n  \"location\": \"Москва\",\n  \"category_characteristics\": [],\n  \"custom_characteristics\": []\n}",
+									"type": "text"
+								},
+								{
+									"key": "photos",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/ads",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads"]
+						},
+						"description": "Создание объявления (multipart/form-data: JSON data + photos)"
+					}
+				},
+				{
+					"name": "Update Ad",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "data",
+									"value": "{\n  \"title\": \"iPhone 15 Pro Max 256GB — СНИЖЕНА ЦЕНА\",\n  \"price\": 110000\n}",
+									"type": "text"
+								},
+								{
+									"key": "photos",
+									"type": "file",
+									"src": ""
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}"]
+						},
+						"description": "Обновление объявления (только владелец, partial update)"
+					}
+				},
+				{
+					"name": "Delete Ad",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}"]
+						},
+						"description": "Мягкое удаление (только владелец)"
+					}
+				},
+				{
+					"name": "Close Ad",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/close",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}", "close"]
+						},
+						"description": "Архивирование объявления (только владелец). Тело НЕ отправлять!"
+					}
+				},
+				{
+					"name": "Get User Ads",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userId}}/ads",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "{{userId}}", "ads"]
+						},
+						"description": "Объявления пользователя (публичный)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Favorites",
+			"item": [
+				{
+					"name": "Add to Favorites",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/favorite",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}", "favorite"]
+						}
+					}
+				},
+				{
+					"name": "Remove from Favorites",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/favorite",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}", "favorite"]
+						}
+					}
+				},
+				{
+					"name": "Get My Favorites",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profile/favorites",
+							"host": ["{{baseUrl}}"],
+							"path": ["profile", "favorites"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Cart",
+			"item": [
+				{
+					"name": "Get Cart",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart",
+							"host": ["{{baseUrl}}"],
+							"path": ["cart"]
+						}
+					}
+				},
+				{
+					"name": "Add to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": {{productId}}\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cart",
+							"host": ["{{baseUrl}}"],
+							"path": ["cart"]
+						}
+					}
+				},
+				{
+					"name": "Remove from Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/{{productId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["cart", "{{productId}}"]
+						}
+					}
+				},
+				{
+					"name": "Checkout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cart/checkout",
+							"host": ["{{baseUrl}}"],
+							"path": ["cart", "checkout"]
+						},
+						"description": "Оформить заказ (группировка по продавцам)"
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories",
+			"item": [
+				{
+					"name": "Get Category Characteristics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/categories/{{categoryId}}/characteristics",
+							"host": ["{{baseUrl}}"],
+							"path": ["categories", "{{categoryId}}", "characteristics"]
+						},
+						"description": "Предопределённые характеристики для категории"
+					}
+				}
+			]
+		}
+	]
+}

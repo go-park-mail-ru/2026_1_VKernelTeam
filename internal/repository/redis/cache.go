@@ -32,6 +32,11 @@ func New(addr string) *RedisCache {
 	return &RedisCache{pool: pool}
 }
 
+// Pool возвращает пул соединений Redis для прямого использования.
+func (c *RedisCache) Pool() *redis.Pool {
+	return c.pool
+}
+
 // Close закрывает пул соединений Redis, освобождая все ресурсы.
 func (c *RedisCache) Close() error {
 	return c.pool.Close()

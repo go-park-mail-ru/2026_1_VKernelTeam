@@ -329,6 +329,21 @@ func (mr *MockAdsMockRecorder) RemoveFavorite(ctx, userID, adID interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFavorite", reflect.TypeOf((*MockAds)(nil).RemoveFavorite), ctx, userID, adID)
 }
 
+// SearchAds mocks base method.
+func (m *MockAds) SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchAds", ctx, query, categoryID)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchAds indicates an expected call of SearchAds.
+func (mr *MockAdsMockRecorder) SearchAds(ctx, query, categoryID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAds", reflect.TypeOf((*MockAds)(nil).SearchAds), ctx, query, categoryID)
+}
+
 // UpdateAd mocks base method.
 func (m *MockAds) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) error {
 	m.ctrl.T.Helper()

@@ -83,3 +83,47 @@ func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.
 		})
 	}
 }
+
+// OptionalAuthMiddleware пытается извлечь user_id из JWT cookie.
+// Если токен отсутствует или невалиден — пропускает запрос без user_id в контексте.
+func OptionalAuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie("token")
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (any, error) {
+				return []byte(secret), nil
+			})
+			if err != nil || !token.Valid {
+				log.DebugContext(r.Context(), "optional auth: invalid token, proceeding as anonymous")
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			claims, ok := token.Claims.(jwt.MapClaims)
+			if !ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			jti, _ := claims["jti"].(string)
+			if bl.Check(jti) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			uidRaw, ok := claims["uid"].(float64)
+			if !ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			ctx := context.WithValue(r.Context(), UserIDKey, int64(uidRaw))
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}

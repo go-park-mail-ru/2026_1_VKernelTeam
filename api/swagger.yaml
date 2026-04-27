@@ -722,6 +722,79 @@ paths:
       summary: Создать запрос на покупку товара
       tags:
       - orders
+  /ads/{id}/view:
+    post:
+      description: Записывает просмотр с дедупликацией и возвращает актуальный счётчик
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: UUID v4 идентификатор устройства
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: views_count
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+        "400":
+          description: invalid ad id / invalid X-Device-ID
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: ad not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Зафиксировать просмотр объявления
+      tags:
+      - ads
+  /ads/search:
+    get:
+      description: Поиск объявлений по заголовку и описанию с поддержкой триграмм,
+        транслитерации и смены раскладки
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: ID категории (фильтр)
+        in: query
+        name: category_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: результаты поиска
+          schema:
+            items:
+              $ref: '#/definitions/models.Ad'
+            type: array
+        "400":
+          description: query parameter is required / search query is too short
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Поиск объявлений
+      tags:
+      - ads
   /auth/login:
     post:
       consumes:

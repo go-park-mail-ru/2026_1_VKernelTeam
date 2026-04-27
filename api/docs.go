@@ -113,6 +113,56 @@ const docTemplate = `{
                 }
             }
         },
+        "/ads/search": {
+            "get": {
+                "description": "Поиск объявлений по заголовку и описанию с поддержкой триграмм, транслитерации и смены раскладки",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "Поиск объявлений",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID категории (фильтр)",
+                        "name": "category_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "результаты поиска",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Ad"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "query parameter is required / search query is too short",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ads/{id}": {
             "get": {
                 "description": "Возвращает объявление по заданному ID",
@@ -487,6 +537,64 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ads/{id}/view": {
+            "post": {
+                "description": "Записывает просмотр с дедупликацией и возвращает актуальный счётчик",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "Зафиксировать просмотр объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID v4 идентификатор устройства",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "views_count",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int64"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid ad id / invalid X-Device-ID",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "ad not found",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
