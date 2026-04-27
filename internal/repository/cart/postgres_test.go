@@ -193,3 +193,194 @@ func TestCartStorage_Clear(t *testing.T) {
 	})
 }
 
+func TestCartStorage_Checkout(t *testing.T) {
+	ctx := context.Background()
+
+	cartColumns := []string{"id", "seller_id", "price", "status", "user_id", "first_name", "email"}
+
+	t.Run("Success single seller", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		cartRows := pgxmock.NewRows(cartColumns).
+			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnRows(cartRows)
+
+		// create order
+		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO \"order\"")).
+			WithArgs(int64(1), int64(5000)).
+			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(101)))
+
+		// create order item
+		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO order_item")).
+			WithArgs(int64(101), int64(10), int64(5000)).
+			WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+		// update product status
+		mock.ExpectExec(regexp.QuoteMeta("UPDATE product SET status")).
+			WithArgs(int64(10)).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+		// clear cart
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM cart_item WHERE user_id")).
+			WithArgs(int64(1)).
+			WillReturnResult(pgxmock.NewResult("DELETE", 1))
+
+		mock.ExpectCommit()
+
+		orderIDs, sellers, err := storage.Checkout(ctx, 1)
+		assert.NoError(t, err)
+		assert.Len(t, orderIDs, 1)
+		assert.Contains(t, orderIDs, int64(101))
+		assert.Len(t, sellers, 1)
+		assert.Equal(t, "Иван", sellers[2].Name)
+		assert.Equal(t, "ivan@mail.ru", sellers[2].Email)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Empty cart", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnRows(pgxmock.NewRows(cartColumns))
+		mock.ExpectRollback()
+
+		orderIDs, sellers, err := storage.Checkout(ctx, 1)
+		assert.ErrorIs(t, err, ErrCartEmpty)
+		assert.Nil(t, orderIDs)
+		assert.Nil(t, sellers)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Product reserved", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		cartRows := pgxmock.NewRows(cartColumns).
+			AddRow(int64(10), int64(2), int64(5000), "reserved", int64(2), "Иван", "ivan@mail.ru")
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnRows(cartRows)
+		mock.ExpectRollback()
+
+		_, _, err = storage.Checkout(ctx, 1)
+		assert.ErrorIs(t, err, ErrProductReserved)
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Begin tx error", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		mock.ExpectBegin().WillReturnError(fmt.Errorf("db unavailable"))
+
+		_, _, err = storage.Checkout(ctx, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "begin tx")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Query cart items error", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnError(assert.AnError)
+		mock.ExpectRollback()
+
+		_, _, err = storage.Checkout(ctx, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "query cart items")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Create order error", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		cartRows := pgxmock.NewRows(cartColumns).
+			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnRows(cartRows)
+
+		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO \"order\"")).
+			WithArgs(int64(1), int64(5000)).
+			WillReturnError(fmt.Errorf("constraint violation"))
+		mock.ExpectRollback()
+
+		_, _, err = storage.Checkout(ctx, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "create order")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("Clear cart error", func(t *testing.T) {
+		mock, err := pgxmock.NewPool()
+		require.NoError(t, err)
+		defer mock.Close()
+
+		storage := NewCartStorage(mock, slog.Default())
+
+		cartRows := pgxmock.NewRows(cartColumns).
+			AddRow(int64(10), int64(2), int64(5000), "active", int64(2), "Иван", "ivan@mail.ru")
+
+		mock.ExpectBegin()
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT p.id")).
+			WithArgs(int64(1)).
+			WillReturnRows(cartRows)
+
+		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO \"order\"")).
+			WithArgs(int64(1), int64(5000)).
+			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(101)))
+
+		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO order_item")).
+			WithArgs(int64(101), int64(10), int64(5000)).
+			WillReturnResult(pgxmock.NewResult("INSERT", 1))
+
+		mock.ExpectExec(regexp.QuoteMeta("UPDATE product SET status")).
+			WithArgs(int64(10)).
+			WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+
+		mock.ExpectExec(regexp.QuoteMeta("DELETE FROM cart_item WHERE user_id")).
+			WithArgs(int64(1)).
+			WillReturnError(assert.AnError)
+		mock.ExpectRollback()
+
+		_, _, err = storage.Checkout(ctx, 1)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "clear cart")
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+}

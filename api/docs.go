@@ -445,61 +445,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/ads/{id}/order": {
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Создаёт (или переиспользует существующий) чат между покупателем\nи продавцом по объявлению и отправляет туда сообщение-заказ.\nВ ответе возвращается ID чата для редиректа на фронте.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "Создать запрос на покупку товара",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID объявления (ad_id)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "запрос на покупку создан успешно",
-                        "schema": {
-                            "$ref": "#/definitions/dto.OrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "invalid ad id",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен",
@@ -771,6 +716,49 @@ const docTemplate = `{
                 }
             }
         },
+        "/cart/checkout": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Совершает покупку всех товаров из корзины и возвращает контакты продавцов",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cart"
+                ],
+                "summary": "Оформить заказ",
+                "responses": {
+                    "200": {
+                        "description": "успешное оформление заказа",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CheckoutResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "cart is empty / one or more products are no longer available: Ошибка оформления заказа",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/cart/{id}": {
             "delete": {
                 "security": [
@@ -857,150 +845,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "invalid category id",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/chats": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Возвращает чаты, в которых участвует текущий пользователь,\nотсортированные по времени последнего сообщения.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chats"
-                ],
-                "summary": "Получить список чатов",
-                "responses": {
-                    "200": {
-                        "description": "список чатов",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ChatListResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/chats/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Возвращает объявление, собеседника и все сообщения чата.\nДоступ только у участников чата — для остальных 400.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "chats"
-                ],
-                "summary": "Получить чат",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID чата",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "детали чата",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ChatDetailResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "chat not found",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/chats/{id}/confirm": {
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,\nобъявление переводится в статус 'sold' и удаляется из корзин всех пользователей.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "orders"
-                ],
-                "summary": "Подтвердить покупку товара",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID чата",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "покупка подтверждена успешно",
-                        "schema": {
-                            "$ref": "#/definitions/dto.SuccessConfirmOrderResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "invalid chat id / forbidden: not the seller / ad is not active",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1204,573 +1048,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/support/tickets": {
-            "get": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Возвращает список обращений текущего пользователя",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Мои обращения",
-                "responses": {
-                    "200": {
-                        "description": "список обращений получен",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.TicketResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Создаёт новое обращение в техподдержку",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Создать обращение",
-                "parameters": [
-                    {
-                        "description": "Данные обращения",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.CreateTicketRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "обращение успешно создано",
-                        "schema": {
-                            "$ref": "#/definitions/dto.TicketResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: Ошибка валидации или неверный JSON",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/all": {
-            "get": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Возвращает список всех обращений всех пользователей.\nДоступно только пользователям с ролью support/admin.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Все обращения",
-                "responses": {
-                    "200": {
-                        "description": "список обращений",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.TicketResponse"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/stats": {
-            "get": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Возвращает сводную статистику по обращениям: общее количество,\nразбивку по статусу и категории. Доступно только support/admin.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Статистика обращений",
-                "responses": {
-                    "200": {
-                        "description": "статистика обращений",
-                        "schema": {
-                            "$ref": "#/definitions/dto.StatsResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Возвращает детали одного обращения по ID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Получить обращение",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "обращение получено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.TicketResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: Некорректный ID",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "forbidden: Нет доступа к чужому обращению",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "not found: Обращение не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Обновляет данные обращения (только в статусе open)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Обновить обращение",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Новые данные обращения",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateTicketRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "обращение успешно обновлено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.TicketResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: Ошибка валидации, неверный статус или JSON",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "forbidden: Нет доступа к чужому обращению",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "not found: Обращение не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/{id}/messages": {
-            "get": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Возвращает все сообщения чата обращения. Доступно автору обращения,\nа также пользователям с ролью support/admin.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Получить сообщения обращения",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "список сообщений",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/dto.MessageResponse"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: неверный ID или нет доступа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Отправляет сообщение в чат обращения. Доступно автору обращения,\nа также пользователям с ролью support/admin.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Отправить сообщение в чат обращения",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Текст сообщения",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.SendMessageRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "сообщение отправлено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.MessageResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: пустой текст, неверный ID или нет доступа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/{id}/rate": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Позволяет автору обращения выставить оценку от 1 до 5 для закрытого тикета",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Оценить обращение",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Оценка",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.RateTicketRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "оценка выставлена",
-                        "schema": {
-                            "$ref": "#/definitions/dto.TicketResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: Некорректная оценка, тикет не закрыт или уже оценён",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "forbidden: Пользователь не является автором",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "not found: Обращение не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/support/tickets/{id}/status": {
-            "patch": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Меняет статус обращения. Доступно только пользователям с ролью support/admin.\nДопустимые статусы: open, in_progress, closed.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "support"
-                ],
-                "summary": "Сменить статус обращения",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID обращения",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Новый статус",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.ChangeStatusRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "статус обновлён",
-                        "schema": {
-                            "$ref": "#/definitions/dto.TicketStatusResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "bad request: неверный ID, статус или обращение не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/users/{id}": {
             "get": {
                 "description": "Возвращает только общедоступную информацию: имя, рейтинг, кол-во объявлений. Не требует авторизации.",
@@ -1867,26 +1144,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dto.AdPreview": {
-            "type": "object",
-            "properties": {
-                "ad_id": {
-                    "type": "integer"
-                },
-                "photo": {
-                    "type": "string"
-                },
-                "price": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "dto.AddToCartRequest": {
             "type": "object",
             "properties": {
@@ -1932,73 +1189,21 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ChangeStatusRequest": {
+        "dto.CheckoutResponse": {
             "type": "object",
             "properties": {
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.ChatDetailResponse": {
-            "type": "object",
-            "properties": {
-                "ad": {
-                    "$ref": "#/definitions/dto.AdPreview"
-                },
-                "chat_id": {
-                    "type": "integer"
-                },
-                "messages": {
+                "order_ids": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.MessageItem"
+                        "type": "integer"
                     }
                 },
-                "partner": {
-                    "$ref": "#/definitions/dto.UserPreview"
-                }
-            }
-        },
-        "dto.ChatListResponse": {
-            "type": "object",
-            "properties": {
-                "chats": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/dto.ChatPreview"
+                "sellers": {
+                    "description": "Ключ — ID продавца",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/dto.SellerContact"
                     }
-                }
-            }
-        },
-        "dto.ChatPreview": {
-            "type": "object",
-            "properties": {
-                "ad": {
-                    "$ref": "#/definitions/dto.AdPreview"
-                },
-                "chat_id": {
-                    "type": "integer"
-                },
-                "last_message": {
-                    "$ref": "#/definitions/dto.LastMessagePreview"
-                },
-                "partner": {
-                    "$ref": "#/definitions/dto.UserPreview"
-                }
-            }
-        },
-        "dto.CreateTicketRequest": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
                 }
             }
         },
@@ -2006,20 +1211,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.LastMessagePreview": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "text": {
-                    "type": "string"
-                },
-                "type": {
                     "type": "string"
                 }
             }
@@ -2044,62 +1235,8 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string"
-                },
                 "user_id": {
                     "type": "integer"
-                }
-            }
-        },
-        "dto.MessageItem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "sender_id": {
-                    "type": "integer"
-                },
-                "text": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.MessageResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "text": {
-                    "type": "string"
-                },
-                "ticket_id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.OrderResponse": {
-            "type": "object",
-            "properties": {
-                "chat_id": {
-                    "type": "integer"
-                },
-                "message": {
-                    "type": "string"
                 }
             }
         },
@@ -2129,14 +1266,6 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.RateTicketRequest": {
-            "type": "object",
-            "properties": {
-                "rating": {
-                    "type": "integer"
-                }
-            }
-        },
         "dto.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -2151,84 +1280,16 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.SendMessageRequest": {
+        "dto.SellerContact": {
             "type": "object",
             "properties": {
-                "text": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.StatsResponse": {
-            "type": "object",
-            "properties": {
-                "by_category": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
-                "by_status": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "type": "integer"
-                    }
-                },
-                "total": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.SuccessConfirmOrderResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.TicketResponse": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "description": {
+                "email": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "rating": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "dto.TicketStatusResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "updated_at": {
+                "name": {
                     "type": "string"
                 }
             }
@@ -2243,34 +1304,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 3
-                }
-            }
-        },
-        "dto.UpdateTicketRequest": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
-        "dto.UserPreview": {
-            "type": "object",
-            "properties": {
-                "avatar_path": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
                 }
             }
         },
@@ -2461,9 +1494,6 @@ const docTemplate = `{
                 },
                 "reviews_count": {
                     "type": "integer"
-                },
-                "role": {
-                    "type": "string"
                 },
                 "unread_messages_count": {
                     "type": "integer"

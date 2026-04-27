@@ -242,3 +242,63 @@ func TestGetCart(t *testing.T) {
 	})
 }
 
+func TestCheckout(t *testing.T) {
+	log := discardLogger()
+
+	t.Run("Success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cartMock := mocks.NewMockCartProvider(ctrl)
+		adsMock := mocks.NewMockAdsProvider(ctrl)
+		uc := cart.New(log, cartMock, adsMock)
+
+		orderIDs := []int64{101, 102}
+		sellers := map[int64]*dto.SellerContact{
+			2: {ID: 2, Name: "Иван", Email: "ivan@mail.ru"},
+			3: {ID: 3, Name: "Петр", Email: "petr@mail.ru"},
+		}
+
+		cartMock.EXPECT().Checkout(gomock.Any(), int64(1)).Return(orderIDs, sellers, nil)
+
+		result, err := uc.Checkout(context.Background(), 1)
+		require.NoError(t, err)
+		assert.Len(t, result.OrderIDs, 2)
+		assert.Contains(t, result.OrderIDs, int64(101))
+		assert.Contains(t, result.OrderIDs, int64(102))
+		assert.Len(t, result.Sellers, 2)
+		assert.Equal(t, "Иван", result.Sellers[2].Name)
+	})
+
+	t.Run("Empty cart error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cartMock := mocks.NewMockCartProvider(ctrl)
+		adsMock := mocks.NewMockAdsProvider(ctrl)
+		uc := cart.New(log, cartMock, adsMock)
+
+		cartMock.EXPECT().Checkout(gomock.Any(), int64(1)).Return(nil, nil, errors.New("cart is empty"))
+
+		result, err := uc.Checkout(context.Background(), 1)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "cart is empty")
+	})
+
+	t.Run("Products reserved error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		cartMock := mocks.NewMockCartProvider(ctrl)
+		adsMock := mocks.NewMockAdsProvider(ctrl)
+		uc := cart.New(log, cartMock, adsMock)
+
+		cartMock.EXPECT().Checkout(gomock.Any(), int64(1)).
+			Return(nil, nil, errors.New("one or more products are no longer available"))
+
+		result, err := uc.Checkout(context.Background(), 1)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+	})
+}

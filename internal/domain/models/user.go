@@ -12,7 +12,6 @@ type User struct {
 	PassHash       []byte    `json:"-"`
 	AvatarPath     string    `json:"avatar_path"`
 	Rating         float64   `json:"rating"`
-	Role           string    `json:"role"`
 	ReviewsCount   int       `json:"reviews_count"`
 	AdsCount       int       `json:"ads_count"`
 	FavoritesCount int       `json:"favorites_count"`
