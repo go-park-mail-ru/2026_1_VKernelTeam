@@ -10,6 +10,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
+//go:generate mockgen -source=support_ticket.go -destination=mocks/mock_support_ticket.go -package=mocks
+
 var (
 	ErrInvalidCategory  = errors.New("invalid category: must be bug, suggestion or complaint")
 	ErrTitleTooLong     = errors.New("title must be at most 255 characters")

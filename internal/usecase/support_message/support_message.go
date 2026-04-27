@@ -9,6 +9,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
 
+//go:generate mockgen -source=support_message.go -destination=mocks/mock_support_message.go -package=mocks
+
 var (
 	ErrTextRequired = errors.New("text is required")
 	ErrForbidden    = errors.New("forbidden: not the ticket author or staff")
