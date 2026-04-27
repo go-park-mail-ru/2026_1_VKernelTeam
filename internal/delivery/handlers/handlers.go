@@ -43,10 +43,12 @@ const (
 
 // Services объединяет все бизнес-сервисы приложения, необходимые хендлерам
 type Services struct {
-	Ads  Ads
-	Auth Auth
-	Cart Cart
-	Chat Chat
+	Ads            Ads
+	Auth           Auth
+	Cart           Cart
+	Chat           Chat
+	SupportTicket  SupportTicket
+	SupportMessage SupportMessage
 }
 
 // Cart описывает методы сервиса корзины
@@ -91,6 +93,24 @@ type Chat interface {
 	ConfirmPurchase(ctx context.Context, chatID int64, userID int64) error
 	GetAllChats(ctx context.Context, userID int64) (dto.ChatListResponse, error)
 	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
+}
+
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
+	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
+	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
+	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
+}
+
+// SupportMessage описывает методы сервиса сообщений в чате обращения
+type SupportMessage interface {
+	SendMessage(ctx context.Context, ticketID, userID int64, req *dto.SendMessageRequest) (*dto.MessageResponse, error)
+	GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error)
 }
 
 // AuthHandlers содержит обработчики для аутентификации
@@ -207,5 +227,6 @@ func (h *AuthHandlers) respondWithUser(w http.ResponseWriter, user models.User) 
 		UserID: user.ID,
 		Email:  user.Email,
 		Name:   user.Name,
+		Role:   user.Role,
 	})
 }

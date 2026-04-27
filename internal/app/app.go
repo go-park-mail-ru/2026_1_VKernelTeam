@@ -17,6 +17,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/refresh"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/s3"
+	supportMessageRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_message"
+	supportTicketRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/support_ticket"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/user"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/view"
 	viewcache "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/view_cache"
@@ -25,6 +27,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/auth"
 	cartUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/cart"
 	chatUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/chat"
+	supportMessageUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/support_message"
+	supportTicketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/support_ticket"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/views"
 )
 
@@ -85,6 +89,14 @@ func New(
 	chatStorage := chatRepo.NewChatStorage(dbClient.Pool, log)
 	chatService := chatUC.New(log, chatStorage, adRepo)
 
+	// создаём сервис техподдержки
+	ticketStorage := supportTicketRepo.NewSupportTicketStorage(dbClient.Pool, log)
+	ticketService := supportTicketUC.New(log, ticketStorage)
+
+	// создаём сервис сообщений в чате обращения
+	messageStorage := supportMessageRepo.NewSupportMessageStorage(dbClient.Pool, log)
+	messageService := supportMessageUC.New(log, messageStorage, ticketStorage, userRepo)
+
 	// создаём компоненты просмотров
 	viewStorage := view.NewViewStorage(dbClient.Pool, log)
 	viewCache := viewcache.New(rc.Pool(), cfg.Views.DedupTTL, cfg.Views.CountCacheTTL)
@@ -109,15 +121,17 @@ func New(
 	}()
 
 	services := httpapp.Services{
-		Ads:   adsService,
-		Auth:  authService,
-		Cart:  cartService,
-		Chat: chatService,
-		Views: viewsService,
+		Ads:            adsService,
+		Auth:           authService,
+		Cart:           cartService,
+		Chat:           chatService,
+		SupportTicket:  ticketService,
+		SupportMessage: messageService,
+		Views:          viewsService,
 	}
 
 	// создаём HTTP-приложение
-	httpApp := httpapp.New(log, services, bl, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
+	httpApp := httpapp.New(log, services, bl, userRepo, cfg.HTTP.Port, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
 	return &App{
 		HTTPServer:    httpApp,

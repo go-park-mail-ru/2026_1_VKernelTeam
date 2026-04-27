@@ -61,8 +61,8 @@ func TestUserStorage_User(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		now := time.Now()
-		rows := pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "created_at", "updated_at"}).
-			AddRow(int64(1), "Ivan", email, []byte("hash"), now, now)
+		rows := pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "role", "created_at", "updated_at"}).
+			AddRow(int64(1), "Ivan", email, []byte("hash"), "user", now, now)
 
 		mock.ExpectQuery(`SELECT id, first_name, email`).
 			WithArgs(email).
@@ -95,13 +95,13 @@ func TestUserStorage_UserByID(t *testing.T) {
 		now := time.Now()
 		columns := []string{
 			"id", "first_name", "email", "password_hash", "avatar_path",
-			"rating", "created_at", "updated_at", "reviews_count",
+			"rating", "role", "created_at", "updated_at", "reviews_count",
 			"ads_count", "favorites_count", "cart_count", "unread_count",
 		}
 
 		rows := pgxmock.NewRows(columns).
 			AddRow(userID, "Ivan", "test@mail.ru", []byte("hash"), "/img/ava.png",
-				4.5, now, now, 10, 5, 3, 2, 0)
+				4.5, "user", now, now, 10, 5, 3, 2, 0)
 
 		mock.ExpectQuery(`SELECT u.id, u.first_name`).
 			WithArgs(userID).
@@ -127,8 +127,8 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 
 		mock.ExpectQuery(`UPDATE "user"`).
 			WithArgs(newName, userID).
-			WillReturnRows(pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "created_at", "updated_at"}).
-				AddRow(userID, newName, "test@mail.ru", []byte("hash"), time.Now(), time.Now()))
+			WillReturnRows(pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "role", "created_at", "updated_at"}).
+				AddRow(userID, newName, "test@mail.ru", []byte("hash"), "user", time.Now(), time.Now()))
 
 		u, err := repo.UpdateUser(ctx, userID, newName)
 		assert.NoError(t, err)

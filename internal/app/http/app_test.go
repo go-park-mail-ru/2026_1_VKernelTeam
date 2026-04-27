@@ -1,6 +1,7 @@
 package httpapp
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"testing"
@@ -14,6 +15,12 @@ import (
 type dummyTokenChecker struct{}
 
 func (d dummyTokenChecker) Check(jti string) bool { return false }
+
+type dummyRoleProvider struct{}
+
+func (d dummyRoleProvider) GetUserRole(ctx context.Context, userID int64) (string, error) {
+	return "user", nil
+}
 
 func setupTestApp(t *testing.T) (*App, *mock_httpapp.MockAuth, *mock_httpapp.MockAds) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -29,7 +36,7 @@ func setupTestApp(t *testing.T) (*App, *mock_httpapp.MockAuth, *mock_httpapp.Moc
 		Ads:  mockAds,
 	}
 
-	app := New(logger, services, dummyTokenChecker{}, 0, time.Hour, time.Hour, "secret")
+	app := New(logger, services, dummyTokenChecker{}, dummyRoleProvider{}, 0, time.Hour, time.Hour, "secret")
 
 	return app, mockAuth, mockAds
 }

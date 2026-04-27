@@ -72,6 +72,24 @@ type Chat interface {
 	GetChat(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
 
+// SupportTicket описывает методы сервиса техподдержки
+type SupportTicket interface {
+	CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error)
+	GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error)
+	GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error)
+	UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error)
+	GetAllTickets(ctx context.Context) ([]dto.TicketResponse, error)
+	ChangeStatus(ctx context.Context, ticketID int64, req *dto.ChangeStatusRequest) (*dto.TicketStatusResponse, error)
+	GetStats(ctx context.Context) (*dto.StatsResponse, error)
+	RateTicket(ctx context.Context, userID, ticketID int64, rating int) (*dto.TicketResponse, error)
+}
+
+// SupportMessage описывает методы сервиса сообщений в чате обращения
+type SupportMessage interface {
+	SendMessage(ctx context.Context, ticketID, userID int64, req *dto.SendMessageRequest) (*dto.MessageResponse, error)
+	GetMessages(ctx context.Context, ticketID, userID int64) ([]dto.MessageResponse, error)
+}
+
 // Views описывает методы сервиса просмотров
 type Views interface {
 	RecordView(ctx context.Context, productID int64, userID *int64, deviceID string) (int64, error)
@@ -82,31 +100,40 @@ type TokenChecker interface {
 	Check(jti string) bool
 }
 
+// RoleProvider возвращает роль пользователя по его ID (для role middleware).
+type RoleProvider interface {
+	GetUserRole(ctx context.Context, userID int64) (string, error)
+}
+
 // Services объединяет все бизнес-сервисы приложения
 type Services struct {
-	Ads   Ads
-	Auth  Auth
-	Cart  Cart
-	Chat Chat
-	Views Views
+	Ads            Ads
+	Auth           Auth
+	Cart           Cart
+	Chat           Chat
+	SupportTicket  SupportTicket
+	SupportMessage SupportMessage
+	Views          Views
 }
 
 // App представляет HTTP-приложение с маршрутизатором, логгером и
 // ссылкой на сервис аутентификации.
 type App struct {
-	log           *slog.Logger
-	router        *http.ServeMux
-	port          int
-	srv           *http.Server
-	services      Services
-	blacklist     TokenChecker
-	tokenTTL      time.Duration
-	secret        string
-	authHandlers  *handlers.AuthHandlers
-	adsHandlers   *handlers.AdsHandlers
-	cartHandlers  *handlers.CartHandlers
-	chatHandlers *handlers.ChatHandlers
-	viewsHandlers *handlers.ViewsHandlers
+	log                   *slog.Logger
+	router                *http.ServeMux
+	port                  int
+	srv                   *http.Server
+	services              Services
+	blacklist             TokenChecker
+	roleProvider          RoleProvider
+	tokenTTL              time.Duration
+	secret                string
+	authHandlers          *handlers.AuthHandlers
+	adsHandlers           *handlers.AdsHandlers
+	cartHandlers          *handlers.CartHandlers
+	chatHandlers          *handlers.ChatHandlers
+	supportTicketHandlers *handlers.SupportTicketHandlers
+	viewsHandlers         *handlers.ViewsHandlers
 }
 
 // New создаёт новый HTTP-сервер с заданной конфигурацией и сервисом auth.
@@ -114,19 +141,21 @@ func New(
 	log *slog.Logger,
 	services Services,
 	bl TokenChecker,
+	roleProvider RoleProvider,
 	port int,
 	tokenTTL time.Duration,
 	refreshTTL time.Duration,
 	secret string,
 ) *App {
 	app := &App{
-		log:       log,
-		router:    http.NewServeMux(),
-		port:      port,
-		services:  services,
-		tokenTTL:  tokenTTL,
-		blacklist: bl,
-		secret:    secret,
+		log:          log,
+		router:       http.NewServeMux(),
+		port:         port,
+		services:     services,
+		tokenTTL:     tokenTTL,
+		blacklist:    bl,
+		roleProvider: roleProvider,
+		secret:       secret,
 	}
 
 	app.authHandlers = handlers.NewAuthHandlers(log, handlers.Services{
@@ -154,6 +183,11 @@ func New(
 		Chat: services.Chat,
 	})
 	app.viewsHandlers = handlers.NewViewsHandlers(log, services.Views)
+
+	app.supportTicketHandlers = handlers.NewSupportTicketHandlers(log, &handlers.Services{
+		SupportTicket:  services.SupportTicket,
+		SupportMessage: services.SupportMessage,
+	})
 
 	app.setupRoutes()
 
@@ -234,6 +268,23 @@ func (a *App) setupRoutes() {
 
 	// Аватар
 	a.router.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(a.authHandlers.HandleUploadAvatar)))
+
+	// Техподдержка (обращения)
+	a.router.Handle("POST "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleCreateTicket)))
+	a.router.Handle("GET "+prefix+"/support/tickets", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMyTickets)))
+	a.router.Handle("GET "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetTicket)))
+	a.router.Handle("PUT "+prefix+"/support/tickets/{id}", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleUpdateTicket)))
+	a.router.Handle("POST "+prefix+"/support/tickets/{id}/rate", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleRateTicket)))
+
+	// Чат обращения (сообщения)
+	a.router.Handle("POST "+prefix+"/support/tickets/{id}/messages", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleSendMessage)))
+	a.router.Handle("GET "+prefix+"/support/tickets/{id}/messages", authMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetMessages)))
+
+	// Админка техподдержки (только support/admin)
+	staffMW := middleware.RoleMiddleware(a.log, a.roleProvider, "support", "admin")
+	a.router.Handle("PATCH "+prefix+"/support/tickets/{id}/status", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleChangeStatus))))
+	a.router.Handle("GET "+prefix+"/support/tickets/all", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetAllTickets))))
+	a.router.Handle("GET "+prefix+"/support/tickets/stats", authMW(staffMW(http.HandlerFunc(a.supportTicketHandlers.HandleGetStats))))
 
 	// Ручка для Swagger UI
 	// Она будет доступна по адресу /swagger/index.html
