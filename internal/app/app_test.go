@@ -46,7 +46,6 @@ func TestApp_Stop(t *testing.T) {
 		nopLogger,
 		httpapp.Services{},
 		nil,
-		nil,
 		8080,
 		time.Minute,
 		time.Minute,

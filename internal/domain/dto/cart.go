@@ -16,6 +16,19 @@ type CartResponse struct {
 	TotalPrice int64              `json:"total_price"`
 }
 
+// SellerContact контактные данные продавца при чекауте
+type SellerContact struct {
+	ID    int64  `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+// CheckoutResponse успешный ответ после оформления заказа
+type CheckoutResponse struct {
+	OrderIDs []int64                  `json:"order_ids,omitempty"`
+	Sellers  map[int64]*SellerContact `json:"sellers"` // Ключ — ID продавца
+}
+
 // AddToCartRequest для POST /api/cart
 type AddToCartRequest struct {
 	ProductID int64 `json:"product_id"`

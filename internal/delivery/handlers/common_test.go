@@ -46,20 +46,3 @@ func setupCartHandlers(t *testing.T) (*CartHandlers, *mocks.MockCart) {
 
 	return cartH, mockCart
 }
-
-// setupChatHandlers возвращает готовый хендлер чатов и мок сервиса Chat
-func setupChatHandlers(t *testing.T) (*ChatHandlers, *mocks.MockChat) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockChat := mocks.NewMockChat(ctrl)
-
-	services := &Services{
-		Chat: mockChat,
-	}
-
-	chatHandlers := NewChatHandlers(logger, services)
-
-	return chatHandlers, mockChat
-}
