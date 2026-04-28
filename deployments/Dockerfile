@@ -21,8 +21,8 @@ WORKDIR /app
 
 COPY --from=builder /app/clover .
 COPY config ./config
-COPY .env .env
 COPY api ./api
+# .env НЕ копируем — переменные окружения передаются через docker-compose env_file
 
 # Создаём пустые папки для статики и хранилища
 RUN mkdir -p /app/static /app/storage
@@ -30,5 +30,5 @@ RUN mkdir -p /app/static /app/storage
 # Слушаем 8000 порт
 EXPOSE 8000
 
-# Запуск контейнера
-ENTRYPOINT ["./clover"]
+# Запуск контейнера (путь к конфигу — через аргумент, не через env)
+ENTRYPOINT ["./clover", "--config=./config/local.json"]
