@@ -1,13 +1,29 @@
 {
 	"info": {
 		"name": "Clover API",
-		"description": "API маркетплейса Клевер — все эндпоинты",
+		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :80) → микросервисы.\n\n- Auth Service (:8001 HTTP, :9001 gRPC)\n- Монолит (:8000) — ads, cart, chat, support\n\nПеременные:\n- `gateway` — через nginx (http://localhost)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
+			"key": "gateway",
+			"value": "http://localhost/api/v1",
+			"description": "Через API Gateway (nginx)"
+		},
+		{
+			"key": "authDirect",
+			"value": "http://localhost:8001/api/v1",
+			"description": "Напрямую к Auth Service"
+		},
+		{
+			"key": "monolithDirect",
+			"value": "http://localhost:8000/api/v1",
+			"description": "Напрямую к монолиту"
+		},
+		{
 			"key": "baseUrl",
-			"value": "http://localhost:8000/api/v1"
+			"value": "http://localhost/api/v1",
+			"description": "Активный URL (по умолчанию — gateway)"
 		},
 		{
 			"key": "adId",
@@ -24,14 +40,56 @@
 		{
 			"key": "productId",
 			"value": "1"
+		},
+		{
+			"key": "chatId",
+			"value": "1"
+		},
+		{
+			"key": "ticketId",
+			"value": "1"
+		}
+	],
+	"event": [
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Автоматически сохраняем CSRF токен из cookie после любого запроса",
+					"const csrf = pm.cookies.get('csrf_token');",
+					"if (csrf) {",
+					"    pm.collectionVariables.set('csrfToken', csrf);",
+					"}"
+				]
+			}
 		}
 	],
 	"item": [
 		{
-			"name": "Auth",
+			"name": "Auth Service",
+			"description": "Микросервис авторизации (services/auth).\nРоуты: /auth/*, /profile*, /users/{id}",
 			"item": [
 				{
 					"name": "Register",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.collectionVariables.set('userId', body.user_id);",
+									"    pm.test('User registered', () => {",
+									"        pm.expect(body.user_id).to.be.above(0);",
+									"        pm.expect(body.email).to.be.a('string');",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -39,17 +97,35 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"Иван\"\n}"
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test1234!\",\n  \"name\": \"Иван\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/register",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "register"]
-						}
+						},
+						"description": "Регистрация + автоматический логин. Устанавливает cookie: token, csrf_token, refresh_token."
 					}
 				},
 				{
 					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.collectionVariables.set('userId', body.user_id);",
+									"    pm.test('Login successful', () => {",
+									"        pm.expect(body.user_id).to.be.above(0);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -57,13 +133,26 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test1234!\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/login",
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "login"]
 						}
+					}
+				},
+				{
+					"name": "Login (by cookie)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Если cookie token уже есть — валидирует токен и возвращает профиль без body."
 					}
 				},
 				{
@@ -76,7 +165,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "refresh"]
 						},
-						"description": "Обновление access token по refresh token из cookie"
+						"description": "Обновление access token по refresh token из cookie. Ротирует оба токена."
 					}
 				},
 				{
@@ -91,14 +180,9 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["auth", "logout"]
 						},
-						"description": "Требует JWT cookie + CSRF token"
+						"description": "Добавляет JWT в blacklist, удаляет refresh token, очищает cookie."
 					}
-				}
-			]
-		},
-		{
-			"name": "Profile",
-			"item": [
+				},
 				{
 					"name": "Get My Profile",
 					"request": {
@@ -110,11 +194,12 @@
 							"raw": "{{baseUrl}}/profile",
 							"host": ["{{baseUrl}}"],
 							"path": ["profile"]
-						}
+						},
+						"description": "Профиль текущего пользователя (по JWT из cookie)."
 					}
 				},
 				{
-					"name": "Update Profile Name",
+					"name": "Update Profile",
 					"request": {
 						"method": "PATCH",
 						"header": [
@@ -154,7 +239,7 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["profile", "avatar"]
 						},
-						"description": "Загрузка аватара (JPEG/PNG/WebP/GIF, max 5MB)"
+						"description": "JPEG/PNG/WebP/GIF, max 5MB."
 					}
 				},
 				{
@@ -167,13 +252,14 @@
 							"host": ["{{baseUrl}}"],
 							"path": ["users", "{{userId}}"]
 						},
-						"description": "Публичный профиль продавца (без авторизации)"
+						"description": "Публичный профиль (без авторизации). Имя, аватар, рейтинг, кол-во объявлений."
 					}
 				}
 			]
 		},
 		{
-			"name": "Ads",
+			"name": "Ads (Monolith)",
+			"description": "Объявления — пока в монолите, будет перенесено в Catalog Service (Николай).",
 			"item": [
 				{
 					"name": "Get All Ads",
@@ -184,8 +270,7 @@
 							"raw": "{{baseUrl}}/ads",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads"]
-						},
-						"description": "Все активные объявления"
+						}
 					}
 				},
 				{
@@ -194,24 +279,23 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/ads/search?query=макбук&category_id=1",
+							"raw": "{{baseUrl}}/ads/search?query=iPhone",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads", "search"],
 							"query": [
 								{
 									"key": "query",
-									"value": "макбук",
-									"description": "Поисковый запрос (мин. 2 символа). Поддерживает транслитерацию и смену раскладки"
+									"value": "iPhone",
+									"description": "Поисковый запрос (мин. 2 символа)"
 								},
 								{
 									"key": "category_id",
 									"value": "1",
-									"description": "ID категории для фильтрации (опционально, если не указан — поиск по всем категориям)",
+									"description": "Фильтр по категории (опционально)",
 									"disabled": true
 								}
 							]
-						},
-						"description": "Поиск по title + description (pg_trgm триграммы, транслитерация, смена раскладки). Опционально фильтрация по категории"
+						}
 					}
 				},
 				{
@@ -252,8 +336,7 @@
 							"raw": "{{baseUrl}}/ads",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads"]
-						},
-						"description": "Создание объявления (multipart/form-data: JSON data + photos)"
+						}
 					}
 				},
 				{
@@ -268,13 +351,8 @@
 							"formdata": [
 								{
 									"key": "data",
-									"value": "{\n  \"title\": \"iPhone 15 Pro Max 256GB — СНИЖЕНА ЦЕНА\",\n  \"price\": 110000\n}",
+									"value": "{\n  \"title\": \"iPhone 15 Pro Max — СНИЖЕНА ЦЕНА\",\n  \"price\": 110000\n}",
 									"type": "text"
-								},
-								{
-									"key": "photos",
-									"type": "file",
-									"src": ""
 								}
 							]
 						},
@@ -282,8 +360,7 @@
 							"raw": "{{baseUrl}}/ads/{{adId}}",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads", "{{adId}}"]
-						},
-						"description": "Обновление объявления (только владелец, partial update)"
+						}
 					}
 				},
 				{
@@ -297,8 +374,7 @@
 							"raw": "{{baseUrl}}/ads/{{adId}}",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads", "{{adId}}"]
-						},
-						"description": "Мягкое удаление (только владелец)"
+						}
 					}
 				},
 				{
@@ -312,8 +388,7 @@
 							"raw": "{{baseUrl}}/ads/{{adId}}/close",
 							"host": ["{{baseUrl}}"],
 							"path": ["ads", "{{adId}}", "close"]
-						},
-						"description": "Архивирование объявления (только владелец). Тело НЕ отправлять!"
+						}
 					}
 				},
 				{
@@ -325,14 +400,26 @@
 							"raw": "{{baseUrl}}/users/{{userId}}/ads",
 							"host": ["{{baseUrl}}"],
 							"path": ["users", "{{userId}}", "ads"]
+						}
+					}
+				},
+				{
+					"name": "Record View",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/view",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}", "view"]
 						},
-						"description": "Объявления пользователя (публичный)"
+						"description": "Записать просмотр (опциональная авторизация, дедупликация 24ч)."
 					}
 				}
 			]
 		},
 		{
-			"name": "Favorites",
+			"name": "Favorites (Monolith)",
 			"item": [
 				{
 					"name": "Add to Favorites",
@@ -379,7 +466,7 @@
 			]
 		},
 		{
-			"name": "Cart",
+			"name": "Cart (Monolith)",
 			"item": [
 				{
 					"name": "Get Cart",
@@ -427,26 +514,247 @@
 							"path": ["cart", "{{productId}}"]
 						}
 					}
-				},
+				}
+			]
+		},
+		{
+			"name": "Chat & Orders (Monolith)",
+			"item": [
 				{
-					"name": "Checkout",
+					"name": "Create Order (Start Chat)",
 					"request": {
 						"method": "POST",
 						"header": [
 							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/cart/checkout",
+							"raw": "{{baseUrl}}/ads/{{adId}}/order",
 							"host": ["{{baseUrl}}"],
-							"path": ["cart", "checkout"]
+							"path": ["ads", "{{adId}}", "order"]
 						},
-						"description": "Оформить заказ (группировка по продавцам)"
+						"description": "Создать заказ и чат с продавцом."
+					}
+				},
+				{
+					"name": "Confirm Purchase",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/chats/{{chatId}}/confirm",
+							"host": ["{{baseUrl}}"],
+							"path": ["chats", "{{chatId}}", "confirm"]
+						}
+					}
+				},
+				{
+					"name": "Get All Chats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/chats",
+							"host": ["{{baseUrl}}"],
+							"path": ["chats"]
+						}
+					}
+				},
+				{
+					"name": "Get Chat",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/chats/{{chatId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["chats", "{{chatId}}"]
+						}
 					}
 				}
 			]
 		},
 		{
-			"name": "Categories",
+			"name": "Support (Monolith)",
+			"description": "Техподдержка — будет перенесена в Support Service (Егор).",
+			"item": [
+				{
+					"name": "Create Ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"category\": \"bug\",\n  \"title\": \"Не загружаются фото\",\n  \"description\": \"При создании объявления фотографии не загружаются, ошибка 500\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets"]
+						}
+					}
+				},
+				{
+					"name": "Get My Tickets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets"]
+						}
+					}
+				},
+				{
+					"name": "Get Ticket",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Ticket",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Обновлённый заголовок\",\n  \"description\": \"Дополнительная информация о проблеме\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}"]
+						}
+					}
+				},
+				{
+					"name": "Rate Ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 5\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/rate",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}", "rate"]
+						}
+					}
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Здравствуйте, подскажите статус обращения?\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}", "messages"]
+						}
+					}
+				},
+				{
+					"name": "Get Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}", "messages"]
+						}
+					}
+				},
+				{
+					"name": "[Admin] Change Ticket Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{"key": "Content-Type", "value": "application/json"},
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"in_progress\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "{{ticketId}}", "status"]
+						},
+						"description": "Только для ролей support/admin."
+					}
+				},
+				{
+					"name": "[Admin] Get All Tickets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/all",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "all"]
+						},
+						"description": "Только для ролей support/admin."
+					}
+				},
+				{
+					"name": "[Admin] Get Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/support/tickets/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["support", "tickets", "stats"]
+						},
+						"description": "Только для ролей support/admin."
+					}
+				}
+			]
+		},
+		{
+			"name": "Categories (Monolith)",
 			"item": [
 				{
 					"name": "Get Category Characteristics",
@@ -457,8 +765,26 @@
 							"raw": "{{baseUrl}}/categories/{{categoryId}}/characteristics",
 							"host": ["{{baseUrl}}"],
 							"path": ["categories", "{{categoryId}}", "characteristics"]
-						},
-						"description": "Предопределённые характеристики для категории"
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Health Checks",
+			"item": [
+				{
+					"name": "Auth Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8001/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8001",
+							"path": ["health"]
+						}
 					}
 				}
 			]
