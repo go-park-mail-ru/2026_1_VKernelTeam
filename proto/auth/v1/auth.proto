@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package auth.v1;
+
+option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/proto/auth/v1;authv1";
+
+// AuthService — внутренний gRPC API для валидации токенов и получения данных пользователей.
+// Используется сервисами Catalog, Commerce, Support.
+service AuthService {
+  // Валидация JWT токена, возвращает user_id и роль
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // Получение данных пользователя по ID
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+
+  // Пакетное получение пользователей (для чатов, объявлений)
+  rpc GetUsersByIDs(GetUsersByIDsRequest) returns (GetUsersByIDsResponse);
+
+  // Проверка роли пользователя (support, admin)
+  rpc CheckRole(CheckRoleRequest) returns (CheckRoleResponse);
+}
+
+// --- ValidateToken ---
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+message ValidateTokenResponse {
+  int64 user_id = 1;
+  string role = 2;     // "user", "support", "admin"
+  string jti = 3;      // JWT ID для blacklist
+}
+
+// --- GetUser ---
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message UserResponse {
+  int64 id = 1;
+  string email = 2;
+  string first_name = 3;
+  string second_name = 4;
+  string avatar_path = 5;
+  double rating = 6;
+  string role = 7;
+}
+
+// --- GetUsersByIDs ---
+
+message GetUsersByIDsRequest {
+  repeated int64 user_ids = 1;
+}
+
+message GetUsersByIDsResponse {
+  repeated UserResponse users = 1;
+}
+
+// --- CheckRole ---
+
+message CheckRoleRequest {
+  int64 user_id = 1;
+  string required_role = 2; // "support" или "admin"
+}
+
+message CheckRoleResponse {
+  bool allowed = 1;
+  string actual_role = 2;
+}
