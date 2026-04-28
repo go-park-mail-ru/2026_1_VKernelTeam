@@ -1,5 +1,8 @@
 .PHONY: help run stop deploy test build build-auth swag lint fmt vet clean proto
 
+include .env
+export
+
 COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml
 
 help:
@@ -35,11 +38,11 @@ run:
 	@echo "╔══════════════════════════════════════════════════╗"
 	@echo "║  Clover запущен                                 ║"
 	@echo "║                                                 ║"
-	@echo "║  Gateway:   http://localhost                    ║"
-	@echo "║  Монолит:   http://localhost:8000               ║"
-	@echo "║  Auth HTTP: http://localhost:8001               ║"
-	@echo "║  Auth gRPC: localhost:9001                      ║"
-	@echo "║  Kafka:     localhost:9092                      ║"
+	@echo "║  Gateway:   http://localhost:$(GATEWAY_PORT)               ║"
+	@echo "║  Монолит:   http://localhost:$(MONOLITH_PORT)               ║"
+	@echo "║  Auth HTTP: http://localhost:$(AUTH_HTTP_PORT)               ║"
+	@echo "║  Auth gRPC: localhost:$(AUTH_GRPC_PORT)                      ║"
+	@echo "║  Kafka:     localhost:$(KAFKA_PORT)                      ║"
 	@echo "║                                                 ║"
 	@echo "║  make stop  — остановить всё                    ║"
 	@echo "║  make logs  — посмотреть логи                   ║"
@@ -78,18 +81,9 @@ proto:
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
 test:
-	go test ./...
-
-test-verbose:
-	go test -v ./...
-
-test-auth:
-	go test -v ./internal/usecase/auth/...
-
-test-coverage:
-	@go test -coverprofile=coverage.tmp ./internal/... ./pkg/... > /dev/null
+	@go test -coverprofile=coverage.tmp ./internal/... ./pkg/... ./services/... > /dev/null
 	@grep -v -E "mocks|domain" coverage.tmp > coverage.out
-	@go test -cover ./internal/... ./pkg/... | grep -v -E "mocks|domain" | awk '{ \
+	@go test -cover ./internal/... ./pkg/... ./services/... | grep -v -E "mocks|domain" | awk '{ \
 		if ($$1 == "ok") { \
 			printf "%-100s %s\n", $$2, $$(NF-2) " " $$(NF-1) " " $$NF; \
 		} else { \
