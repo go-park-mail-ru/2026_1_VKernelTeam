@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/proto/catalog/v1;catalogv1";
+
+// CatalogService — внутренний gRPC API для получения данных объявлений.
+// Используется сервисом Commerce.
+service CatalogService {
+  // Получение объявления по ID (цена, статус, продавец)
+  rpc GetAd(GetAdRequest) returns (AdResponse);
+
+  // Пакетное получение объявлений
+  rpc GetAdsByIDs(GetAdsByIDsRequest) returns (GetAdsByIDsResponse);
+
+  // Проверка статуса объявления (можно ли добавить в корзину / купить)
+  rpc CheckAdStatus(CheckAdStatusRequest) returns (CheckAdStatusResponse);
+
+  // Смена статуса объявления (при покупке: active -> sold)
+  rpc UpdateAdStatus(UpdateAdStatusRequest) returns (UpdateAdStatusResponse);
+}
+
+// --- GetAd ---
+
+message GetAdRequest {
+  int64 ad_id = 1;
+}
+
+message AdResponse {
+  int64 id = 1;
+  int64 seller_id = 2;
+  int64 category_id = 3;
+  string title = 4;
+  string description = 5;
+  int64 price = 6;          // не помню в чем
+  string status = 7;        // "draft", "active", "reserved", "sold", "archived"
+  string location = 8;
+  repeated string photo_urls = 9;
+}
+
+// --- GetAdsByIDs ---
+
+message GetAdsByIDsRequest {
+  repeated int64 ad_ids = 1;
+}
+
+message GetAdsByIDsResponse {
+  repeated AdResponse ads = 1;
+}
+
+// --- CheckAdStatus ---
+
+message CheckAdStatusRequest {
+  int64 ad_id = 1;
+}
+
+message CheckAdStatusResponse {
+  bool available = 1;       // true если статус == "active"
+  string current_status = 2;
+}
+
+// --- UpdateAdStatus ---
+
+message UpdateAdStatusRequest {
+  int64 ad_id = 1;
+  string new_status = 2;    // "reserved", "sold", "active"
+  int64 buyer_id = 3;       // кто инициировал смену
+}
+
+message UpdateAdStatusResponse {
+  bool success = 1;
+  string previous_status = 2;
+}
