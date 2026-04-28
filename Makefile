@@ -1,40 +1,79 @@
-.PHONY: help run deploy test test-verbose test-coverage test-auth test-storage build swag lint fmt vet clean migrate
+.PHONY: help run stop deploy test build build-auth swag lint fmt vet clean proto
+
+COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml
 
 help:
 	@echo "Available targets:"
 	@echo ""
-	@echo "  Разработка (локально):"
-	@echo "  run               - Быстрый запуск локально (DB/Redis в Docker, сервер нативно с логами)"
+	@echo "  Разработка:"
+	@echo "  run               - Поднять всю инфраструктуру (монолит + auth + gateway + kafka)"
+	@echo "  stop              - Остановить все контейнеры"
+	@echo "  logs              - Показать логи всех сервисов"
+	@echo "  logs-auth         - Показать логи auth-сервиса"
+	@echo ""
+	@echo "  Сборка:"
+	@echo "  build             - Собрать бинарник монолита"
+	@echo "  build-auth        - Собрать бинарник auth-сервиса"
+	@echo "  proto             - Сгенерировать Go-код из proto-файлов"
 	@echo "  swag              - Сгенерировать Swagger-документацию"
-	@echo "  build             - Скомпилировать бинарный файл приложения"
 	@echo ""
 	@echo "  Тесты:"
-	@echo "  test              - Запустить тесты и показать отчет о покрытии"
+	@echo "  test              - Запустить тесты с покрытием"
 	@echo ""
-	@echo "  Деплой (только на сервере):"
-	@echo "  deploy            - Обновить код (git pull) и перезапустить все контейнеры"
+	@echo "  Деплой:"
+	@echo "  deploy            - git pull + пересобрать контейнеры"
 	@echo ""
 	@echo "  Утилиты:"
-	@echo "  lint              - Запустить линтер (golangci-lint)"
-	@echo "  fmt               - Отформатировать код"
-	@echo "  vet               - Запустить go vet"
-	@echo "  clean             - Удалить временные файлы и отчеты о покрытии"
-	@echo "  migrate           - Применить миграции локально"
+	@echo "  lint / fmt / vet / clean"
 
 # ─── Разработка ───────────────────────────────────────────────────────────────
+
+# Поднимает всё: БД монолита, БД auth, Redis, Kafka, монолит, auth, gateway
+run:
+	$(COMPOSE) up -d --build --remove-orphans
+	@echo ""
+	@echo "╔══════════════════════════════════════════════════╗"
+	@echo "║  Clover запущен                                 ║"
+	@echo "║                                                 ║"
+	@echo "║  Gateway:   http://localhost                    ║"
+	@echo "║  Монолит:   http://localhost:8000               ║"
+	@echo "║  Auth HTTP: http://localhost:8001               ║"
+	@echo "║  Auth gRPC: localhost:9001                      ║"
+	@echo "║  Kafka:     localhost:9092                      ║"
+	@echo "║                                                 ║"
+	@echo "║  make stop  — остановить всё                    ║"
+	@echo "║  make logs  — посмотреть логи                   ║"
+	@echo "╚══════════════════════════════════════════════════╝"
+
+stop:
+	$(COMPOSE) down
+
+logs:
+	$(COMPOSE) logs -f --tail=50
+
+logs-auth:
+	$(COMPOSE) logs -f --tail=50 auth
 
 # Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go -o ./api
 
-# Быстрый локальный запуск: поднимает только зависимости в Docker, сервер — нативно
-run: swag
-	docker compose --env-file .env -f deployments/docker-compose.yaml up -d db db_migrate redis
-	go run ./cmd/server/main.go --config=./config/local.json
+# ─── Сборка ──────────────────────────────────────────────────────────────────
 
-# Сборка приложения в исполняемый файл
 build: swag
 	go build -o bin/clover ./cmd/server/main.go
+
+build-auth:
+	go build -o bin/auth-service ./services/auth/cmd/server/main.go
+
+# ─── Proto ────────────────────────────────────────────────────────────────────
+
+proto:
+	protoc \
+		--proto_path=proto \
+		--go_out=proto/gen --go_opt=paths=source_relative \
+		--go-grpc_out=proto/gen --go-grpc_opt=paths=source_relative \
+		auth/v1/auth.proto
 
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
@@ -53,25 +92,17 @@ test:
 	@echo "--------------------------------------------------------------------------------------------------------------------------"
 	@rm coverage.tmp coverage.out
 
-# ─── Деплой (только на сервере) ───────────────────────────────────────────────
+# ─── Деплой ───────────────────────────────────────────────────────────────────
 
-# Обновление кода и перезапуск всех контейнеров на сервере
 deploy:
 	sudo git pull
-	docker compose --env-file .env -f deployments/docker-compose.yaml up -d --build --remove-orphans
+	$(COMPOSE) up -d --build --remove-orphans
 	docker image prune -f
 
 # ─── Утилиты ──────────────────────────────────────────────────────────────────
 
-migrate:
-	migrate -path ./internal/repository/postgres/migrations \
-		-database "$(DATABASE_URL)" up
-
-migrate-ads-img:
-	go run ./cmd/migrate-images/
-
 lint:
-	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/...
+	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/... ./services/...
 
 fmt:
 	go fmt ./...

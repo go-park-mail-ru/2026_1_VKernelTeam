@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth.v1;
 
-option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/proto/auth/v1;authv1";
+option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/auth/v1;authv1";
 
 // AuthService — внутренний gRPC API для валидации токенов и получения данных пользователей.
 // Используется сервисами Catalog, Commerce, Support.
