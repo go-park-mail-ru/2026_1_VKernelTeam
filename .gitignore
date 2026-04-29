@@ -15,4 +15,4 @@ schema.md
 skills-*.json
 .claude
 
-static/
+server
