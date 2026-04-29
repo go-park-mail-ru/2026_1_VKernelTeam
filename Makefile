@@ -1,4 +1,5 @@
-.PHONY: help run stop deploy test build build-auth build-support swag lint fmt vet clean proto
+.PHONY: help run stop deploy test build build-auth build-support swag lint fmt vet clean proto \
+       logs-clickhouse grafana-open status
 
 include .env
 export
@@ -28,6 +29,11 @@ help:
 	@echo "  Деплой:"
 	@echo "  deploy            - git pull + пересобрать контейнеры"
 	@echo ""
+	@echo "  Observability:"
+	@echo "  logs-clickhouse   - Показать последние логи из ClickHouse"
+	@echo "  grafana-open      - Открыть Grafana в браузере"
+	@echo "  status            - Статус всех контейнеров"
+	@echo ""
 	@echo "  Утилиты:"
 	@echo "  lint / fmt / vet / clean"
 
@@ -47,6 +53,11 @@ run:
 	@echo "║  Support:   http://localhost:$(SUPPORT_HTTP_PORT)               ║"
 	@echo "║  Kafka:     localhost:$(KAFKA_PORT)                      ║"
 	@echo "║                                                 ║"
+	@echo "║  Observability:                                 ║"
+	@echo "║  Grafana:    http://localhost:$(GRAFANA_PORT)               ║"
+	@echo "║  Prometheus: http://localhost:$(PROMETHEUS_PORT)               ║"
+	@echo "║  ClickHouse: http://localhost:$(CLICKHOUSE_PORT)               ║"
+	@echo "║                                                 ║"
 	@echo "║  make stop  — остановить всё                    ║"
 	@echo "║  make logs  — посмотреть логи                   ║"
 	@echo "╚══════════════════════════════════════════════════╝"
@@ -62,6 +73,20 @@ logs-auth:
 
 logs-support:
 	$(COMPOSE) logs -f --tail=50 support
+
+logs-vector:
+	$(COMPOSE) logs -f --tail=50 vector
+
+# ─── Observability ────────────────────────────────────────────────────────────
+
+logs-clickhouse:
+	@curl -s "http://localhost:$(CLICKHOUSE_PORT)/?query=SELECT+timestamp,level,service,message,request_id+FROM+logs.service_logs+ORDER+BY+timestamp+DESC+LIMIT+25+FORMAT+PrettyCompact"
+
+grafana-open:
+	@open "http://localhost:$(GRAFANA_PORT)" 2>/dev/null || xdg-open "http://localhost:$(GRAFANA_PORT)" 2>/dev/null || echo "Grafana: http://localhost:$(GRAFANA_PORT)"
+
+status:
+	$(COMPOSE) ps
 
 # Генерация документации Swagger
 swag:
