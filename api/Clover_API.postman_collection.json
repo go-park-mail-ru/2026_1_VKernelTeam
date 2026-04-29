@@ -1,13 +1,13 @@
 {
 	"info": {
 		"name": "Clover API",
-		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :80) → микросервисы.\n\n- Auth Service (:8001 HTTP, :9001 gRPC)\n- Support Service (:8002 HTTP)\n- Монолит (:8000) — ads, cart, chat\n\nПеременные:\n- `gateway` — через nginx (http://localhost)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
+		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :8080) → микросервисы.\n\n- Auth Service (:8001 HTTP, :8003 gRPC)\n- Support Service (:8002 HTTP)\n- Монолит (:8000) — ads, cart, chat\n\nПеременные:\n- `gateway` — через nginx (http://localhost:8080)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "gateway",
-			"value": "http://localhost/api/v1",
+			"value": "http://localhost:8080/api/v1",
 			"description": "Через API Gateway (nginx)"
 		},
 		{
@@ -27,7 +27,7 @@
 		},
 		{
 			"key": "baseUrl",
-			"value": "http://localhost/api/v1",
+			"value": "http://localhost:8080/api/v1",
 			"description": "Активный URL (по умолчанию — gateway)"
 		},
 		{
