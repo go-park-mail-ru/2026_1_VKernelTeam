@@ -22,6 +22,12 @@ type Config struct {
 	HTTP        HTTPConfig
 	GRPC        GRPCConfig
 	S3Storage   S3Config
+	Kafka       KafkaConfig
+}
+
+type KafkaConfig struct {
+	Brokers        string
+	UserEventTopic string
 }
 
 type HTTPConfig struct {
@@ -78,6 +84,13 @@ func MustLoadConfig() *Config {
 		return val
 	}
 
+	envOrDefault := func(key, def string) string {
+		if val := os.Getenv(key); val != "" {
+			return val
+		}
+		return def
+	}
+
 	return &Config{
 		Env:         rawConfig.Env,
 		DatabaseDSN: mustEnv("DATABASE_DSN"),
@@ -93,6 +106,10 @@ func MustLoadConfig() *Config {
 			BucketName:     mustEnv("S3_BUCKET_NAME"),
 			AccessKeyID:    mustEnv("S3_ACCESS_KEY_ID"),
 			SecretAccessKey: mustEnv("S3_SECRET_ACCESS_KEY"),
+		},
+		Kafka: KafkaConfig{
+			Brokers:        envOrDefault("KAFKA_BROKERS", "localhost:9092"),
+			UserEventTopic: envOrDefault("KAFKA_USER_EVENT_TOPIC", "clover.auth.user-events"),
 		},
 	}
 }

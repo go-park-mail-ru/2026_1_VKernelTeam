@@ -1,4 +1,4 @@
-.PHONY: help run stop deploy test build build-auth swag lint fmt vet clean proto
+.PHONY: help run stop deploy test build build-auth build-support swag lint fmt vet clean proto
 
 include .env
 export
@@ -9,14 +9,16 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Разработка:"
-	@echo "  run               - Поднять всю инфраструктуру (монолит + auth + gateway + kafka)"
+	@echo "  run               - Поднять всю инфраструктуру (монолит + auth + support + gateway + kafka)"
 	@echo "  stop              - Остановить все контейнеры"
 	@echo "  logs              - Показать логи всех сервисов"
 	@echo "  logs-auth         - Показать логи auth-сервиса"
+	@echo "  logs-support      - Показать логи support-сервиса"
 	@echo ""
 	@echo "  Сборка:"
 	@echo "  build             - Собрать бинарник монолита"
 	@echo "  build-auth        - Собрать бинарник auth-сервиса"
+	@echo "  build-support     - Собрать бинарник support-сервиса"
 	@echo "  proto             - Сгенерировать Go-код из proto-файлов"
 	@echo "  swag              - Сгенерировать Swagger-документацию"
 	@echo ""
@@ -42,6 +44,7 @@ run:
 	@echo "║  Монолит:   http://localhost:$(MONOLITH_PORT)               ║"
 	@echo "║  Auth HTTP: http://localhost:$(AUTH_HTTP_PORT)               ║"
 	@echo "║  Auth gRPC: localhost:$(AUTH_GRPC_PORT)                      ║"
+	@echo "║  Support:   http://localhost:$(SUPPORT_HTTP_PORT)               ║"
 	@echo "║  Kafka:     localhost:$(KAFKA_PORT)                      ║"
 	@echo "║                                                 ║"
 	@echo "║  make stop  — остановить всё                    ║"
@@ -57,6 +60,9 @@ logs:
 logs-auth:
 	$(COMPOSE) logs -f --tail=50 auth
 
+logs-support:
+	$(COMPOSE) logs -f --tail=50 support
+
 # Генерация документации Swagger
 swag:
 	swag init -g cmd/server/main.go -o ./api
@@ -68,6 +74,9 @@ build: swag
 
 build-auth:
 	go build -o bin/auth-service ./services/auth/cmd/server/main.go
+
+build-support:
+	go build -o bin/support-service ./services/support/cmd/server/main.go
 
 # ─── Proto ────────────────────────────────────────────────────────────────────
 

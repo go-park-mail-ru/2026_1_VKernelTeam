@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Clover API",
-		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :80) → микросервисы.\n\n- Auth Service (:8001 HTTP, :9001 gRPC)\n- Монолит (:8000) — ads, cart, chat, support\n\nПеременные:\n- `gateway` — через nginx (http://localhost)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
+		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :80) → микросервисы.\n\n- Auth Service (:8001 HTTP, :9001 gRPC)\n- Support Service (:8002 HTTP)\n- Монолит (:8000) — ads, cart, chat\n\nПеременные:\n- `gateway` — через nginx (http://localhost)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -14,6 +14,11 @@
 			"key": "authDirect",
 			"value": "http://localhost:8001/api/v1",
 			"description": "Напрямую к Auth Service"
+		},
+		{
+			"key": "supportDirect",
+			"value": "http://localhost:8002/api/v1",
+			"description": "Напрямую к Support Service"
 		},
 		{
 			"key": "monolithDirect",
@@ -580,8 +585,8 @@
 			]
 		},
 		{
-			"name": "Support (Monolith)",
-			"description": "Техподдержка — будет перенесена в Support Service (Егор).",
+			"name": "Support Service",
+			"description": "Микросервис техподдержки (services/support).\nРоуты: /support/*\nAuth через gRPC к Auth Service.",
 			"item": [
 				{
 					"name": "Create Ticket",
@@ -783,6 +788,20 @@
 							"protocol": "http",
 							"host": ["localhost"],
 							"port": "8001",
+							"path": ["health"]
+						}
+					}
+				},
+				{
+					"name": "Support Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8002/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8002",
 							"path": ["health"]
 						}
 					}

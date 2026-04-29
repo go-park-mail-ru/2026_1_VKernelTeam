@@ -19,6 +19,7 @@ services:
     depends_on:
       - monolith
       - auth
+      - support
     restart: unless-stopped
 
   # ════════════════════════════════════════════════
@@ -91,6 +92,7 @@ services:
     environment:
       - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@monolith_db:5432/${MONOLITH_POSTGRES_DB}?sslmode=disable
       - REDIS_ADDR=${REDIS_ADDR}
+      - KAFKA_BROKERS=kafka:29092
     restart: unless-stopped
     ports:
       - "${AUTH_HTTP_PORT}:8001"
@@ -100,6 +102,34 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_started
+      kafka:
+        condition: service_healthy
+
+  # ════════════════════════════════════════════════
+  #  SUPPORT SERVICE (http 8002 — services/support/config/local.json)
+  # ════════════════════════════════════════════════
+
+  support:
+    container_name: support
+    build:
+      context: ..
+      dockerfile: ./deployments/Dockerfile.support
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@monolith_db:5432/${MONOLITH_POSTGRES_DB}?sslmode=disable
+      - AUTH_GRPC_ADDR=auth:9001
+      - KAFKA_BROKERS=kafka:29092
+    restart: unless-stopped
+    ports:
+      - "${SUPPORT_HTTP_PORT}:8002"
+    depends_on:
+      monolith_db_migrate:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      kafka:
+        condition: service_healthy
 
   # ════════════════════════════════════════════════
   #  ОБЩАЯ ИНФРАСТРУКТУРА

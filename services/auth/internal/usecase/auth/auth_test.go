@@ -42,6 +42,7 @@ func TestRegisterNewUser_Success(t *testing.T) {
 		tokenRevoker,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -76,6 +77,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		nil,
 		time.Hour,
 		time.Hour,
@@ -115,6 +117,7 @@ func TestLogin_Success(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		nil,
 		time.Hour,
 		time.Hour,
@@ -165,6 +168,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 		tokenRevoker,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -203,6 +207,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		tokenRevoker,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -234,6 +239,7 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 		tokenRevoker,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -263,6 +269,7 @@ func TestLogin_UserProviderError(t *testing.T) {
 		storageMock,
 		tokenRevoker,
 		refreshMock,
+		nil,
 		nil,
 		time.Hour,
 		time.Hour,
@@ -294,6 +301,7 @@ func TestLogout_Success(t *testing.T) {
 		tokenRevoker,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -324,6 +332,7 @@ func TestRefresh_Success(t *testing.T) {
 		storageMock,
 		nil,
 		refreshMock,
+		nil,
 		nil,
 		time.Hour,
 		time.Hour,
@@ -367,6 +376,7 @@ func TestRefresh_InvalidToken(t *testing.T) {
 		nil,
 		refreshMock,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -389,6 +399,7 @@ func TestValidateTokenAndGetUser_Success(t *testing.T) {
 
 	auth := New(log,
 		storageMock,
+		nil,
 		nil,
 		nil,
 		nil,
@@ -416,6 +427,7 @@ func TestValidateTokenAndGetUser_InvalidJWT(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -431,12 +443,14 @@ func TestUpdateProfile_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
+	eventMock := mock_auth.NewMockEventPublisher(ctrl)
 
 	auth := New(log,
 		storageMock,
 		nil,
 		nil,
 		nil,
+		eventMock,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -447,6 +461,9 @@ func TestUpdateProfile_Success(t *testing.T) {
 	storageMock.EXPECT().
 		UpdateUser(gomock.Any(), userID, newName).
 		Return(models.User{ID: userID, Name: newName}, nil)
+	eventMock.EXPECT().
+		PublishUserUpdated(gomock.Any(), userID).
+		Return(nil)
 
 	u, err := auth.UpdateProfile(context.Background(), userID, newName)
 	assert.NoError(t, err)
@@ -460,12 +477,14 @@ func TestUpdateAvatar_Success(t *testing.T) {
 
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
 	fileMock := mock_auth.NewMockFileStorage(ctrl)
+	eventMock := mock_auth.NewMockEventPublisher(ctrl)
 
 	auth := New(log,
 		storageMock,
 		nil,
 		nil,
 		fileMock,
+		eventMock,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -518,6 +537,10 @@ func TestUpdateAvatar_Success(t *testing.T) {
 		DeleteFile(gomock.Any(), oldAvatarURL).
 		Return(nil)
 
+	eventMock.EXPECT().
+		PublishUserUpdated(gomock.Any(), userID).
+		Return(nil)
+
 	updatedUser := models.User{
 		ID:         userID,
 		AvatarPath: s3URL,
@@ -541,12 +564,14 @@ func TestUpdateAvatar_DeleteOldFails(t *testing.T) {
 
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
 	fileMock := mock_auth.NewMockFileStorage(ctrl)
+	eventMock := mock_auth.NewMockEventPublisher(ctrl)
 
 	auth := New(log,
 		storageMock,
 		nil,
 		nil,
 		fileMock,
+		eventMock,
 		time.Hour,
 		time.Hour,
 		testSecret,
@@ -598,6 +623,10 @@ func TestUpdateAvatar_DeleteOldFails(t *testing.T) {
 	fileMock.EXPECT().
 		DeleteFile(gomock.Any(), oldAvatarURL).
 		Return(errors.New("S3 deletion failed"))
+
+	eventMock.EXPECT().
+		PublishUserUpdated(gomock.Any(), userID).
+		Return(nil)
 
 	updatedUser := models.User{
 		ID:         userID,
