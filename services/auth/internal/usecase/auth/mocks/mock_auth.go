@@ -14,6 +14,57 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
+// MockEventPublisher is a mock of EventPublisher interface.
+type MockEventPublisher struct {
+	ctrl     *gomock.Controller
+	recorder *MockEventPublisherMockRecorder
+}
+
+// MockEventPublisherMockRecorder is the mock recorder for MockEventPublisher.
+type MockEventPublisherMockRecorder struct {
+	mock *MockEventPublisher
+}
+
+// NewMockEventPublisher creates a new mock instance.
+func NewMockEventPublisher(ctrl *gomock.Controller) *MockEventPublisher {
+	mock := &MockEventPublisher{ctrl: ctrl}
+	mock.recorder = &MockEventPublisherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEventPublisher) EXPECT() *MockEventPublisherMockRecorder {
+	return m.recorder
+}
+
+// PublishUserUpdated mocks base method.
+func (m *MockEventPublisher) PublishUserUpdated(ctx context.Context, userID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishUserUpdated", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishUserUpdated indicates an expected call of PublishUserUpdated.
+func (mr *MockEventPublisherMockRecorder) PublishUserUpdated(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishUserUpdated", reflect.TypeOf((*MockEventPublisher)(nil).PublishUserUpdated), ctx, userID)
+}
+
+// PublishUserDeleted mocks base method.
+func (m *MockEventPublisher) PublishUserDeleted(ctx context.Context, userID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishUserDeleted", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishUserDeleted indicates an expected call of PublishUserDeleted.
+func (mr *MockEventPublisherMockRecorder) PublishUserDeleted(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishUserDeleted", reflect.TypeOf((*MockEventPublisher)(nil).PublishUserDeleted), ctx, userID)
+}
+
 // MockTokenRevoker is a mock of TokenRevoker interface.
 type MockTokenRevoker struct {
 	ctrl     *gomock.Controller

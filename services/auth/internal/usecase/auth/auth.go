@@ -56,6 +56,12 @@ type FileStorage interface {
 	DeleteFile(ctx context.Context, fileURL string) error
 }
 
+// EventPublisher публикует события пользователей в брокер сообщений.
+type EventPublisher interface {
+	PublishUserUpdated(ctx context.Context, userID int64) error
+	PublishUserDeleted(ctx context.Context, userID int64) error
+}
+
 // UserProviderSaver предоставляет методы для работы с пользователями в хранилище.
 type UserProviderSaver interface {
 	SaveUser(ctx context.Context, email string, passHash []byte, name string) (uid int64, err error)
@@ -72,6 +78,7 @@ type Auth struct {
 	tokenRevoker   TokenRevoker
 	refreshStorage RefreshStorage
 	fileStorage    FileStorage
+	eventPublisher EventPublisher
 	tokenTTL       time.Duration
 	refreshTTL     time.Duration
 	secret         string
@@ -89,6 +96,7 @@ func New(
 	tokenRevoker TokenRevoker,
 	refreshStorage RefreshStorage,
 	fileStorage FileStorage,
+	eventPublisher EventPublisher,
 	tokenTTL time.Duration,
 	refreshTTL time.Duration,
 	secret string,
@@ -99,6 +107,7 @@ func New(
 		tokenRevoker:   tokenRevoker,
 		refreshStorage: refreshStorage,
 		fileStorage:    fileStorage,
+		eventPublisher: eventPublisher,
 		tokenTTL:       tokenTTL,
 		refreshTTL:     refreshTTL,
 		secret:         secret,
@@ -288,6 +297,15 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 	if err != nil {
 		return models.User{}, fmt.Errorf("%s: %w", opUpdateProfile, err)
 	}
+
+	if err := a.eventPublisher.PublishUserUpdated(ctx, userID); err != nil {
+		a.log.WarnContext(ctx, "failed to publish user.updated event",
+			slog.String("op", opUpdateProfile),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
+	}
+
 	return user, nil
 }
 
@@ -330,6 +348,14 @@ func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file multipart.Fi
 				slog.String("error", err.Error()),
 			)
 		}
+	}
+
+	if err := a.eventPublisher.PublishUserUpdated(ctx, userID); err != nil {
+		a.log.WarnContext(ctx, "failed to publish user.updated event",
+			slog.String("op", opUpdateAvatar),
+			slog.Int64("user_id", userID),
+			slog.String("error", err.Error()),
+		)
 	}
 
 	return a.userStorage.UserByID(ctx, userID)
