@@ -1,8 +1,8 @@
-// Package consumer реализует Kafka consumer для Support-сервиса.
+// Package kafka реализует Kafka consumer для Support-сервиса.
 //
 // Подписывается на топик clover.auth.user-events и обрабатывает:
 //   - user.deleted — анонимизация тикетов и сообщений удалённого пользователя
-package consumer
+package kafka
 
 import (
 	"context"
@@ -10,9 +10,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5"
-	"github.com/segmentio/kafka-go"
+	"github.com/jackc/pgx/v5/pgconn"
+	kafkago "github.com/segmentio/kafka-go"
 )
 
 // PgxPool интерфейс для операций с БД.
@@ -34,16 +34,16 @@ type UserDeletedPayload struct {
 	UserID int64 `json:"user_id"`
 }
 
-// UserEventsConsumer слушает события пользователей из Auth-сервиса.
-type UserEventsConsumer struct {
-	reader *kafka.Reader
+// Consumer слушает события пользователей из Auth-сервиса.
+type Consumer struct {
+	reader *kafkago.Reader
 	pool   PgxPool
 	log    *slog.Logger
 }
 
-// NewUserEventsConsumer создаёт consumer для указанного топика и consumer group.
-func NewUserEventsConsumer(brokers []string, topic, groupID string, pool PgxPool, log *slog.Logger) *UserEventsConsumer {
-	reader := kafka.NewReader(kafka.ReaderConfig{
+// NewConsumer создаёт consumer для указанного топика и consumer group.
+func NewConsumer(brokers []string, topic, groupID string, pool PgxPool, log *slog.Logger) *Consumer {
+	reader := kafkago.NewReader(kafkago.ReaderConfig{
 		Brokers:  brokers,
 		Topic:    topic,
 		GroupID:  groupID,
@@ -51,7 +51,7 @@ func NewUserEventsConsumer(brokers []string, topic, groupID string, pool PgxPool
 		MaxBytes: 10e6,
 	})
 
-	return &UserEventsConsumer{
+	return &Consumer{
 		reader: reader,
 		pool:   pool,
 		log:    log,
@@ -60,7 +60,7 @@ func NewUserEventsConsumer(brokers []string, topic, groupID string, pool PgxPool
 
 // Run запускает бесконечный цикл чтения сообщений.
 // Завершается при отмене контекста.
-func (c *UserEventsConsumer) Run(ctx context.Context) {
+func (c *Consumer) Run(ctx context.Context) {
 	c.log.Info("kafka consumer started",
 		slog.String("topic", c.reader.Config().Topic),
 		slog.String("group_id", c.reader.Config().GroupID),
@@ -82,11 +82,11 @@ func (c *UserEventsConsumer) Run(ctx context.Context) {
 }
 
 // Close закрывает Kafka reader.
-func (c *UserEventsConsumer) Close() error {
+func (c *Consumer) Close() error {
 	return c.reader.Close()
 }
 
-func (c *UserEventsConsumer) handleMessage(ctx context.Context, msg kafka.Message) {
+func (c *Consumer) handleMessage(ctx context.Context, msg kafkago.Message) {
 	var event Event
 	if err := json.Unmarshal(msg.Value, &event); err != nil {
 		c.log.ErrorContext(ctx, "failed to unmarshal kafka event",
@@ -108,7 +108,7 @@ func (c *UserEventsConsumer) handleMessage(ctx context.Context, msg kafka.Messag
 
 // handleUserDeleted анонимизирует данные удалённого пользователя в тикетах и сообщениях.
 // Устанавливает user_id = 0 (анонимный пользователь).
-func (c *UserEventsConsumer) handleUserDeleted(ctx context.Context, event Event) {
+func (c *Consumer) handleUserDeleted(ctx context.Context, event Event) {
 	var payload UserDeletedPayload
 	if err := json.Unmarshal(event.Payload, &payload); err != nil {
 		c.log.ErrorContext(ctx, "failed to unmarshal user.deleted payload",
