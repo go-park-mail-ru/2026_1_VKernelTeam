@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ── Prometheus self-monitoring ──────────────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── Сервисы Clover (раскомментировать после добавления /metrics) ─
+  # - job_name: "monolith"
+  #   static_configs:
+  #     - targets: ["monolith:8000"]
+  #   metrics_path: /metrics
+
+  # - job_name: "auth"
+  #   static_configs:
+  #     - targets: ["auth:8001"]
+  #   metrics_path: /metrics
+
+  # - job_name: "support"
+  #   static_configs:
+  #     - targets: ["support:8002"]
+  #   metrics_path: /metrics
+
+  # ── Vector metrics ──────────────────────────────────────────────
+  - job_name: "vector"
+    static_configs:
+      - targets: ["vector:8686"]
+    metrics_path: /metrics

@@ -1,0 +1,72 @@
+api:
+  enabled: true
+  address: "0.0.0.0:8686"
+
+sources:
+  docker_logs:
+    type: docker_logs
+    include_containers:
+      - "monolith"
+      - "auth"
+      - "support"
+      - "gateway"
+
+transforms:
+  parse_logs:
+    type: remap
+    inputs:
+      - docker_logs
+    drop_on_error: true
+    source: |-
+      .service = .container_name
+
+      parsed, err = parse_json(.message)
+      if err == null {
+        .level = downcase(to_string!(parsed.level))
+        .message = to_string!(parsed.msg)
+        .request_id = if exists(parsed.request_id) { to_string!(parsed.request_id) } else { "" }
+        log_time = if exists(parsed.time) { to_string!(parsed.time) } else { "" }
+
+        del(parsed.time)
+        del(parsed.level)
+        del(parsed.msg)
+        del(parsed.request_id)
+        .attributes = encode_json(parsed)
+
+        if log_time != "" {
+          .timestamp = parse_timestamp!(log_time, format: "%+")
+        } else {
+          .timestamp = now()
+        }
+      } else {
+        .level = "info"
+        .request_id = ""
+        .attributes = "{}"
+        .timestamp = now()
+      }
+
+sinks:
+  clickhouse:
+    type: clickhouse
+    inputs:
+      - parse_logs
+    endpoint: "http://clickhouse:8123"
+    database: "${CLICKHOUSE_DB}"
+    table: "service_logs"
+    auth:
+      strategy: basic
+      user: "${CLICKHOUSE_USER}"
+      password: "${CLICKHOUSE_PASSWORD}"
+    encoding:
+      timestamp_format: "unix_ms"
+    batch:
+      max_bytes: 1048576
+      timeout_secs: 5
+    skip_unknown_fields: true
+
+  console_debug:
+    type: console
+    inputs:
+      - parse_logs
+    encoding:
+      codec: json
