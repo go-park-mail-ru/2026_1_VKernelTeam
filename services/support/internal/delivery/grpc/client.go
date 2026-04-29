@@ -1,32 +1,32 @@
-// Package grpcclient реализует gRPC-клиент к Auth-сервису.
+// Package grpc реализует gRPC-клиент к Auth-сервису.
 //
 // Support-сервис вызывает Auth для:
 //   - ValidateToken: проверка JWT токена (auth middleware)
 //   - CheckRole / GetUserRole: проверка роли support/admin
-package grpcclient
+package grpc
 
 import (
 	"context"
 	"fmt"
 
 	authv1 "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/auth/v1"
-	"google.golang.org/grpc"
+	grpclib "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 // AuthClient обёртка над gRPC-клиентом Auth-сервиса.
 type AuthClient struct {
 	client authv1.AuthServiceClient
-	conn   *grpc.ClientConn
+	conn   *grpclib.ClientConn
 }
 
 // NewAuthClient создаёт подключение к Auth gRPC серверу.
 func NewAuthClient(addr string) (*AuthClient, error) {
-	conn, err := grpc.NewClient(addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpclib.NewClient(addr,
+		grpclib.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("grpcclient.NewAuthClient: %w", err)
+		return nil, fmt.Errorf("grpc.NewAuthClient: %w", err)
 	}
 
 	return &AuthClient{

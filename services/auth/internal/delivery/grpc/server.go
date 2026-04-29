@@ -40,8 +40,6 @@ type TokenValidator interface {
 // Server реализует authv1.AuthServiceServer — интерфейс,
 // сгенерированный protoc из auth.proto.
 type Server struct {
-	// Встраиваем UnimplementedAuthServiceServer.
-	// Это обязательно — если в proto добавится новый RPC метод,
 	// старый код не сломается (вернёт "not implemented" по умолчанию).
 	authv1.UnimplementedAuthServiceServer
 
@@ -64,9 +62,6 @@ func NewServer(
 }
 
 // ValidateToken проверяет JWT токен и возвращает user_id и роль.
-//
-// Это самый частый вызов — каждый запрос к Catalog/Commerce/Support
-// проходит через auth middleware, который вызывает этот метод.
 func (s *Server) ValidateToken(ctx context.Context, req *authv1.ValidateTokenRequest) (*authv1.ValidateTokenResponse, error) {
 	// req.Token — это JWT строка из cookie, которую другой сервис получил от клиента
 
@@ -179,9 +174,7 @@ func (s *Server) CheckRole(ctx context.Context, req *authv1.CheckRoleRequest) (*
 	}, nil
 }
 
-// userToProto конвертирует доменную модель User в protobuf UserResponse.
-// Это нужно потому что gRPC работает с protobuf-структурами,
-// а не с нашими Go-структурами.
+// userToProto конвертирует доменную модель User в protobuf UserResponse
 func userToProto(u models.User) *authv1.UserResponse {
 	return &authv1.UserResponse{
 		Id:         u.ID,
