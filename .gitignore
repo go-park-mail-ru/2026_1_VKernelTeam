@@ -16,3 +16,5 @@ skills-*.json
 .claude
 
 server
+
+docs/
