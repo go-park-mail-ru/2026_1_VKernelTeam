@@ -1,5 +1,5 @@
-.PHONY: help run rebuild stop deploy test build build-auth build-support swag lint fmt vet clean proto proto-install \
-       logs-clickhouse grafana-open status
+.PHONY: help run rebuild stop deploy test build build-auth build-support build-catalog swag lint fmt vet clean proto proto-install \
+       logs-clickhouse grafana-open logs-catalog status
 
 include .env
 export
@@ -21,6 +21,7 @@ help:
 	@echo "  build             - Собрать бинарник монолита"
 	@echo "  build-auth        - Собрать бинарник auth-сервиса"
 	@echo "  build-support     - Собрать бинарник support-сервиса"
+	@echo "  build-catalog     - Собрать бинарник catalog-сервиса"
 	@echo "  proto             - Сгенерировать Go-код из proto-файлов"
 	@echo "  swag              - Сгенерировать Swagger-документацию"
 	@echo ""
@@ -83,6 +84,9 @@ logs-auth:
 logs-support:
 	$(COMPOSE) logs -f --tail=50 support
 
+logs-catalog:
+	$(COMPOSE) logs -f --tail=50 catalog
+
 logs-vector:
 	$(COMPOSE) logs -f --tail=50 vector
 
@@ -111,6 +115,9 @@ build-auth:
 
 build-support:
 	go build -o bin/support-service ./services/support/cmd/server/main.go
+
+build-catalog:
+	go build -o bin/catalog-service ./services/catalog/cmd/server/main.go
 
 # ─── Proto ────────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,25 @@
+{
+  "env": "local",
+  "http": {
+    "port": 8004
+  },
+  "grpc": {
+    "port": 9004
+  },
+  "search": {
+    "max_results": 50,
+    "min_query_length": 2,
+    "similarity_threshold": 0.3,
+    "word_similarity_threshold": 0.3
+  },
+  "views": {
+    "dedup_ttl": "24h",
+    "stream_key": "views:events",
+    "consumer_group": "views-consumer",
+    "batch_size": 100,
+    "flush_interval": "2s",
+    "block_timeout": "1s",
+    "count_cache_ttl": "48h",
+    "claim_timeout": "30s"
+  }
+}

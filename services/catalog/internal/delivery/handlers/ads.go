@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
-	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/repository/ad"
-	adsUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/usecase/ads"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/dto"
+	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/ad"
+	adsUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/usecase/ads"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
