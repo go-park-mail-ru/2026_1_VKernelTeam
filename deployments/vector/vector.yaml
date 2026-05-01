@@ -6,7 +6,6 @@ sources:
   docker_logs:
     type: docker_logs
     include_containers:
-      - "monolith"
       - "auth"
       - "support"
       - "catalog"

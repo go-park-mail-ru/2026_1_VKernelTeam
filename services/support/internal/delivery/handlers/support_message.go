@@ -21,6 +21,20 @@ const (
 )
 
 // HandleSendMessage отправляет сообщение в чат обращения техподдержки.
+// @Summary Отправить сообщение в чат обращения
+// @Description Отправляет сообщение в чат обращения. Доступно автору обращения,
+// @Description а также пользователям с ролью support/admin.
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Param request body dto.SendMessageRequest true "Текст сообщения"
+// @Success 200 {object} dto.MessageResponse "сообщение отправлено"
+// @Failure 400 {object} dto.ErrorResponse "bad request: пустой текст, неверный ID или нет доступа"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id}/messages [post]
 func (h *SupportTicketHandlers) HandleSendMessage(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok || userID == 0 {
@@ -67,6 +81,18 @@ func (h *SupportTicketHandlers) HandleSendMessage(w http.ResponseWriter, r *http
 }
 
 // HandleGetMessages возвращает все сообщения чата обращения.
+// @Summary Получить сообщения обращения
+// @Description Возвращает все сообщения чата обращения. Доступно автору обращения,
+// @Description а также пользователям с ролью support/admin.
+// @Tags support
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Success 200 {array} dto.MessageResponse "список сообщений"
+// @Failure 400 {object} dto.ErrorResponse "bad request: неверный ID или нет доступа"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id}/messages [get]
 func (h *SupportTicketHandlers) HandleGetMessages(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok || userID == 0 {

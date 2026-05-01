@@ -20,6 +20,20 @@ const (
 )
 
 // HandleChangeStatus меняет статус обращения техподдержки.
+// @Summary Сменить статус обращения
+// @Description Меняет статус обращения. Доступно только пользователям с ролью support/admin.
+// @Description Допустимые статусы: open, in_progress, closed.
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Param request body dto.ChangeStatusRequest true "Новый статус"
+// @Success 200 {object} dto.TicketStatusResponse "статус обновлён"
+// @Failure 400 {object} dto.ErrorResponse "bad request: неверный ID, статус или обращение не найдено"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id}/status [patch]
 func (h *SupportTicketHandlers) HandleChangeStatus(w http.ResponseWriter, r *http.Request) {
 	ticketID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
@@ -55,6 +69,16 @@ func (h *SupportTicketHandlers) HandleChangeStatus(w http.ResponseWriter, r *htt
 }
 
 // HandleGetAllTickets возвращает список всех обращений всех пользователей.
+// @Summary Все обращения
+// @Description Возвращает список всех обращений всех пользователей.
+// @Description Доступно только пользователям с ролью support/admin.
+// @Tags support
+// @Produce json
+// @Success 200 {array} dto.TicketResponse "список обращений"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/all [get]
 func (h *SupportTicketHandlers) HandleGetAllTickets(w http.ResponseWriter, r *http.Request) {
 	tickets, err := h.services.SupportTicket.GetAllTickets(r.Context())
 	if err != nil {
@@ -67,6 +91,16 @@ func (h *SupportTicketHandlers) HandleGetAllTickets(w http.ResponseWriter, r *ht
 }
 
 // HandleGetStats возвращает сводную статистику по обращениям.
+// @Summary Статистика обращений
+// @Description Возвращает сводную статистику по обращениям: общее количество,
+// @Description разбивку по статусу и категории. Доступно только support/admin.
+// @Tags support
+// @Produce json
+// @Success 200 {object} dto.StatsResponse "статистика обращений"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/stats [get]
 func (h *SupportTicketHandlers) HandleGetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.services.SupportTicket.GetStats(r.Context())
 	if err != nil {

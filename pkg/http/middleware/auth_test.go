@@ -8,12 +8,27 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/jwt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// mintTestToken — локальная мини-реализация подписи JWT для тестов middleware.
+// Раньше использовался удалённый pkg/jwt из монолита; теперь auth-сервис
+// держит свою копию у себя, а тесту middleware достаточно прямого вызова
+// golang-jwt с теми же claims.
+func mintTestToken(t *testing.T, userID int64, ttl time.Duration, secret string) string {
+	t.Helper()
+	claims := jwt.MapClaims{
+		"uid": userID,
+		"exp": time.Now().Add(ttl).Unix(),
+		"jti": uuid.NewString(),
+	}
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
+	require.NoError(t, err)
+	return token
+}
 
 type mockTokenChecker struct {
 	revoked map[string]bool
@@ -51,9 +66,7 @@ func TestAuthMiddleware(t *testing.T) {
 
 	handlerToTest := mw(nextHandler)
 
-	user := models.User{ID: 42, Email: "test@example.com"}
-	validToken, err := ssntjwt.NewToken(user, time.Hour, secret)
-	require.NoError(t, err)
+	validToken := mintTestToken(t, 42, time.Hour, secret)
 
 	t.Run("MissingToken", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)

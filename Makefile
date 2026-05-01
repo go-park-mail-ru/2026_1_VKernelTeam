@@ -1,5 +1,5 @@
-.PHONY: help run rebuild stop deploy test build build-auth build-support build-catalog build-commerce swag lint fmt vet clean proto proto-install \
-       logs-clickhouse grafana-open logs-catalog logs-commerce status
+.PHONY: help run rebuild stop deploy test build-auth build-support build-catalog build-commerce lint fmt vet clean proto proto-install swag swag-install \
+       logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
 include .env
 export
@@ -14,16 +14,17 @@ help:
 	@echo "  rebuild           - Пересобрать образы и поднять (после изменения Go-кода/Dockerfile)"
 	@echo "  stop              - Остановить все контейнеры"
 	@echo "  logs              - Показать логи всех сервисов"
-	@echo "  logs-auth         - Показать логи auth-сервиса"
-	@echo "  logs-support      - Показать логи support-сервиса"
+	@echo "  logs-auth/-support/-catalog/-commerce - логи конкретного сервиса"
 	@echo ""
 	@echo "  Сборка:"
-	@echo "  build             - Собрать бинарник монолита"
 	@echo "  build-auth        - Собрать бинарник auth-сервиса"
 	@echo "  build-support     - Собрать бинарник support-сервиса"
 	@echo "  build-catalog     - Собрать бинарник catalog-сервиса"
+	@echo "  build-commerce    - Собрать бинарник commerce-сервиса"
 	@echo "  proto             - Сгенерировать Go-код из proto-файлов"
-	@echo "  swag              - Сгенерировать Swagger-документацию"
+	@echo "  proto-install     - Установить protoc + Go-плагины (один раз)"
+	@echo "  swag              - Перегенерировать api/swagger.{json,yaml} из аннотаций хендлеров"
+	@echo "  swag-install      - Установить swag CLI (один раз)"
 	@echo ""
 	@echo "  Тесты:"
 	@echo "  test              - Запустить тесты с покрытием"
@@ -41,32 +42,36 @@ help:
 
 # ─── Разработка ───────────────────────────────────────────────────────────────
 
-# Поднимает всё: общая БД, Redis, Kafka, монолит, auth, support, gateway, observability.
+# Поднимает всё: общая БД, Redis, Kafka, auth, support, catalog, commerce, gateway, observability.
 # Использует уже собранные образы. Если их нет — Compose соберёт автоматически.
 # Не лезет в Docker Hub проверять метаданные базовых образов, так что работает офлайн,
 # если контейнеры/кэш уже есть локально.
-run:
+# Префикс swag — на случай, если забыли перегенерировать перед запуском.
+run: swag
 	$(COMPOSE) up -d --remove-orphans
 
 # Пересобирает образы (Go-код или Dockerfile поменялись) и поднимает стек.
 # Требует доступ к Docker Hub для проверки базовых образов.
-rebuild:
+rebuild: swag
 	$(COMPOSE) up -d --build --remove-orphans
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════╗"
 	@echo "║  Clover запущен                                 ║"
 	@echo "║                                                 ║"
-	@echo "║  Gateway:   http://localhost:$(GATEWAY_PORT)               ║"
-	@echo "║  Монолит:   http://localhost:$(MONOLITH_PORT)               ║"
-	@echo "║  Auth HTTP: http://localhost:$(AUTH_HTTP_PORT)               ║"
-	@echo "║  Auth gRPC: localhost:$(AUTH_GRPC_PORT)                      ║"
-	@echo "║  Support:   http://localhost:$(SUPPORT_HTTP_PORT)               ║"
-	@echo "║  Kafka:     localhost:$(KAFKA_PORT)                      ║"
+	@echo "║  Gateway:    http://localhost:$(GATEWAY_PORT)              ║"
+	@echo "║  Auth HTTP:  http://localhost:$(AUTH_HTTP_PORT)              ║"
+	@echo "║  Auth gRPC:  localhost:$(AUTH_GRPC_PORT)                     ║"
+	@echo "║  Support:    http://localhost:$(SUPPORT_HTTP_PORT)              ║"
+	@echo "║  Catalog:    http://localhost:$(CATALOG_HTTP_PORT)              ║"
+	@echo "║  Catalog gRPC: localhost:$(CATALOG_GRPC_PORT)                  ║"
+	@echo "║  Commerce:   http://localhost:$(COMMERCE_HTTP_PORT)              ║"
+	@echo "║  Swagger UI: http://localhost:$(GATEWAY_PORT)/swagger/      ║"
+	@echo "║  Kafka:      localhost:$(KAFKA_PORT)                     ║"
 	@echo "║                                                 ║"
 	@echo "║  Observability:                                 ║"
-	@echo "║  Grafana:    http://localhost:$(GRAFANA_PORT)               ║"
-	@echo "║  Prometheus: http://localhost:$(PROMETHEUS_PORT)               ║"
-	@echo "║  ClickHouse: http://localhost:$(CLICKHOUSE_PORT)               ║"
+	@echo "║  Grafana:    http://localhost:$(GRAFANA_PORT)              ║"
+	@echo "║  Prometheus: http://localhost:$(PROMETHEUS_PORT)              ║"
+	@echo "║  ClickHouse: http://localhost:$(CLICKHOUSE_PORT)              ║"
 	@echo "║                                                 ║"
 	@echo "║  make stop  — остановить всё                    ║"
 	@echo "║  make logs  — посмотреть логи                   ║"
@@ -104,14 +109,7 @@ grafana-open:
 status:
 	$(COMPOSE) ps
 
-# Генерация документации Swagger
-swag:
-	swag init -g cmd/server/main.go -o ./api
-
 # ─── Сборка ──────────────────────────────────────────────────────────────────
-
-build: swag
-	go build -o bin/clover ./cmd/server/main.go
 
 build-auth:
 	go build -o bin/auth-service ./services/auth/cmd/server/main.go
@@ -125,10 +123,33 @@ build-catalog:
 build-commerce:
 	go build -o bin/commerce-service ./services/commerce/cmd/server/main.go
 
+# ─── Swagger ──────────────────────────────────────────────────────────────────
+
+# Генерация api/swagger.{json,yaml} из аннотаций @Summary/@Param/@Failure
+# в services/<svc>/internal/delivery/handlers/. Глобальная мета (@title, @host,
+# @securityDefinitions) лежит в api/swagger_info.go.
+#
+# Сейчас аннотированы catalog и commerce. Auth/support без аннотаций — их роуты
+# в спеку не попадут, пока кто-нибудь не накидает @Summary. Это не блокер.
+#
+# Цель fail-safe: если swag CLI не установлен — пропускает с подсказкой;
+# если генерация падает — логирует и оставляет старый api/swagger.yaml.
+# `make run` и `make rebuild` зовут swag заранее, чтобы фронт получал свежий спек.
+swag:
+	@if command -v swag >/dev/null 2>&1; then \
+		swag init -g swagger_info.go --dir ./api,./services/auth,./services/support,./services/catalog,./services/commerce --parseInternal -o ./api 2>&1 \
+			| grep -vE '^\s*$$|warning: failed to get package name' \
+			| tail -5; \
+	else \
+		echo "[swag] CLI не установлен — пропускаю (один раз: make swag-install)"; \
+	fi
+
+swag-install:
+	go install github.com/swaggo/swag/cmd/swag@latest
+
 # ─── Proto ────────────────────────────────────────────────────────────────────
 
 # Один раз: ставит компилятор protoc и Go-плагины.
-# Без них `make proto` упадёт с "protoc: No such file or directory".
 proto-install:
 	@which protoc >/dev/null 2>&1 || (echo "Installing protobuf-compiler (требуется sudo):" && sudo apt-get update && sudo apt-get install -y protobuf-compiler)
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -147,9 +168,9 @@ proto:
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
 test:
-	@go test -coverprofile=coverage.tmp ./internal/... ./pkg/... ./services/... > /dev/null
+	@go test -coverprofile=coverage.tmp ./pkg/... ./services/... > /dev/null
 	@grep -v -E "mocks|domain" coverage.tmp > coverage.out
-	@go test -cover ./internal/... ./pkg/... ./services/... | grep -v -E "mocks|domain" | awk '{ \
+	@go test -cover ./pkg/... ./services/... | grep -v -E "mocks|domain" | awk '{ \
 		if ($$1 == "ok") { \
 			printf "%-100s %s\n", $$2, $$(NF-2) " " $$(NF-1) " " $$NF; \
 		} else { \
@@ -171,7 +192,7 @@ deploy:
 # ─── Утилиты ──────────────────────────────────────────────────────────────────
 
 lint:
-	golangci-lint run --fix ./internal/... ./pkg/... ./cmd/... ./services/...
+	golangci-lint run --fix ./pkg/... ./services/...
 
 fmt:
 	go fmt ./...
