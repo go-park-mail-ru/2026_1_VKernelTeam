@@ -32,8 +32,8 @@ message AdResponse {
   int64 category_id = 3;
   string title = 4;
   string description = 5;
-  int64 price = 6;          // не помню в чем
-  string status = 7;        // "draft", "active", "reserved", "sold", "archived"
+  int64 price = 6;          // в рублях (целое число)
+  string status = 7;        // см. AdStatus константы: draft|active|reserved|sold|archived
   string location = 8;
   repeated string photo_urls = 9;
 }

@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"unicode/utf8"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/config"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/config"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/dto"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/synonyms"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/translit"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
@@ -64,6 +64,13 @@ type FileStorage interface {
 	DeleteFile(ctx context.Context, fileURL string) error
 }
 
+// EventPublisher публикует события объявлений в брокер сообщений.
+// Допустимо передать nil — тогда события не публикуются (для тестов).
+type EventPublisher interface {
+	PublishAdDeleted(ctx context.Context, adID int64) error
+	PublishAdSold(ctx context.Context, adID, buyerID int64) error
+}
+
 var allowedImageTypes = map[string]struct{}{
 	"image/jpeg": {},
 	"image/png":  {},
@@ -72,24 +79,28 @@ var allowedImageTypes = map[string]struct{}{
 }
 
 type Ads struct {
-	log         *slog.Logger
-	adsStorage  AdsProvider
-	fileStorage FileStorage
-	searchCfg   config.SearchConfig
+	log            *slog.Logger
+	adsStorage     AdsProvider
+	fileStorage    FileStorage
+	searchCfg      config.SearchConfig
+	eventPublisher EventPublisher
 }
 
 // New создаёт новый экземпляр Ads с переданными зависимостями.
+// eventPublisher может быть nil — события Kafka не будут публиковаться.
 func New(
 	log *slog.Logger,
 	adsStorage AdsProvider,
 	fileStorage FileStorage,
 	searchCfg config.SearchConfig,
+	eventPublisher EventPublisher,
 ) *Ads {
 	return &Ads{
-		log:         log,
-		adsStorage:  adsStorage,
-		fileStorage: fileStorage,
-		searchCfg:   searchCfg,
+		log:            log,
+		adsStorage:     adsStorage,
+		fileStorage:    fileStorage,
+		searchCfg:      searchCfg,
+		eventPublisher: eventPublisher,
 	}
 }
 
@@ -443,6 +454,16 @@ func (a *Ads) DeleteAd(ctx context.Context, id int64, userID int64) error {
 		}
 	}
 
+	if a.eventPublisher != nil {
+		if err := a.eventPublisher.PublishAdDeleted(ctx, id); err != nil {
+			a.log.WarnContext(ctx, "failed to publish ad.deleted event",
+				slog.String("op", opDeleteAd),
+				slog.Int64("ad_id", id),
+				slog.String("error", err.Error()),
+			)
+		}
+	}
+
 	a.log.InfoContext(ctx, "ad deleted successfully",
 		slog.String("op", opDeleteAd),
 		slog.Int64("ad_id", id),
@@ -593,10 +614,15 @@ func (a *Ads) GetCategoryCharacteristics(ctx context.Context, categoryID int64) 
 	return chars, nil
 }
 
+// toValidatorChars конвертирует доменные характеристики в формат validator-пакета,
+// чтобы pkg/validator не зависел от catalog-специфичного dto.
 func toValidatorChars(in []dto.CharacteristicInput) []validator.CharacteristicInput {
 	out := make([]validator.CharacteristicInput, len(in))
 	for i, c := range in {
-		out[i] = validator.CharacteristicInput{CategoryCharacteristicID: c.CategoryCharacteristicID, Value: c.Value}
+		out[i] = validator.CharacteristicInput{
+			CategoryCharacteristicID: c.CategoryCharacteristicID,
+			Value:                    c.Value,
+		}
 	}
 	return out
 }

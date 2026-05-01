@@ -20,6 +20,7 @@ services:
       - monolith
       - auth
       - support
+      - catalog
     restart: unless-stopped
 
   # ════════════════════════════════════════════════
@@ -130,6 +131,37 @@ services:
     depends_on:
       db_migrate:
         condition: service_completed_successfully
+      auth:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+
+  # ════════════════════════════════════════════════
+  #  CATALOG SERVICE (http 8004, grpc 9004 — services/catalog/config/local.json)
+  # ════════════════════════════════════════════════
+
+  catalog:
+    container_name: catalog
+    build:
+      context: ..
+      dockerfile: ./deployments/Dockerfile.catalog
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - REDIS_ADDR=${REDIS_ADDR}
+      - AUTH_GRPC_ADDR=auth:9001
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_GROUP_ID=catalog-service
+    restart: unless-stopped
+    ports:
+      - "${CATALOG_HTTP_PORT}:8004"
+      - "${CATALOG_GRPC_PORT}:9004"
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
       auth:
         condition: service_started
       kafka:

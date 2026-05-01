@@ -6,10 +6,27 @@ import (
 	"slices"
 	"strings"
 	"unicode/utf8"
-
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/dto"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/domain/models"
 )
+
+// CharacteristicInput описывает входное значение категорийной характеристики.
+// Локальный тип, чтобы pkg/validator не зависел от domain-моделей конкретного сервиса.
+type CharacteristicInput struct {
+	CategoryCharacteristicID int64
+	Value                    string
+}
+
+// CustomCharacteristicInput описывает входную пользовательскую характеристику.
+type CustomCharacteristicInput struct {
+	Name  string
+	Value string
+}
+
+// CategoryCharacteristicDef описывает определение категорийной характеристики
+// (для проверки allowed_values при валидации).
+type CategoryCharacteristicDef struct {
+	ID            int64
+	AllowedValues []string
+}
 
 // ошибки валидации
 var (
@@ -61,11 +78,11 @@ var (
 	nameRegex = regexp.MustCompile(`^[\p{L}\s'-]{3,50}$`)
 
 	allowedAdStatuses = map[string]bool{
-		models.AdStatusDraft:    true,
-		models.AdStatusActive:   true,
-		models.AdStatusReserved: true,
-		models.AdStatusSold:     true,
-		models.AdStatusArchived: true,
+		"draft":    true,
+		"active":   true,
+		"reserved": true,
+		"sold":     true,
+		"archived": true,
 	}
 )
 
@@ -191,76 +208,12 @@ func ValidateAdStatus(status string) error {
 	return nil
 }
 
-// ValidateCreateAdRequest консолидирует валидацию для запроса на создание объявления
-func ValidateCreateAdRequest(req *dto.CreateAdRequest) *dto.ValidationErrors {
-	errs := dto.ValidationErrors{}
-
-	if err := ValidateCategoryID(req.CategoryID); err != nil {
-		errs.CategoryID = err.Error()
-	}
-	if err := ValidateAdTitle(req.Title); err != nil {
-		errs.Title = err.Error()
-	}
-	if err := ValidateAdDescription(req.Description); err != nil {
-		errs.Description = err.Error()
-	}
-	if err := ValidateAdPrice(req.Price); err != nil {
-		errs.Price = err.Error()
-	}
-	if err := ValidateAdStatus(req.Status); err != nil {
-		errs.Status = err.Error()
-	}
-	if err := ValidateAdLocation(req.Location); err != nil {
-		errs.Location = err.Error()
-	}
-
-	return &errs
-}
-
-// ValidateUpdateAdRequest консолидирует валидацию для запроса на обновление объявления
-func ValidateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
-	errs := dto.ValidationErrors{}
-
-	if req.CategoryID != nil {
-		if err := ValidateCategoryID(*req.CategoryID); err != nil {
-			errs.CategoryID = err.Error()
-		}
-	}
-	if req.Title != nil {
-		if err := ValidateAdTitle(*req.Title); err != nil {
-			errs.Title = err.Error()
-		}
-	}
-	if req.Description != nil {
-		if err := ValidateAdDescription(*req.Description); err != nil {
-			errs.Description = err.Error()
-		}
-	}
-	if req.Price != nil {
-		if err := ValidateAdPrice(*req.Price); err != nil {
-			errs.Price = err.Error()
-		}
-	}
-	if req.Status != nil {
-		if err := ValidateAdStatus(*req.Status); err != nil {
-			errs.Status = err.Error()
-		}
-	}
-	if req.Location != nil {
-		if err := ValidateAdLocation(*req.Location); err != nil {
-			errs.Location = err.Error()
-		}
-	}
-
-	return &errs
-}
-
 // ValidateCharacteristics проверяет категорийные характеристики:
 // - category_characteristic_id существует в определениях категории
 // - если allowed_values задан, value должен входить в список
 // - value: 1-500 символов
-func ValidateCharacteristics(inputs []dto.CharacteristicInput, defs []models.CategoryCharacteristic) error {
-	defMap := make(map[int64]models.CategoryCharacteristic, len(defs))
+func ValidateCharacteristics(inputs []CharacteristicInput, defs []CategoryCharacteristicDef) error {
+	defMap := make(map[int64]CategoryCharacteristicDef, len(defs))
 	for _, d := range defs {
 		defMap[d.ID] = d
 	}
@@ -295,7 +248,7 @@ func ValidateCharacteristics(inputs []dto.CharacteristicInput, defs []models.Cat
 // - не более 10 штук
 // - name: 1-100 символов, уникальные
 // - value: 0-500 символов (пустая строка допустима — означает удаление)
-func ValidateCustomCharacteristics(inputs []dto.CustomCharacteristicInput) error {
+func ValidateCustomCharacteristics(inputs []CustomCharacteristicInput) error {
 	if len(inputs) > 10 {
 		return ErrCustomCharacteristicsTooMany
 	}
