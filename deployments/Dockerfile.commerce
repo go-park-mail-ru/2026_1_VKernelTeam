@@ -1,0 +1,21 @@
+FROM golang:1.26.0-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o commerce-service ./services/commerce/cmd/server/main.go
+
+FROM alpine:3.20
+
+WORKDIR /app
+
+COPY --from=builder /app/commerce-service .
+COPY services/commerce/config ./config
+
+EXPOSE 8006
+
+ENTRYPOINT ["./commerce-service", "--config=./config/local.json"]
