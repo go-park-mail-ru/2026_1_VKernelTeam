@@ -1,104 +1,45 @@
-// Package kafka реализует Kafka producer для Auth-сервиса.
+// Package kafka — domain-обёртка над общим Kafka producer.
 //
-// Публикует события в топик clover.auth.user-events:
-//   - user.updated — профиль обновлён (для инвалидации кэшей)
-//   - user.deleted — пользователь удалён (для очистки данных в других сервисах)
+// Реализует EventPublisher из usecase auth: PublishUserUpdated/PublishUserDeleted.
+// Низкоуровневая работа с Kafka — в pkg/shared/kafka.
 package kafka
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"strconv"
-	"time"
 
-	"github.com/google/uuid"
-	kafkago "github.com/segmentio/kafka-go"
+	sharedkafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/kafka"
 )
 
-// Event описывает формат сообщения для Kafka.
-type Event struct {
-	EventType string      `json:"event_type"`
-	EventID   string      `json:"event_id"`
-	Timestamp time.Time   `json:"timestamp"`
-	Payload   interface{} `json:"payload"`
-}
-
-// UserPayload — payload для событий пользователя.
-type UserPayload struct {
-	UserID int64 `json:"user_id"`
-}
-
-// Producer публикует события пользователей в Kafka.
+// Producer публикует события пользователей в clover.auth.user-events.
 type Producer struct {
-	writer *kafkago.Writer
-	log    *slog.Logger
+	inner *sharedkafka.Producer
 }
 
-// NewProducer создаёт Kafka producer для указанного топика.
-func NewProducer(brokers []string, topic string, log *slog.Logger) *Producer {
-	writer := &kafkago.Writer{
-		Addr:         kafkago.TCP(brokers...),
-		Topic:        topic,
-		Balancer:     &kafkago.Hash{},
-		BatchTimeout: 10 * time.Millisecond,
-		RequiredAcks: kafkago.RequireOne,
-	}
-
+// NewProducer создаёт producer, подключённый к топику clover.auth.user-events.
+func NewProducer(brokers []string, log *slog.Logger) *Producer {
 	return &Producer{
-		writer: writer,
-		log:    log,
+		inner: sharedkafka.NewProducer(brokers, sharedkafka.TopicAuthUserEvents, log),
 	}
 }
 
 // Close закрывает Kafka writer.
 func (p *Producer) Close() error {
-	return p.writer.Close()
+	return p.inner.Close()
 }
 
-// PublishUserUpdated публикует событие user.updated.
+// PublishUserUpdated публикует событие user.updated с ключом user_id.
 func (p *Producer) PublishUserUpdated(ctx context.Context, userID int64) error {
-	return p.publish(ctx, "user.updated", userID)
+	return p.publishUserEvent(ctx, sharedkafka.EventUserUpdated, userID)
 }
 
-// PublishUserDeleted публикует событие user.deleted.
+// PublishUserDeleted публикует событие user.deleted с ключом user_id.
 func (p *Producer) PublishUserDeleted(ctx context.Context, userID int64) error {
-	return p.publish(ctx, "user.deleted", userID)
+	return p.publishUserEvent(ctx, sharedkafka.EventUserDeleted, userID)
 }
 
-func (p *Producer) publish(ctx context.Context, eventType string, userID int64) error {
-	event := Event{
-		EventType: eventType,
-		EventID:   uuid.New().String(),
-		Timestamp: time.Now().UTC(),
-		Payload:   UserPayload{UserID: userID},
-	}
-
-	value, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("kafka.Producer.publish: marshal: %w", err)
-	}
-
-	msg := kafkago.Message{
-		Key:   []byte(strconv.FormatInt(userID, 10)),
-		Value: value,
-	}
-
-	if err := p.writer.WriteMessages(ctx, msg); err != nil {
-		p.log.ErrorContext(ctx, "failed to publish kafka event",
-			slog.String("event_type", eventType),
-			slog.Int64("user_id", userID),
-			slog.String("error", err.Error()),
-		)
-		return fmt.Errorf("kafka.Producer.publish: write: %w", err)
-	}
-
-	p.log.InfoContext(ctx, "kafka event published",
-		slog.String("event_type", eventType),
-		slog.Int64("user_id", userID),
-		slog.String("event_id", event.EventID),
-	)
-
-	return nil
+func (p *Producer) publishUserEvent(ctx context.Context, eventType string, userID int64) error {
+	key := strconv.FormatInt(userID, 10)
+	return p.inner.Publish(ctx, key, eventType, sharedkafka.UserPayload{UserID: userID})
 }
