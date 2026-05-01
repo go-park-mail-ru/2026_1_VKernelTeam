@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Clover API",
-		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :8080) → микросервисы.\n\n- Auth Service (:8001 HTTP, :8003 gRPC)\n- Support Service (:8002 HTTP)\n- Монолит (:8000) — ads, cart, chat\n\nПеременные:\n- `gateway` — через nginx (http://localhost:8080)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `monolithDirect` — напрямую к монолиту (http://localhost:8000)",
+		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :8080) → микросервисы.\n\n- Auth Service (:8001 HTTP, :8003 gRPC)\n- Support Service (:8002 HTTP)\n- Catalog Service (:8004 HTTP, :8005 gRPC) — объявления, поиск, избранное, просмотры, категории\n- Commerce Service (:8006 HTTP) — корзина, чаты, заказы\n\nПеременные:\n- `gateway` — через nginx (http://localhost:8080)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `catalogDirect` — напрямую к catalog (http://localhost:8004)\n- `commerceDirect` — напрямую к commerce (http://localhost:8006)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -21,9 +21,14 @@
 			"description": "Напрямую к Support Service"
 		},
 		{
-			"key": "monolithDirect",
-			"value": "http://localhost:8000/api/v1",
-			"description": "Напрямую к монолиту"
+			"key": "catalogDirect",
+			"value": "http://localhost:8004/api/v1",
+			"description": "Напрямую к Catalog Service"
+		},
+		{
+			"key": "commerceDirect",
+			"value": "http://localhost:8006/api/v1",
+			"description": "Напрямую к Commerce Service"
 		},
 		{
 			"key": "baseUrl",
@@ -263,8 +268,8 @@
 			]
 		},
 		{
-			"name": "Ads (Monolith)",
-			"description": "Объявления — пока в монолите, будет перенесено в Catalog Service (Николай).",
+			"name": "Ads (Catalog)",
+			"description": "Объявления — Catalog Service.",
 			"item": [
 				{
 					"name": "Get All Ads",
@@ -424,7 +429,7 @@
 			]
 		},
 		{
-			"name": "Favorites (Monolith)",
+			"name": "Favorites (Catalog)",
 			"item": [
 				{
 					"name": "Add to Favorites",
@@ -471,7 +476,7 @@
 			]
 		},
 		{
-			"name": "Cart (Monolith)",
+			"name": "Cart (Commerce)",
 			"item": [
 				{
 					"name": "Get Cart",
@@ -523,7 +528,7 @@
 			]
 		},
 		{
-			"name": "Chat & Orders (Monolith)",
+			"name": "Chat & Orders (Commerce)",
 			"item": [
 				{
 					"name": "Create Order (Start Chat)",
@@ -759,7 +764,7 @@
 			]
 		},
 		{
-			"name": "Categories (Monolith)",
+			"name": "Categories (Catalog)",
 			"item": [
 				{
 					"name": "Get Category Characteristics",

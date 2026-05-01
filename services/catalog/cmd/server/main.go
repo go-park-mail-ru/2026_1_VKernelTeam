@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/internal/logger"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/logger"
 	sharedmw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	catalogv1 "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/catalog/v1"
 

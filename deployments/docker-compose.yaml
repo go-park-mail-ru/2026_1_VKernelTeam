@@ -1,6 +1,8 @@
-# Порты сервисов задаются в конфигах:
-#   Монолит: config/local.json              → port 8000
-#   Auth:    services/auth/config/local.json → http 8001, grpc 9001
+# Порты сервисов задаются в конфигах services/<name>/config/local.json:
+#   auth     → http 8001, grpc 9001
+#   support  → http 8002
+#   catalog  → http 8004, grpc 9004
+#   commerce → http 8006
 # При изменении портов в конфигах — обновить port mapping здесь.
 
 services:
@@ -17,38 +19,12 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      - monolith
       - auth
       - support
       - catalog
       - commerce
+      - swagger-ui
     restart: unless-stopped
-
-  # ════════════════════════════════════════════════
-  #  МОНОЛИТ (port 8000 — config/local.json)
-  # ════════════════════════════════════════════════
-
-  monolith:
-    container_name: monolith
-    build:
-      context: ..
-      dockerfile: ./deployments/Dockerfile
-    env_file:
-      - ../.env
-    environment:
-      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
-      - REDIS_ADDR=${REDIS_ADDR}
-    restart: unless-stopped
-    ports:
-      - "${MONOLITH_PORT}:8000"
-    volumes:
-      - ../static:/app/static
-      - ../storage:/app/storage
-    depends_on:
-      db_migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_started
 
   # ════════════════════════════════════════════════
   #  ОБЩАЯ БД (одна на все сервисы — Database Shared)
@@ -210,6 +186,20 @@ services:
       - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
+
+  # ════════════════════════════════════════════════
+  #  SWAGGER UI (читает api/swagger.yaml, доступен через gateway: /swagger/)
+  # ════════════════════════════════════════════════
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: swagger_ui
+    restart: unless-stopped
+    environment:
+      SWAGGER_JSON: /spec/swagger.yaml
+      BASE_URL: /swagger
+    volumes:
+      - ../api/swagger.yaml:/spec/swagger.yaml:ro
 
   kafka:
     image: apache/kafka:3.9.0

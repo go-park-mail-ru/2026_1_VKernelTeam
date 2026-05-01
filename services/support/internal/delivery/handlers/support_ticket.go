@@ -25,6 +25,18 @@ const (
 )
 
 // HandleCreateTicket создаёт новое обращение в техподдержку
+// @Summary Создать обращение
+// @Description Создаёт новое обращение в техподдержку
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param request body dto.CreateTicketRequest true "Данные обращения"
+// @Success 201 {object} dto.TicketResponse "обращение успешно создано"
+// @Failure 400 {object} dto.ErrorResponse "bad request: Ошибка валидации или неверный JSON"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets [post]
 func (h *SupportTicketHandlers) HandleCreateTicket(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
@@ -60,6 +72,15 @@ func (h *SupportTicketHandlers) HandleCreateTicket(w http.ResponseWriter, r *htt
 }
 
 // HandleGetMyTickets возвращает список обращений текущего пользователя
+// @Summary Мои обращения
+// @Description Возвращает список обращений текущего пользователя
+// @Tags support
+// @Produce json
+// @Success 200 {array} dto.TicketResponse "список обращений получен"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets [get]
 func (h *SupportTicketHandlers) HandleGetMyTickets(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
@@ -81,6 +102,19 @@ func (h *SupportTicketHandlers) HandleGetMyTickets(w http.ResponseWriter, r *htt
 }
 
 // HandleGetTicket возвращает детали одного обращения
+// @Summary Получить обращение
+// @Description Возвращает детали одного обращения по ID
+// @Tags support
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Success 200 {object} dto.TicketResponse "обращение получено"
+// @Failure 400 {object} dto.ErrorResponse "bad request: Некорректный ID"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 403 {object} dto.ErrorResponse "forbidden: Нет доступа к чужому обращению"
+// @Failure 404 {object} dto.ErrorResponse "not found: Обращение не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id} [get]
 func (h *SupportTicketHandlers) HandleGetTicket(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
@@ -116,6 +150,21 @@ func (h *SupportTicketHandlers) HandleGetTicket(w http.ResponseWriter, r *http.R
 }
 
 // HandleUpdateTicket обновляет обращение (только своё, только в статусе open)
+// @Summary Обновить обращение
+// @Description Обновляет данные обращения (только в статусе open)
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Param request body dto.UpdateTicketRequest true "Новые данные обращения"
+// @Success 200 {object} dto.TicketResponse "обращение успешно обновлено"
+// @Failure 400 {object} dto.ErrorResponse "bad request: Ошибка валидации, неверный статус или JSON"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 403 {object} dto.ErrorResponse "forbidden: Нет доступа к чужому обращению"
+// @Failure 404 {object} dto.ErrorResponse "not found: Обращение не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id} [put]
 func (h *SupportTicketHandlers) HandleUpdateTicket(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {
@@ -165,6 +214,21 @@ func (h *SupportTicketHandlers) HandleUpdateTicket(w http.ResponseWriter, r *htt
 }
 
 // HandleRateTicket выставляет оценку обращению в техподдержку
+// @Summary Оценить обращение
+// @Description Позволяет автору обращения выставить оценку от 1 до 5 для закрытого тикета
+// @Tags support
+// @Accept json
+// @Produce json
+// @Param id path int true "ID обращения"
+// @Param request body dto.RateTicketRequest true "Оценка"
+// @Success 200 {object} dto.TicketResponse "оценка выставлена"
+// @Failure 400 {object} dto.ErrorResponse "bad request: Некорректная оценка, тикет не закрыт или уже оценён"
+// @Failure 401 {object} dto.ErrorResponse "unauthorized: Пользователь не авторизован"
+// @Failure 403 {object} dto.ErrorResponse "forbidden: Пользователь не является автором"
+// @Failure 404 {object} dto.ErrorResponse "not found: Обращение не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера"
+// @Security CookieAuth
+// @Router /support/tickets/{id}/rate [post]
 func (h *SupportTicketHandlers) HandleRateTicket(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok {

@@ -943,6 +943,64 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "CsrfHeaderAuth": []
+                    }
+                ],
+                "description": "Обновляет имя пользователя. Требует действующую сессию и валидный CSRF-токен.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Обновить профиль",
+                "parameters": [
+                    {
+                        "description": "Новые данные профиля",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "профиль успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body / Missing CSRF cookie / CSRF token mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "missing token cookie / invalid token / token has been revoked",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/profile/avatar": {
@@ -1038,17 +1096,52 @@ const docTemplate = `{
                 }
             }
         },
-        "/profile/update": {
+        "/support/tickets": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает список обращений текущего пользователя",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Мои обращения",
+                "responses": {
+                    "200": {
+                        "description": "список обращений получен",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TicketResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
                         "CookieAuth": []
-                    },
-                    {
-                        "CsrfHeaderAuth": []
                     }
                 ],
-                "description": "Обновляет имя пользователя. Требует действующую сессию и валидный CSRF-токен.",
+                "description": "Создаёт новое обращение в техподдержку",
                 "consumes": [
                     "application/json"
                 ],
@@ -1056,41 +1149,513 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "auth"
+                    "support"
                 ],
-                "summary": "Обновить профиль",
+                "summary": "Создать обращение",
                 "parameters": [
                     {
-                        "description": "Новые данные профиля",
-                        "name": "input",
+                        "description": "Данные обращения",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dto.UpdateProfileRequest"
+                            "$ref": "#/definitions/dto.CreateTicketRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "профиль успешно обновлен",
+                    "201": {
+                        "description": "обращение успешно создано",
                         "schema": {
-                            "$ref": "#/definitions/models.User"
+                            "$ref": "#/definitions/dto.TicketResponse"
                         }
                     },
                     "400": {
-                        "description": "invalid request body / Missing CSRF cookie / CSRF token mismatch",
+                        "description": "bad request: Ошибка валидации или неверный JSON",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "missing token cookie / invalid token / token has been revoked",
+                        "description": "unauthorized: Пользователь не авторизован",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "internal error: внутренняя ошибка сервера",
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/all": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает список всех обращений всех пользователей.\nДоступно только пользователям с ролью support/admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Все обращения",
+                "responses": {
+                    "200": {
+                        "description": "список обращений",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.TicketResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/stats": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает сводную статистику по обращениям: общее количество,\nразбивку по статусу и категории. Доступно только support/admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Статистика обращений",
+                "responses": {
+                    "200": {
+                        "description": "статистика обращений",
+                        "schema": {
+                            "$ref": "#/definitions/dto.StatsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает детали одного обращения по ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Получить обращение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "обращение получено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TicketResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: Некорректный ID",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden: Нет доступа к чужому обращению",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "not found: Обращение не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Обновляет данные обращения (только в статусе open)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Обновить обращение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные обращения",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "обращение успешно обновлено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TicketResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: Ошибка валидации, неверный статус или JSON",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden: Нет доступа к чужому обращению",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "not found: Обращение не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/{id}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Возвращает все сообщения чата обращения. Доступно автору обращения,\nа также пользователям с ролью support/admin.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Получить сообщения обращения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "список сообщений",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.MessageResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: неверный ID или нет доступа",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Отправляет сообщение в чат обращения. Доступно автору обращения,\nа также пользователям с ролью support/admin.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Отправить сообщение в чат обращения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Текст сообщения",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SendMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "сообщение отправлено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: пустой текст, неверный ID или нет доступа",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/{id}/rate": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Позволяет автору обращения выставить оценку от 1 до 5 для закрытого тикета",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Оценить обращение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Оценка",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RateTicketRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "оценка выставлена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TicketResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: Некорректная оценка, тикет не закрыт или уже оценён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "forbidden: Пользователь не является автором",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "not found: Обращение не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/support/tickets/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "description": "Меняет статус обращения. Доступно только пользователям с ролью support/admin.\nДопустимые статусы: open, in_progress, closed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "support"
+                ],
+                "summary": "Сменить статус обращения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID обращения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новый статус",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChangeStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "статус обновлён",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TicketStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "bad request: неверный ID, статус или обращение не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized: пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1360,46 +1925,13 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
-                    "type": "string"
-                },
-                "category_id": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
                 "email": {
-                    "type": "string"
-                },
-                "location": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }
@@ -1470,7 +2002,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "allowed_values": {
-                    "description": "nil = свободный ввод",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -1583,7 +2114,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Clover API",
-	Description:      "API for the Clover service.",
+	Description:      "API маркетплейса Клевер (микросервисная архитектура).\n- Auth Service       (HTTP :8001, gRPC :9001) — авторизация, профиль, пользователи\n- Support Service    (HTTP :8002)             — техподдержка\n- Catalog Service    (HTTP :8004, gRPC :9004) — объявления, категории, избранное, просмотры\n- Commerce Service   (HTTP :8006)             — корзина, чаты, заказы\nВсе запросы идут через API Gateway (nginx :8080).",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
