@@ -10,6 +10,7 @@ sources:
       - "auth"
       - "support"
       - "catalog"
+      - "commerce"
       - "gateway"
 
 transforms:
