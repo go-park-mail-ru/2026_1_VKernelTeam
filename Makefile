@@ -1,4 +1,4 @@
-.PHONY: help run stop deploy test build build-auth build-support swag lint fmt vet clean proto \
+.PHONY: help run rebuild stop deploy test build build-auth build-support swag lint fmt vet clean proto proto-install \
        logs-clickhouse grafana-open status
 
 include .env
@@ -10,7 +10,8 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Разработка:"
-	@echo "  run               - Поднять всю инфраструктуру (монолит + auth + support + gateway + kafka)"
+	@echo "  run               - Поднять стек (использует кэшированные образы; сеть в Docker Hub не нужна)"
+	@echo "  rebuild           - Пересобрать образы и поднять (после изменения Go-кода/Dockerfile)"
 	@echo "  stop              - Остановить все контейнеры"
 	@echo "  logs              - Показать логи всех сервисов"
 	@echo "  logs-auth         - Показать логи auth-сервиса"
@@ -39,8 +40,16 @@ help:
 
 # ─── Разработка ───────────────────────────────────────────────────────────────
 
-# Поднимает всё: БД монолита, БД auth, Redis, Kafka, монолит, auth, gateway
+# Поднимает всё: общая БД, Redis, Kafka, монолит, auth, support, gateway, observability.
+# Использует уже собранные образы. Если их нет — Compose соберёт автоматически.
+# Не лезет в Docker Hub проверять метаданные базовых образов, так что работает офлайн,
+# если контейнеры/кэш уже есть локально.
 run:
+	$(COMPOSE) up -d --remove-orphans
+
+# Пересобирает образы (Go-код или Dockerfile поменялись) и поднимает стек.
+# Требует доступ к Docker Hub для проверки базовых образов.
+rebuild:
 	$(COMPOSE) up -d --build --remove-orphans
 	@echo ""
 	@echo "╔══════════════════════════════════════════════════╗"
@@ -105,12 +114,22 @@ build-support:
 
 # ─── Proto ────────────────────────────────────────────────────────────────────
 
+# Один раз: ставит компилятор protoc и Go-плагины.
+# Без них `make proto` упадёт с "protoc: No such file or directory".
+proto-install:
+	@which protoc >/dev/null 2>&1 || (echo "Installing protobuf-compiler (требуется sudo):" && sudo apt-get update && sudo apt-get install -y protobuf-compiler)
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	@echo "Готово. protoc + Go-плагины установлены."
+
 proto:
+	@which protoc >/dev/null 2>&1 || (echo "protoc не установлен. Запусти: make proto-install" && exit 1)
 	protoc \
 		--proto_path=proto \
 		--go_out=proto/gen --go_opt=paths=source_relative \
 		--go-grpc_out=proto/gen --go-grpc_opt=paths=source_relative \
-		auth/v1/auth.proto
+		auth/v1/auth.proto \
+		catalog/v1/catalog.proto
 
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 

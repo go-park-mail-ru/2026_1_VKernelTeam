@@ -774,39 +774,6 @@
 					}
 				}
 			]
-		},
-		{
-			"name": "Health Checks",
-			"item": [
-				{
-					"name": "Auth Service Health",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:8001/health",
-							"protocol": "http",
-							"host": ["localhost"],
-							"port": "8001",
-							"path": ["health"]
-						}
-					}
-				},
-				{
-					"name": "Support Service Health",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "http://localhost:8002/health",
-							"protocol": "http",
-							"host": ["localhost"],
-							"port": "8002",
-							"path": ["health"]
-						}
-					}
-				}
-			]
 		}
 	]
 }
