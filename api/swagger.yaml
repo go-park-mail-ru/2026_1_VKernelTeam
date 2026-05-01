@@ -265,33 +265,11 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      category_characteristics:
-        type: string
-      category_id:
-        type: string
-      custom_characteristics:
-        type: string
-      description:
-        type: string
       email:
-        type: string
-      location:
         type: string
       name:
         type: string
       password:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
-      price:
-        type: string
-      status:
-        type: string
-      title:
-        type: string
-      user_id:
         type: string
     type: object
   models.Ad:
@@ -338,7 +316,6 @@ definitions:
   models.CategoryCharacteristic:
     properties:
       allowed_values:
-        description: nil = свободный ввод
         items:
           type: string
         type: array
@@ -397,7 +374,13 @@ definitions:
 host: clover-go.ru
 info:
   contact: {}
-  description: API for the Clover service.
+  description: |-
+    API маркетплейса Клевер (микросервисная архитектура).
+    - Auth Service       (HTTP :8001, gRPC :9001) — авторизация, профиль, пользователи
+    - Support Service    (HTTP :8002)             — техподдержка
+    - Catalog Service    (HTTP :8004, gRPC :9004) — объявления, категории, избранное, просмотры
+    - Commerce Service   (HTTP :8006)             — корзина, чаты, заказы
+    Все запросы идут через API Gateway (nginx :8080).
   title: Clover API
   version: "1.0"
 paths:
@@ -1162,6 +1145,43 @@ paths:
       summary: Получить профиль пользователя
       tags:
       - auth
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет имя пользователя. Требует действующую сессию и валидный
+        CSRF-токен.
+      parameters:
+      - description: Новые данные профиля
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: профиль успешно обновлен
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: invalid request body / Missing CSRF cookie / CSRF token mismatch
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: missing token cookie / invalid token / token has been revoked
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: внутренняя ошибка сервера'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - CsrfHeaderAuth: []
+      summary: Обновить профиль
+      tags:
+      - auth
   /profile/avatar:
     post:
       consumes:
@@ -1223,44 +1243,6 @@ paths:
       summary: Получить избранное
       tags:
       - favorites
-  /profile/update:
-    post:
-      consumes:
-      - application/json
-      description: Обновляет имя пользователя. Требует действующую сессию и валидный
-        CSRF-токен.
-      parameters:
-      - description: Новые данные профиля
-        in: body
-        name: input
-        required: true
-        schema:
-          $ref: '#/definitions/dto.UpdateProfileRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: профиль успешно обновлен
-          schema:
-            $ref: '#/definitions/models.User'
-        "400":
-          description: invalid request body / Missing CSRF cookie / CSRF token mismatch
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: missing token cookie / invalid token / token has been revoked
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: 'internal error: внутренняя ошибка сервера'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - CookieAuth: []
-      - CsrfHeaderAuth: []
-      summary: Обновить профиль
-      tags:
-      - auth
   /support/tickets:
     get:
       description: Возвращает список обращений текущего пользователя
