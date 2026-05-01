@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package catalog.v1;
 
-option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/proto/catalog/v1;catalogv1";
+option go_package = "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/catalog/v1;catalogv1";
 
 // CatalogService — внутренний gRPC API для получения данных объявлений.
 // Используется сервисом Commerce.
