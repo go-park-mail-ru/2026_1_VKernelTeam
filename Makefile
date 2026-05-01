@@ -1,5 +1,5 @@
-.PHONY: help run rebuild stop deploy test build build-auth build-support build-catalog swag lint fmt vet clean proto proto-install \
-       logs-clickhouse grafana-open logs-catalog status
+.PHONY: help run rebuild stop deploy test build build-auth build-support build-catalog build-commerce swag lint fmt vet clean proto proto-install \
+       logs-clickhouse grafana-open logs-catalog logs-commerce status
 
 include .env
 export
@@ -87,6 +87,9 @@ logs-support:
 logs-catalog:
 	$(COMPOSE) logs -f --tail=50 catalog
 
+logs-commerce:
+	$(COMPOSE) logs -f --tail=50 commerce
+
 logs-vector:
 	$(COMPOSE) logs -f --tail=50 vector
 
@@ -118,6 +121,9 @@ build-support:
 
 build-catalog:
 	go build -o bin/catalog-service ./services/catalog/cmd/server/main.go
+
+build-commerce:
+	go build -o bin/commerce-service ./services/commerce/cmd/server/main.go
 
 # ─── Proto ────────────────────────────────────────────────────────────────────
 

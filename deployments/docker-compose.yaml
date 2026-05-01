@@ -21,6 +21,7 @@ services:
       - auth
       - support
       - catalog
+      - commerce
     restart: unless-stopped
 
   # ════════════════════════════════════════════════
@@ -163,6 +164,36 @@ services:
       redis:
         condition: service_started
       auth:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+
+  # ════════════════════════════════════════════════
+  #  COMMERCE SERVICE (http 8006 — services/commerce/config/local.json)
+  # ════════════════════════════════════════════════
+
+  commerce:
+    container_name: commerce
+    build:
+      context: ..
+      dockerfile: ./deployments/Dockerfile.commerce
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - AUTH_GRPC_ADDR=auth:9001
+      - CATALOG_GRPC_ADDR=catalog:9004
+      - KAFKA_BROKERS=kafka:29092
+      - KAFKA_GROUP_ID=commerce-service
+    restart: unless-stopped
+    ports:
+      - "${COMMERCE_HTTP_PORT}:8006"
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      catalog:
         condition: service_started
       kafka:
         condition: service_healthy
