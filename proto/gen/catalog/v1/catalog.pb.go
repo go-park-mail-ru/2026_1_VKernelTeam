@@ -72,8 +72,8 @@ type AdResponse struct {
 	CategoryId    int64                  `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	Title         string                 `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
 	Description   string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
-	Price         int64                  `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`  // не помню в чем
-	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"` // "draft", "active", "reserved", "sold", "archived"
+	Price         int64                  `protobuf:"varint,6,opt,name=price,proto3" json:"price,omitempty"`  // в рублях (целое число)
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"` // см. AdStatus константы: draft|active|reserved|sold|archived
 	Location      string                 `protobuf:"bytes,8,opt,name=location,proto3" json:"location,omitempty"`
 	PhotoUrls     []string               `protobuf:"bytes,9,rep,name=photo_urls,json=photoUrls,proto3" json:"photo_urls,omitempty"`
 	unknownFields protoimpl.UnknownFields

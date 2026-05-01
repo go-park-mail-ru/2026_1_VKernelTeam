@@ -9,6 +9,7 @@ sources:
       - "monolith"
       - "auth"
       - "support"
+      - "catalog"
       - "gateway"
 
 transforms:
