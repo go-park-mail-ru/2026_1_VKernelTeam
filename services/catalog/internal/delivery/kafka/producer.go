@@ -1,8 +1,8 @@
-// Package kafka — domain-обёртка над общим Kafka producer для catalog.
+// Package kafka - domain-обёртка над общим Kafka producer для catalog.
 //
 // Публикует события в clover.catalog.ad-events:
-//   - ad.sold     — при покупке (вызывается из gRPC UpdateAdStatus)
-//   - ad.deleted  — при удалении объявления (вызывается из usecase DeleteAd)
+//   - ad.sold     - при покупке (вызывается из gRPC UpdateAdStatus)
+//   - ad.deleted  - при удалении объявления (вызывается из usecase DeleteAd)
 package kafka
 
 import (
