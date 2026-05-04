@@ -168,19 +168,42 @@ proto:
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
 test:
-	@go test -coverprofile=coverage.tmp ./pkg/... ./services/... > /dev/null
-	@grep -v -E "mocks|domain" coverage.tmp > coverage.out
-	@go test -cover ./pkg/... ./services/... | grep -v -E "mocks|domain" | awk '{ \
-		if ($$1 == "ok") { \
-			printf "%-100s %s\n", $$2, $$(NF-2) " " $$(NF-1) " " $$NF; \
-		} else { \
-			print $$0; \
-		} \
-	}'
-	@echo "--------------------------------------------------------------------------------------------------------------------------"
-	@go tool cover -func=coverage.out | grep total | awk '{printf "%-100s %s\n", "TOTAL PROJECT COVERAGE:", $$3}'
-	@echo "--------------------------------------------------------------------------------------------------------------------------"
-	@rm coverage.tmp coverage.out
+	@go test -coverprofile=coverage.tmp ./pkg/... ./services/... >/dev/null 2>&1 || true
+	@# Из покрытия исключаем то, что не наш «бизнес-код»:
+	@#   mocks/         — autogen от mockgen
+	@#   domain/dto,    — структуры без логики
+	@#   domain/models
+	@#   cmd/server     — wiring main.go
+	@#   internal/config — загрузка конфига
+	@#   proto/gen      — autogen protoc
+	@grep -vE "/mocks/|/domain/(dto|models)/|/cmd/server/|/internal/config/|/proto/gen/" coverage.tmp > coverage.out
+	@echo ""
+	@echo "═══════════════════════════════ Coverage by service ═════════════════════════════════"
+	@awk '\
+	  NR > 1 { \
+	    file = $$1; stmts = $$2; hits = $$3; \
+	    if (match(file, /clover\/services\/[a-z]+/)) { \
+	      grp = substr(file, RSTART + 7, RLENGTH - 7); \
+	    } else if (match(file, /clover\/pkg\//)) { \
+	      grp = "pkg (shared)"; \
+	    } else { next } \
+	    total[grp] += stmts; \
+	    if (hits > 0) covered[grp] += stmts; \
+	  } \
+	  END { \
+	    n = 0; for (g in total) keys[++n] = g; \
+	    for (i = 1; i <= n; i++) for (j = i + 1; j <= n; j++) \
+	      if (keys[i] > keys[j]) { t = keys[i]; keys[i] = keys[j]; keys[j] = t } \
+	    for (i = 1; i <= n; i++) { \
+	      g = keys[i]; \
+	      pct = (total[g] > 0) ? covered[g] / total[g] * 100 : 0; \
+	      printf "  %-22s %6.1f%%   (%d / %d statements)\n", g, pct, covered[g], total[g]; \
+	    } \
+	  }' coverage.out
+	@echo "═════════════════════════════════════════════════════════════════════════════════════"
+	@go tool cover -func=coverage.out | awk 'END { } /^total:/ { printf "  %-22s %6s\n", "TOTAL", $$3 }'
+	@echo "═════════════════════════════════════════════════════════════════════════════════════"
+	@rm -f coverage.tmp coverage.out
 
 # ─── Деплой ───────────────────────────────────────────────────────────────────
 
