@@ -1,5 +1,7 @@
 package s3
 
+//go:generate mockgen -source=client.go -destination=mocks/mock_client.go -package=mocks
+
 import (
 	"context"
 	"fmt"

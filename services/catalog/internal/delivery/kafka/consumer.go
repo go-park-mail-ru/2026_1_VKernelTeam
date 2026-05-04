@@ -1,9 +1,4 @@
-// Package kafka — domain-обёртка над общим Kafka consumer для catalog.
-//
-// Подписывается на clover.auth.user-events. Сейчас БД делает hard cleanup
-// объявлений удалённого пользователя через ON DELETE CASCADE на product.seller_id,
-// поэтому handler user.deleted ничего не делает кроме лога. Когда у catalog
-// появится Redis-кэш продавцов — сюда добавится инвалидация.
+// Package kafka - domain-обёртка над общим Kafka consumer для catalog.
 package kafka
 
 import (
