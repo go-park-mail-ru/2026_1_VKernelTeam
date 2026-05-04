@@ -4,9 +4,26 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"net/http"
+	"strings"
 
 	api "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
 )
+
+// isViewRecordPath проверяет, что путь соответствует POST /ads/{id}/view.
+// Эта ручка вызывается анонимными пользователями (у которых нет csrf_token cookie),
+// поэтому исключаем её из CSRF-проверки. Дедупликация выполняется по X-Device-ID.
+func isViewRecordPath(path string) bool {
+	const prefix = api.ApiPrefix + "/ads/"
+	const suffix = "/view"
+	if !strings.HasPrefix(path, prefix) || !strings.HasSuffix(path, suffix) {
+		return false
+	}
+	id := strings.TrimSuffix(strings.TrimPrefix(path, prefix), suffix)
+	if id == "" || strings.ContainsRune(id, '/') {
+		return false
+	}
+	return true
+}
 
 // CSRF защищает от атак, проверяя наличие токена в заголовке и куках
 func CSRFMiddleware(next http.Handler) http.Handler {
@@ -20,7 +37,8 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 			path == api.ApiPrefix+"/auth/login" ||
 			path == api.ApiPrefix+"/auth/register" ||
 			path == api.ApiPrefix+"/auth/refresh" ||
-			path == api.ApiPrefix+"/auth/logout" {
+			path == api.ApiPrefix+"/auth/logout" ||
+			isViewRecordPath(path) {
 			next.ServeHTTP(w, r)
 			return
 		}

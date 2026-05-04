@@ -71,6 +71,30 @@ func TestCSRFMiddleware(t *testing.T) {
 			path:           "/api/v1/auth/refresh",
 			expectedStatus: http.StatusOK,
 		},
+		{
+			name:           "Allow record view without token (anonymous)",
+			method:         http.MethodPost,
+			path:           "/api/v1/ads/100/view",
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Deny POST on /ads without token",
+			method:         http.MethodPost,
+			path:           "/api/v1/ads",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Deny POST on /ads/{id} without token",
+			method:         http.MethodPost,
+			path:           "/api/v1/ads/100",
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Deny POST on /ads/{id}/view/extra without token",
+			method:         http.MethodPost,
+			path:           "/api/v1/ads/100/view/extra",
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
