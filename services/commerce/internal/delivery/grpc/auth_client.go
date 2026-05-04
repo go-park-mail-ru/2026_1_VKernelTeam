@@ -1,5 +1,7 @@
-// Package grpc — клиенты к Auth и Catalog gRPC из commerce-сервиса.
+// Package grpc - клиенты к Auth и Catalog gRPC из commerce-сервиса.
 package grpc
+
+//go:generate mockgen -destination=mocks/mock_auth_grpc.go -package=mocks -source=../../../../../proto/gen/auth/v1/auth_grpc.pb.go
 
 import (
 	"context"
