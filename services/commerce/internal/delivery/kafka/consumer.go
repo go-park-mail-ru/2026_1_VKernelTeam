@@ -1,12 +1,10 @@
-// Package kafka — Kafka consumer commerce-сервиса.
+// Package kafka - Kafka consumer commerce-сервиса.
 //
 // Подписан на clover.catalog.ad-events:
-//   - ad.deleted — вычищает товар из корзин всех пользователей
-//
-// ad.sold для commerce пока ничего не запускает: сценарий покупки идёт через
-// синхронный gRPC catalog.UpdateAdStatus и chat-юскейс CompletePurchase.
-// Если в будущем появятся подписки/уведомления — добавится сюда.
+//   - ad.deleted - вычищает товар из корзин всех пользователей
 package kafka
+
+//go:generate mockgen -source=consumer.go -destination=mocks/mock_consumer.go -package=mocks
 
 import (
 	"context"
@@ -15,7 +13,7 @@ import (
 	sharedkafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/kafka"
 )
 
-// CartCleaner — интерфейс репозитория корзины, нужный для cleanup'а
+// CartCleaner - интерфейс репозитория корзины, нужный для cleanup'а
 // (реализуется cart.CartStorage.RemoveProductFromAllCarts).
 type CartCleaner interface {
 	RemoveProductFromAllCarts(ctx context.Context, productID int64) (int64, error)
@@ -47,17 +45,21 @@ func (c *Consumer) Close() error { return c.inner.Close() }
 
 func (c *Consumer) handleAdDeleted(ctx context.Context, event sharedkafka.Event) error {
 	var payload sharedkafka.AdPayload
+
 	if err := event.UnmarshalPayload(&payload); err != nil {
 		return err
 	}
+
 	removed, err := c.cart.RemoveProductFromAllCarts(ctx, payload.AdID)
 	if err != nil {
 		return err
 	}
+
 	c.log.InfoContext(ctx, "ad.deleted: cart cleanup",
 		slog.Int64("ad_id", payload.AdID),
 		slog.Int64("removed_rows", removed),
 		slog.String("event_id", event.EventID),
 	)
+
 	return nil
 }

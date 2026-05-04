@@ -3,6 +3,8 @@
 // Авторизация делегирована Auth gRPC; CSRF/CORS/RequestID/AccessLog берутся из pkg/http/middleware.
 package middleware
 
+//go:generate mockgen -source=auth.go -destination=mocks/mock_auth.go -package=mocks
+
 import (
 	"context"
 	"log/slog"
