@@ -1,5 +1,7 @@
 package grpc
 
+//go:generate mockgen -destination=mocks/mock_catalog_grpc.go -package=mocks -source=../../../../../proto/gen/catalog/v1/catalog_grpc.pb.go
+
 import (
 	"context"
 	"fmt"
@@ -12,7 +14,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ErrAdNotFound — gRPC NotFound от catalog приведён к локальной sentinel-ошибке,
+// ErrAdNotFound - gRPC NotFound от catalog приведён к локальной sentinel-ошибке,
 // чтобы commerce-юскейсы могли её матчить через errors.Is.
 type adNotFoundError struct{}
 
@@ -21,7 +23,7 @@ func (adNotFoundError) Error() string { return "ad not found" }
 // ErrAdNotFound публикует sentinel.
 var ErrAdNotFound = adNotFoundError{}
 
-// CatalogClient — обёртка над gRPC CatalogService.
+// CatalogClient - обёртка над gRPC CatalogService.
 // Реализует интерфейсы AdsProvider/AdProvider, нужные usecase'ам cart и chat
 // (они ждут метод GetAdByID(ctx, id) (models.Ad, error)).
 type CatalogClient struct {
