@@ -1,6 +1,8 @@
 // Package handlers — HTTP-обработчики catalog-сервиса.
 package handlers
 
+//go:generate mockgen -source=handlers.go -destination=mocks/mock_handlers.go -package=mocks
+
 import (
 	"context"
 	"log/slog"

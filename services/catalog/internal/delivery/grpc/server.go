@@ -1,13 +1,15 @@
-// Package grpc — реализация CatalogService gRPC API.
+// Package grpc - реализация CatalogService gRPC API.
 //
 // Используется сервисом Commerce для:
-//   - GetAd / GetAdsByIDs   — детали товаров (карточки в чатах, корзине)
-//   - CheckAdStatus         — проверка перед добавлением в корзину
-//   - UpdateAdStatus        — смена active → reserved → sold при покупке
+//   - GetAd / GetAdsByIDs   - детали товаров (карточки в чатах, корзине)
+//   - CheckAdStatus         - проверка перед добавлением в корзину
+//   - UpdateAdStatus        - смена active -> reserved -> sold при покупке
 //
 // Аутентификация на gRPC сейчас не реализована (доверяем внутренней сети
-// docker-compose). Для прод-инсталляции — mTLS или auth-interceptor.
+// docker-compose). Для прод-инсталляции - mTLS или auth-interceptor.
 package grpc
+
+//go:generate mockgen -source=server.go -destination=mocks/mock_server.go -package=mocks
 
 import (
 	"context"
@@ -28,7 +30,7 @@ type AdProvider interface {
 }
 
 // EventPublisher публикует события объявлений (для ad.sold при UpdateAdStatus).
-// Может быть nil — события не публикуются.
+// Может быть nil - события не публикуются.
 type EventPublisher interface {
 	PublishAdSold(ctx context.Context, adID, buyerID int64) error
 }
