@@ -22,6 +22,11 @@ func (rw *responseWriter) WriteHeader(code int) {
 func AccessLogMiddleware(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// /metrics scrape'ится Prometheus'ом раз в 15с — лог-спам в ClickHouse не нужен.
+			if r.URL.Path == "/metrics" {
+				next.ServeHTTP(w, r)
+				return
+			}
 			start := time.Now()
 
 			wrapped := &responseWriter{
