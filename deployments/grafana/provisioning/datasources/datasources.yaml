@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: ClickHouse
+    uid: clickhouse
     type: grafana-clickhouse-datasource
     access: proxy
     url: http://clickhouse:8123
@@ -17,6 +18,7 @@ datasources:
     editable: true
 
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
