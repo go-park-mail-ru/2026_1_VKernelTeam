@@ -12,6 +12,9 @@ sources:
       - "commerce"
       - "gateway"
 
+  internal_metrics:
+    type: internal_metrics
+
 transforms:
   parse_logs:
     type: remap
@@ -71,3 +74,9 @@ sinks:
       - parse_logs
     encoding:
       codec: json
+
+  prometheus_exporter:
+    type: prometheus_exporter
+    inputs:
+      - internal_metrics
+    address: "0.0.0.0:9598"

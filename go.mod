@@ -17,6 +17,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/pashagolub/pgxmock/v3 v3.4.0
+	github.com/prometheus/client_golang v1.23.2
 	github.com/rafaeljusto/redigomock/v3 v3.1.3
 	github.com/segmentio/kafka-go v0.4.51
 	github.com/stretchr/testify v1.11.1
@@ -26,9 +27,17 @@ require (
 )
 
 require (
-	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.66.1 // indirect
+	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120221211-b8f7ae30c516 // indirect
 )
