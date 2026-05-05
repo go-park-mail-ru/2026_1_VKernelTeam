@@ -18,8 +18,9 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/api"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/logger"
 	sharedmw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/logger"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/metrics"
 	catalogv1 "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/catalog/v1"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/config"
@@ -184,9 +185,15 @@ func buildHTTPServer(
 	mux.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(ads.HandleDeleteFromFavorites)))
 	mux.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(ads.HandleGetFavorites)))
 
-	// CORS -> RequestID -> AccessLog -> CSRF -> mux
+	// /metrics - Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
+	mux.Handle("GET /metrics", metrics.Handler())
+
+	httpMetrics := metrics.New("catalog")
+
+	// Цепочка middleware (снаружи внутрь): CORS -> RequestID -> Metrics -> AccessLog -> CSRF -> mux
 	handler := sharedmw.CSRFMiddleware(mux)
 	handler = sharedmw.AccessLogMiddleware(log)(handler)
+	handler = httpMetrics.Middleware(handler)
 	handler = sharedmw.RequestIDMiddleware(handler)
 	handler = sharedmw.CORSMiddleware(handler)
 
@@ -200,7 +207,8 @@ func buildHTTPServer(
 }
 
 func buildGRPCServer(log *slog.Logger, ads cataloggrpc.AdProvider, publisher cataloggrpc.EventPublisher) *grpclib.Server {
-	srv := grpclib.NewServer()
+	grpcMetrics := metrics.NewGRPC("catalog")
+	srv := grpclib.NewServer(grpclib.UnaryInterceptor(grpcMetrics.UnaryServerInterceptor()))
 	catalogv1.RegisterCatalogServiceServer(srv, cataloggrpc.NewServer(log, ads, publisher))
 	return srv
 }

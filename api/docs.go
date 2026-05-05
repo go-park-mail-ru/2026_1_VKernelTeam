@@ -2383,37 +2383,13 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
+                "email": {
                     "type": "string"
                 },
-                "category_id": {
+                "name": {
                     "type": "string"
                 },
-                "custom_characteristics": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
+                "password": {
                     "type": "string"
                 }
             }
@@ -2421,62 +2397,23 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCharacteristic"
-                    }
-                },
-                "category_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
-                    }
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "favorites_count": {
-                    "type": "integer"
-                },
                 "id": {
-                    "type": "integer"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "price": {
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "int64"
                 },
-                "seller_id": {
-                    "type": "integer"
+                "sellerID": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "status": {
                     "type": "string"
                 },
                 "title": {
                     "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "views_count": {
-                    "type": "integer"
                 }
             }
         },
@@ -2500,28 +2437,6 @@ const docTemplate = `{
                 },
                 "sort_order": {
                     "type": "integer"
-                }
-            }
-        },
-        "models.ProductCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ProductCustomCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
                 }
             }
         },
