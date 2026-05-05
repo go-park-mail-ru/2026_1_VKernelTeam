@@ -19,15 +19,15 @@ scrape_configs:
       - targets: ["support:8002"]
     metrics_path: /metrics
 
-  # - job_name: "catalog"
-  #   static_configs:
-  #     - targets: ["catalog:8004"]
-  #   metrics_path: /metrics
+  - job_name: "catalog"
+    static_configs:
+      - targets: ["catalog:8004"]
+    metrics_path: /metrics
 
-  # - job_name: "commerce"
-  #   static_configs:
-  #     - targets: ["commerce:8006"]
-  #   metrics_path: /metrics
+  - job_name: "commerce"
+    static_configs:
+      - targets: ["commerce:8006"]
+    metrics_path: /metrics
 
   # Системные метрики хоста
   - job_name: "node"
