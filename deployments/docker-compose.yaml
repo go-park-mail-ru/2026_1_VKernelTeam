@@ -7,10 +7,7 @@
 
 services:
 
-  # ════════════════════════════════════════════════
   #  API GATEWAY
-  # ════════════════════════════════════════════════
-
   gateway:
     image: nginx:1.27-alpine
     container_name: gateway
@@ -26,10 +23,7 @@ services:
       - swagger-ui
     restart: unless-stopped
 
-  # ════════════════════════════════════════════════
-  #  ОБЩАЯ БД (одна на все сервисы — Database Shared)
-  # ════════════════════════════════════════════════
-
+  #  ОБЩАЯ БД
   db:
     image: postgres:17-alpine
     container_name: postgres
@@ -60,10 +54,7 @@ services:
       - -database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
       - up
 
-  # ════════════════════════════════════════════════
   #  AUTH SERVICE (http 8001, grpc 9001 — services/auth/config/local.json)
-  # ════════════════════════════════════════════════
-
   auth:
     container_name: auth
     build:
@@ -87,10 +78,7 @@ services:
       kafka:
         condition: service_healthy
 
-  # ════════════════════════════════════════════════
   #  SUPPORT SERVICE (http 8002 — services/support/config/local.json)
-  # ════════════════════════════════════════════════
-
   support:
     container_name: support
     build:
@@ -113,10 +101,7 @@ services:
       kafka:
         condition: service_healthy
 
-  # ════════════════════════════════════════════════
   #  CATALOG SERVICE (http 8004, grpc 9004 — services/catalog/config/local.json)
-  # ════════════════════════════════════════════════
-
   catalog:
     container_name: catalog
     build:
@@ -144,10 +129,7 @@ services:
       kafka:
         condition: service_healthy
 
-  # ════════════════════════════════════════════════
   #  COMMERCE SERVICE (http 8006 — services/commerce/config/local.json)
-  # ════════════════════════════════════════════════
-
   commerce:
     container_name: commerce
     build:
@@ -174,10 +156,7 @@ services:
       kafka:
         condition: service_healthy
 
-  # ════════════════════════════════════════════════
   #  ОБЩАЯ ИНФРАСТРУКТУРА
-  # ════════════════════════════════════════════════
-
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -187,10 +166,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # ════════════════════════════════════════════════
   #  SWAGGER UI (читает api/swagger.yaml, доступен через gateway: /swagger/)
-  # ════════════════════════════════════════════════
-
   swagger-ui:
     image: swaggerapi/swagger-ui:v5.17.14
     container_name: swagger_ui
@@ -227,10 +203,7 @@ services:
       retries: 10
       start_period: 30s
 
-  # ════════════════════════════════════════════════
   #  OBSERVABILITY
-  # ════════════════════════════════════════════════
-
   clickhouse:
     image: clickhouse/clickhouse-server:24-alpine
     container_name: clickhouse
@@ -264,6 +237,20 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node_exporter
+    restart: unless-stopped
+    command:
+      - "--path.rootfs=/host"
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+      - "/:/host:ro"
 
   prometheus:
     image: prom/prometheus:v3.4.0
