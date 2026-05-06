@@ -9,7 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/validator"
 )
 
 // HandleGetCart обрабатывает запросы на получение списка товаров в корзине
@@ -68,7 +68,7 @@ func (h *CartHandlers) HandleAddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validator.ValidateProductID(req.ProductID); err != nil {
+	if err := validator.ValidatePositiveInt64("product_id", req.ProductID); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -113,7 +113,7 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := validator.ValidateProductID(productID); err != nil {
+	if err := validator.ValidatePositiveInt64("product_id", productID); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
