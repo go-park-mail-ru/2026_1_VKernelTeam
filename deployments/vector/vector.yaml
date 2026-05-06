@@ -11,15 +11,26 @@ sources:
       - "catalog"
       - "commerce"
       - "gateway"
+    auto_partial_merge: true
 
   internal_metrics:
     type: internal_metrics
 
 transforms:
-  parse_logs:
-    type: remap
+  # Делим поток на gateway (nginx access-log в JSON) и бизнес-сервисы.
+  # Нужно потому, что у этих потоков разные форматы и разные таблицы.
+  route_by_container:
+    type: route
     inputs:
       - docker_logs
+    route:
+      gateway: '.container_name == "gateway"'
+      services: '.container_name != "gateway"'
+
+  parse_service_logs:
+    type: remap
+    inputs:
+      - route_by_container.services
     drop_on_error: true
     source: |-
       .service = .container_name
@@ -49,11 +60,41 @@ transforms:
         .timestamp = now()
       }
 
+  parse_gateway_access:
+    type: remap
+    inputs:
+      - route_by_container.gateway
+    drop_on_error: true
+    source: |-
+      parsed, err = parse_json(.message)
+      if err != null {
+        # error_log nginx — текст, не JSON. Пропускаем такие строки.
+        abort
+      }
+
+      ts = to_string(parsed.timestamp) ?? ""
+      .timestamp = if ts != "" { parse_timestamp(ts, format: "%+") ?? now() } else { now() }
+
+      .status = to_int!(parsed.status)
+      .method = to_string!(parsed.method)
+      .path = to_string!(parsed.path)
+      .upstream = to_string(parsed.upstream) ?? ""
+      .upstream_addr = to_string(parsed.upstream_addr) ?? ""
+      .upstream_status = to_string(parsed.upstream_status) ?? ""
+      .request_time = to_float(parsed.request_time) ?? 0.0
+
+      ut = to_string(parsed.upstream_response_time) ?? ""
+      .upstream_response_time = if ut == "" || ut == "-" { 0.0 } else { to_float(ut) ?? 0.0 }
+
+      .request_id = to_string(parsed.request_id) ?? ""
+      .remote_addr = to_string(parsed.remote_addr) ?? ""
+      .user_agent = to_string(parsed.http_user_agent) ?? ""
+
 sinks:
-  clickhouse:
+  clickhouse_services:
     type: clickhouse
     inputs:
-      - parse_logs
+      - parse_service_logs
     endpoint: "http://clickhouse:8123"
     database: "${CLICKHOUSE_DB}"
     table: "service_logs"
@@ -68,12 +109,23 @@ sinks:
       timeout_secs: 5
     skip_unknown_fields: true
 
-  console_debug:
-    type: console
+  clickhouse_gateway:
+    type: clickhouse
     inputs:
-      - parse_logs
+      - parse_gateway_access
+    endpoint: "http://clickhouse:8123"
+    database: "${CLICKHOUSE_DB}"
+    table: "gateway_access"
+    auth:
+      strategy: basic
+      user: "${CLICKHOUSE_USER}"
+      password: "${CLICKHOUSE_PASSWORD}"
     encoding:
-      codec: json
+      timestamp_format: "unix_ms"
+    batch:
+      max_bytes: 1048576
+      timeout_secs: 5
+    skip_unknown_fields: true
 
   prometheus_exporter:
     type: prometheus_exporter

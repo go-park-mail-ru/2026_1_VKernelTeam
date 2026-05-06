@@ -246,7 +246,8 @@ services:
       - "--path.rootfs=/host"
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
-      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|etc)($$|/)"
+      - "--collector.filesystem.fs-types-exclude=^(tmpfs|overlay|squashfs|devtmpfs|nsfs|autofs|binfmt_misc|cgroup2?|debugfs|fusectl|hugetlbfs|mqueue|pstore|tracefs|configfs|bpf|ramfs|rpc_pipefs|securityfs)$$"
     volumes:
       - "/proc:/host/proc:ro"
       - "/sys:/host/sys:ro"
@@ -260,10 +261,12 @@ services:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
 
   grafana:
     image: grafana/grafana:11.6.0
