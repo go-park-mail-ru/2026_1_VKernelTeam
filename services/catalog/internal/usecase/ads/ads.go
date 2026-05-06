@@ -15,9 +15,9 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/config"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/synonyms"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/translit"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/search/synonyms"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/search/translit"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/validator"
 )
 
 // ErrQueryTooShort возвращается, когда поисковый запрос слишком короткий.
@@ -141,7 +141,6 @@ func (a *Ads) SearchAds(ctx context.Context, query string, categoryID int64) ([]
 
 	original, translitVariant, layoutVariant := translit.GenerateVariants(query)
 
-	// Собираем уникальные варианты: оригинал, транслит, раскладка + синонимы
 	seen := make(map[string]struct{})
 	var variants []string
 	for _, v := range []string{original, translitVariant, layoutVariant} {
@@ -614,8 +613,6 @@ func (a *Ads) GetCategoryCharacteristics(ctx context.Context, categoryID int64) 
 	return chars, nil
 }
 
-// toValidatorChars конвертирует доменные характеристики в формат validator-пакета,
-// чтобы pkg/validator не зависел от catalog-специфичного dto.
 func toValidatorChars(in []dto.CharacteristicInput) []validator.CharacteristicInput {
 	out := make([]validator.CharacteristicInput, len(in))
 	for i, c := range in {

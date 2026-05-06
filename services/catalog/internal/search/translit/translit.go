@@ -171,7 +171,6 @@ func latinToCyrillic(s string) string {
 	runes := []rune(s)
 	for i < len(runes) {
 		matched := false
-		// Пробуем самые длинные совпадения первыми
 		for _, pair := range latToCyr {
 			pLen := len([]rune(pair.lat))
 			if i+pLen <= len(runes) {

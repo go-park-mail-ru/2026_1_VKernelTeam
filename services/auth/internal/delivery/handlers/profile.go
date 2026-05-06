@@ -10,7 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/validator"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/validator"
 )
 
 // HandleGetProfile возвращает профиль текущего авторизованного пользователя

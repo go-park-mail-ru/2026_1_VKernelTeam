@@ -13,7 +13,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 	mock_auth "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth/mocks"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/pkg/jwt"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
