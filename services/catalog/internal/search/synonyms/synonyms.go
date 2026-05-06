@@ -94,7 +94,6 @@ func ExpandAll(query string) []string {
 	var result []string
 	seen := make(map[string]struct{})
 
-	// Сначала проверяем полный запрос как единую фразу
 	if synonyms := Expand(lower); len(synonyms) > 0 {
 		for _, s := range synonyms {
 			if _, ok := seen[s]; !ok {
@@ -104,7 +103,6 @@ func ExpandAll(query string) []string {
 		}
 	}
 
-	// Затем проверяем отдельные слова
 	words := strings.Fields(lower)
 	if len(words) > 1 {
 		for _, word := range words {

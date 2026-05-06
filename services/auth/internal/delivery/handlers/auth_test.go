@@ -14,7 +14,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
-	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/pkg/jwt"
+	ssntjwt "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
