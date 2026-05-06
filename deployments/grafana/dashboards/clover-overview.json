@@ -14,12 +14,23 @@
   ],
   "timezone": "browser",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "time": {
     "from": "now-30m",
     "to": "now"
   },
+  "links": [
+    {
+      "title": "Per-service dashboards",
+      "type": "dashboards",
+      "tags": ["service"],
+      "asDropdown": true,
+      "includeVars": false,
+      "keepTime": true,
+      "targetBlank": false
+    }
+  ],
   "templating": {
     "list": [
       {
@@ -58,46 +69,73 @@
   "panels": [
     {
       "type": "row",
+      "id": 99,
+      "title": "Service health",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 90,
+      "type": "stat",
+      "title": "Service status (up)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 5, "w": 24, "x": 0, "y": 1 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": { "text": "DOWN", "color": "red", "index": 0 },
+                "1": { "text": "UP",   "color": "green", "index": 1 }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "color": { "mode": "thresholds" }
+        }
+      },
+      "options": {
+        "graphMode": "none",
+        "colorMode": "background",
+        "textMode": "value_and_name",
+        "reduceOptions": { "calcs": ["last"], "fields": "", "values": false }
+      },
+      "targets": [
+        {
+          "expr": "up{job=~\"auth|support|catalog|commerce\"}",
+          "legendFormat": "{{job}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "type": "row",
       "id": 100,
       "title": "HTTP",
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }
     },
     {
       "id": 1,
       "type": "timeseries",
       "title": "RPS by service",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 1
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 7 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 10
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         }
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
-      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
       "targets": [
         {
           "expr": "sum by(service) (rate(http_requests_total[1m]))",
@@ -110,34 +148,17 @@
       "id": 2,
       "type": "timeseries",
       "title": "Error rate (5xx) by service",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 7 },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
           "min": 0,
           "max": 1,
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 10
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         }
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
-      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
       "targets": [
         {
           "expr": "sum by(service) (rate(http_requests_total{status=~\"5..\"}[1m])) / clamp_min(sum by(service) (rate(http_requests_total[1m])), 1)",
@@ -150,32 +171,15 @@
       "id": 3,
       "type": "timeseries",
       "title": "HTTP latency p95",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 7 },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 5
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 5 }
         }
       },
-      "options": {
-        "legend": {
-          "displayMode": "table",
-          "placement": "bottom"
-        }
-      },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum by(service, le) (rate(http_request_duration_seconds_bucket[5m])))",
@@ -187,25 +191,13 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "HTTP latency p50 vs p99 (auth)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 9
-      },
+      "title": "HTTP latency p50 vs p99 (by service)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 5
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 5 }
         }
       },
       "targets": [
@@ -225,21 +217,9 @@
       "id": 5,
       "type": "table",
       "title": "Top-10 slowest paths (p95, last 5m)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s"
-        }
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
       "targets": [
         {
           "expr": "topk(10, histogram_quantile(0.95, sum by(service, path, le) (rate(http_request_duration_seconds_bucket[5m]))))",
@@ -255,35 +235,18 @@
       "id": 101,
       "title": "gRPC",
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 17
-      }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 }
     },
     {
       "id": 6,
       "type": "timeseries",
       "title": "gRPC RPS by method",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 18
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 10
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         }
       },
       "targets": [
@@ -298,24 +261,12 @@
       "id": 7,
       "type": "timeseries",
       "title": "gRPC errors (non-OK codes)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 18
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
       "fieldConfig": {
         "defaults": {
           "unit": "reqps",
-          "custom": {
-            "drawStyle": "line",
-            "lineInterpolation": "smooth",
-            "fillOpacity": 10
-          }
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 10 }
         }
       },
       "targets": [
@@ -328,30 +279,102 @@
     },
     {
       "type": "row",
+      "id": 104,
+      "title": "Gateway (nginx)",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Gateway 5xx by upstream",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "rawSql": "SELECT $__timeInterval(timestamp) AS t, upstream AS series, count() AS c FROM logs.gateway_access WHERE $__timeFilter(timestamp) AND status >= 500 GROUP BY t, series ORDER BY t",
+          "format": 0
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Gateway 4xx by upstream",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "drawStyle": "bars", "fillOpacity": 60, "stacking": { "mode": "normal" } }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "rawSql": "SELECT $__timeInterval(timestamp) AS t, upstream AS series, count() AS c FROM logs.gateway_access WHERE $__timeFilter(timestamp) AND status >= 400 AND status < 500 GROUP BY t, series ORDER BY t",
+          "format": 0
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Upstream response time p95",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 41 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 5 }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "rawSql": "SELECT $__timeInterval(timestamp) AS t, upstream AS series, quantile(0.95)(upstream_response_time) AS p95 FROM logs.gateway_access WHERE $__timeFilter(timestamp) GROUP BY t, series ORDER BY t",
+          "format": 0
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Top 5xx paths (last range)",
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 41 },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+          "rawSql": "SELECT path, upstream, count() AS c FROM logs.gateway_access WHERE $__timeFilter(timestamp) AND status >= 500 GROUP BY path, upstream ORDER BY c DESC LIMIT 20",
+          "format": 1
+        }
+      ]
+    },
+    {
+      "type": "row",
       "id": 102,
       "title": "Host (node_exporter)",
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 26
-      }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 }
     },
     {
       "id": 8,
       "type": "stat",
       "title": "CPU usage",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 0,
-        "y": 27
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 50 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -360,26 +383,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
             ]
           }
         }
       },
-      "options": {
-        "graphMode": "area",
-        "colorMode": "background"
-      },
+      "options": { "graphMode": "area", "colorMode": "background" },
       "targets": [
         {
           "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])))",
@@ -391,16 +402,8 @@
       "id": 9,
       "type": "stat",
       "title": "RAM usage",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 8,
-        "y": 27
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 50 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -409,26 +412,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
             ]
           }
         }
       },
-      "options": {
-        "graphMode": "area",
-        "colorMode": "background"
-      },
+      "options": { "graphMode": "area", "colorMode": "background" },
       "targets": [
         {
           "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
@@ -440,16 +431,8 @@
       "id": 10,
       "type": "stat",
       "title": "Disk usage (root fs)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 8,
-        "x": 16,
-        "y": 27
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 50 },
       "fieldConfig": {
         "defaults": {
           "unit": "percent",
@@ -458,26 +441,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 70 },
+              { "color": "red", "value": 90 }
             ]
           }
         }
       },
-      "options": {
-        "graphMode": "area",
-        "colorMode": "background"
-      },
+      "options": { "graphMode": "area", "colorMode": "background" },
       "targets": [
         {
           "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/host\",fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/host\",fstype!~\"tmpfs|overlay\"})",
@@ -489,26 +460,12 @@
       "id": 11,
       "type": "timeseries",
       "title": "CPU usage over time (per mode)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 34
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 57 },
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "custom": {
-            "drawStyle": "line",
-            "stacking": {
-              "mode": "normal"
-            },
-            "fillOpacity": 30
-          }
+          "custom": { "drawStyle": "line", "stacking": { "mode": "normal" }, "fillOpacity": 30 }
         }
       },
       "targets": [
@@ -523,23 +480,12 @@
       "id": 12,
       "type": "timeseries",
       "title": "Memory: used vs available",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 34
-      },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
-          "custom": {
-            "drawStyle": "line",
-            "fillOpacity": 20
-          }
+          "custom": { "drawStyle": "line", "fillOpacity": 20 }
         }
       },
       "targets": [
@@ -556,31 +502,68 @@
       ]
     },
     {
+      "id": 24,
+      "type": "timeseries",
+      "title": "Disk I/O (bytes/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 65 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 5 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by(device) (rate(node_disk_read_bytes_total[1m]))",
+          "legendFormat": "read {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by(device) (rate(node_disk_written_bytes_total[1m]))",
+          "legendFormat": "write {{device}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "Network I/O (bytes/s)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 65 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "fillOpacity": 5 }
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by(device) (rate(node_network_receive_bytes_total{device!~\"lo|veth.*|docker.*|br-.*\"}[1m]))",
+          "legendFormat": "rx {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by(device) (rate(node_network_transmit_bytes_total{device!~\"lo|veth.*|docker.*|br-.*\"}[1m]))",
+          "legendFormat": "tx {{device}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
       "type": "row",
       "id": 103,
       "title": "Logs (ClickHouse via Vector)",
       "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 42
-      }
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 73 }
     },
     {
       "id": 13,
       "type": "logs",
       "title": "Recent errors / warnings (all services)",
-      "datasource": {
-        "type": "grafana-clickhouse-datasource",
-        "uid": "clickhouse"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 24,
-        "x": 0,
-        "y": 43
-      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 74 },
       "options": {
         "showTime": true,
         "wrapLogMessage": true,
@@ -591,10 +574,7 @@
       "targets": [
         {
           "refId": "A",
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "clickhouse"
-          },
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
           "rawSql": "SELECT timestamp AS time, service, level, message, request_id FROM logs.service_logs WHERE $__timeFilter(timestamp) AND level IN ('error', 'warn') ORDER BY timestamp DESC LIMIT 200",
           "format": 1
         }
@@ -604,35 +584,18 @@
       "id": 14,
       "type": "timeseries",
       "title": "Log volume by service & level",
-      "datasource": {
-        "type": "grafana-clickhouse-datasource",
-        "uid": "clickhouse"
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 53
-      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 84 },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "custom": {
-            "drawStyle": "bars",
-            "stacking": {
-              "mode": "normal"
-            },
-            "fillOpacity": 60
-          }
+          "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" }, "fillOpacity": 60 }
         }
       },
       "targets": [
         {
           "refId": "A",
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "clickhouse"
-          },
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
           "rawSql": "SELECT $__timeInterval(timestamp) AS t, concat(service, '/', level) AS series, count() AS c FROM logs.service_logs WHERE $__timeFilter(timestamp) GROUP BY t, series ORDER BY t",
           "format": 0
         }
@@ -642,28 +605,13 @@
       "id": 15,
       "type": "logs",
       "title": "Logs by service (use $service filter above)",
-      "datasource": {
-        "type": "grafana-clickhouse-datasource",
-        "uid": "clickhouse"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 0,
-        "y": 61
-      },
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending"
-      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 92 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Descending" },
       "targets": [
         {
           "refId": "A",
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "clickhouse"
-          },
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
           "rawSql": "SELECT timestamp AS time, service, level, message, request_id FROM logs.service_logs WHERE $__timeFilter(timestamp) AND service IN ($service) ORDER BY timestamp DESC LIMIT 200",
           "format": 1
         }
@@ -673,28 +621,13 @@
       "id": 16,
       "type": "logs",
       "title": "Trace by request_id (set above)",
-      "datasource": {
-        "type": "grafana-clickhouse-datasource",
-        "uid": "clickhouse"
-      },
-      "gridPos": {
-        "h": 10,
-        "w": 12,
-        "x": 12,
-        "y": 61
-      },
-      "options": {
-        "showTime": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Ascending"
-      },
+      "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 92 },
+      "options": { "showTime": true, "wrapLogMessage": true, "sortOrder": "Ascending" },
       "targets": [
         {
           "refId": "A",
-          "datasource": {
-            "type": "grafana-clickhouse-datasource",
-            "uid": "clickhouse"
-          },
+          "datasource": { "type": "grafana-clickhouse-datasource", "uid": "clickhouse" },
           "rawSql": "SELECT timestamp AS time, service, level, message, request_id FROM logs.service_logs WHERE request_id = '$request_id' AND $__timeFilter(timestamp) ORDER BY timestamp ASC",
           "format": 1
         }

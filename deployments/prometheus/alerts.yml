@@ -1,0 +1,68 @@
+groups:
+  - name: clover-services
+    rules:
+      - alert: ServiceDown
+        expr: up{job=~"auth|support|catalog|commerce"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Сервис {{ $labels.job }} лежит >1m"
+          description: "Prometheus не может опросить /metrics у {{ $labels.job }}."
+
+      - alert: HighHttp5xxRate
+        expr: |
+          sum by(service) (rate(http_requests_total{status=~"5.."}[5m]))
+            /
+          clamp_min(sum by(service) (rate(http_requests_total[5m])), 1)
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }}: 5xx > 5%"
+          description: "Доля 5xx у {{ $labels.service }} превышает 5% в течение 5m."
+
+      - alert: HighHttpLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum by(service, le) (rate(http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }}: p95 latency > 1s"
+          description: "p95 HTTP latency у {{ $labels.service }} превышает 1 секунду в течение 10m."
+
+  - name: clover-host
+    rules:
+      - alert: DiskAlmostFull
+        expr: |
+          100 * (1 - node_filesystem_avail_bytes{mountpoint="/host",fstype!~"tmpfs|overlay"}
+                  / node_filesystem_size_bytes{mountpoint="/host",fstype!~"tmpfs|overlay"})
+            > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Диск /host занят > 85%"
+          description: "Свободного места на корневой ФС хоста меньше 15% уже 10m."
+
+      - alert: HostHighCPU
+        expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU > 90% (10m)"
+          description: "Средняя загрузка CPU хоста > 90% в течение 10m."
+
+      - alert: HostHighRAM
+        expr: 100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host RAM usage > 90% (10m)"
+          description: "Свободной памяти на хосте меньше 10% в течение 10m."
