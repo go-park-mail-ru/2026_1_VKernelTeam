@@ -1157,6 +1157,64 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    },
+                    {
+                        "CsrfHeaderAuth": []
+                    }
+                ],
+                "description": "Обновляет имя пользователя. Требует действующую сессию и валидный CSRF-токен.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Обновить профиль",
+                "parameters": [
+                    {
+                        "description": "Новые данные профиля",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "профиль успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/models.User"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid request body / Missing CSRF cookie / CSRF token mismatch",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "missing token cookie / invalid token / token has been revoked",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/profile/avatar": {
@@ -1245,66 +1303,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/profile/update": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    },
-                    {
-                        "CsrfHeaderAuth": []
-                    }
-                ],
-                "description": "Обновляет имя пользователя. Требует действующую сессию и валидный CSRF-токен.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Обновить профиль",
-                "parameters": [
-                    {
-                        "description": "Новые данные профиля",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dto.UpdateProfileRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "профиль успешно обновлен",
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
-                    },
-                    "400": {
-                        "description": "invalid request body / Missing CSRF cookie / CSRF token mismatch",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "missing token cookie / invalid token / token has been revoked",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -2397,16 +2395,7 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "email": {
-                    "type": "string"
-                },
                 "location": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "password": {
                     "type": "string"
                 },
                 "photos": {
@@ -2495,7 +2484,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "allowed_values": {
-                    "description": "nil = свободный ввод",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -2611,7 +2599,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "Clover API",
-	Description:      "API for the Clover service.",
+	Description:      "API маркетплейса Клевер (микросервисная архитектура).\n- Auth Service       (HTTP :8001, gRPC :9001) — авторизация, профиль, пользователи\n- Support Service    (HTTP :8002)             — техподдержка\n- Catalog Service    (HTTP :8004, gRPC :9004) — объявления, категории, избранное, просмотры\n- Commerce Service   (HTTP :8006)             — корзина, чаты, заказы\nВсе запросы идут через API Gateway (nginx :8080).",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

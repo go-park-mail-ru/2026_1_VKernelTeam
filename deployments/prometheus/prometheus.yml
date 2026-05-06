@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Сервисы Clover
+  - job_name: "auth"
+    static_configs:
+      - targets: ["auth:8001"]
+    metrics_path: /metrics
+
+  - job_name: "support"
+    static_configs:
+      - targets: ["support:8002"]
+    metrics_path: /metrics
+
+  - job_name: "catalog"
+    static_configs:
+      - targets: ["catalog:8004"]
+    metrics_path: /metrics
+
+  - job_name: "commerce"
+    static_configs:
+      - targets: ["commerce:8006"]
+    metrics_path: /metrics
+
+  # Системные метрики хоста
+  - job_name: "node"
+    static_configs:
+      - targets: ["node_exporter:9100"]
+
+  # Vector metrics (через prometheus_exporter sink на :9598)
+  - job_name: "vector"
+    static_configs:
+      - targets: ["vector:9598"]
+    metrics_path: /metrics
