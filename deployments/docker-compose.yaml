@@ -67,9 +67,11 @@ services:
       - REDIS_ADDR=${REDIS_ADDR}
       - KAFKA_BROKERS=kafka:29092
     restart: unless-stopped
-    ports:
-      - "${AUTH_HTTP_PORT}:8001"
-      - "${AUTH_GRPC_PORT}:9001"
+    # Порты доступны только внутри docker-сети (gateway ходит по имени auth:8001,
+    # catalog/support/commerce — по auth:9001 gRPC). Наружу host'а не публикуются.
+    expose:
+      - "8001"
+      - "9001"
     depends_on:
       db_migrate:
         condition: service_completed_successfully
@@ -91,8 +93,9 @@ services:
       - AUTH_GRPC_ADDR=auth:9001
       - KAFKA_BROKERS=kafka:29092
     restart: unless-stopped
-    ports:
-      - "${SUPPORT_HTTP_PORT}:8002"
+    # Доступен только внутри docker-сети (gateway → support:8002). Наружу не публикуется.
+    expose:
+      - "8002"
     depends_on:
       db_migrate:
         condition: service_completed_successfully
@@ -116,9 +119,11 @@ services:
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=catalog-service
     restart: unless-stopped
-    ports:
-      - "${CATALOG_HTTP_PORT}:8004"
-      - "${CATALOG_GRPC_PORT}:9004"
+    # Доступен только внутри docker-сети (gateway → catalog:8004, commerce → catalog:9004 gRPC).
+    # Наружу host'а не публикуется.
+    expose:
+      - "8004"
+      - "9004"
     depends_on:
       db_migrate:
         condition: service_completed_successfully
@@ -144,8 +149,9 @@ services:
       - KAFKA_BROKERS=kafka:29092
       - KAFKA_GROUP_ID=commerce-service
     restart: unless-stopped
-    ports:
-      - "${COMMERCE_HTTP_PORT}:8006"
+    # Доступен только внутри docker-сети (gateway → commerce:8006). Наружу не публикуется.
+    expose:
+      - "8006"
     depends_on:
       db_migrate:
         condition: service_completed_successfully
