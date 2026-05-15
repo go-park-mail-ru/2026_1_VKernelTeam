@@ -23,14 +23,38 @@ services:
       - swagger-ui
     restart: unless-stopped
 
+  #  Подготовка прав на volume `pglogs`.
+  #  Docker создаёт named volume под root, а postgres в alpine
+  #  работает под uid/gid 70. Без этого шага сервер падает с
+  #  «could not open log file ... Permission denied».
+  pglogs_init:
+    image: alpine:3.20
+    container_name: pglogs_init
+    command: ["sh", "-c", "chown -R 70:70 /var/log/postgresql && chmod 0750 /var/log/postgresql"]
+    volumes:
+      - pglogs:/var/log/postgresql
+
   #  ОБЩАЯ БД
+  #  Кастомная конфигурация лежит в /db (см. db/README.md):
+  #    db/config/postgresql.custom.conf — параметры сервера,
+  #    db/config/pg_hba.conf            — правила аутентификации,
+  #    db/security/                     — создание сервисных юзеров,
+  #    db/scripts/apply_custom_conf.sh  — установка include в postgresql.conf.
   db:
     image: postgres:17-alpine
     container_name: postgres
+    depends_on:
+      pglogs_init:
+        condition: service_completed_successfully
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      COMMERCE_DB_PASSWORD: ${COMMERCE_DB_PASSWORD}
+      SUPPORT_DB_PASSWORD: ${SUPPORT_DB_PASSWORD}
+      MONITORING_DB_PASSWORD: ${MONITORING_DB_PASSWORD}
     ports:
       - "${POSTGRES_PORT}:5432"
     healthcheck:
@@ -40,6 +64,24 @@ services:
       retries: 10
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - pglogs:/var/log/postgresql
+      # init-скрипты: создание сервисных юзеров + apply кастомного конфига.
+      # Postgres entrypoint исполняет файлы из /docker-entrypoint-initdb.d/
+      # по alfabetical order, поэтому префикс 00_/01_/02_ задаёт порядок:
+      #   00_init_app_users.sh   — создаёт сервисные роли через psql -v.
+      #   01_create_app_users.sql— SQL с DO-блоками (вызывается из 00_*).
+      #   02_apply_custom_conf.sh— дописывает include = '...' в postgresql.conf.
+      - ../db/security/00_init_app_users.sh:/docker-entrypoint-initdb.d/00_init_app_users.sh:ro
+      - ../db/scripts/apply_custom_conf.sh:/docker-entrypoint-initdb.d/02_apply_custom_conf.sh:ro
+      # SQL-скрипт намеренно НЕ кладём в /docker-entrypoint-initdb.d/,
+      # потому что postgres-entrypoint запустил бы его повторно (без
+      # psql-переменных :auth_pass и т.д. → синтаксическая ошибка).
+      # Сам файл вызывается из 00_init_app_users.sh с нужными -v.
+      - ../db/security/01_create_app_users.sql:/sql/01_create_app_users.sql:ro
+      # Сами конфиги монтируем в отдельный каталог (apply-скрипт делает
+      # include на эти пути и копирует pg_hba.conf в $PGDATA).
+      - ../db/config/postgresql.custom.conf:/etc/postgresql/clover/postgresql.custom.conf:ro
+      - ../db/config/pg_hba.conf:/etc/postgresql/clover/pg_hba.conf:ro
 
   db_migrate:
     image: migrate/migrate
@@ -54,7 +96,80 @@ services:
       - -database=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
       - up
 
+  #  Выдача табличных грантов сервисным ролям.
+  #  Init-скрипты postgres-образа выполняются ДО появления таблиц,
+  #  поэтому GRANT'ы на конкретные таблицы вынесены сюда — отдельный
+  #  one-shot контейнер запускается после успешного завершения
+  #  миграций и применяет db/security/02_grant_table_privileges.sql.
+  #  GRANT в postgres идемпотентен, повторный запуск ничего не ломает.
+  db_grants:
+    image: postgres:17-alpine
+    container_name: db_grants
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ../db/security/02_grant_table_privileges.sql:/grants.sql:ro
+    entrypoint: ["psql"]
+    command:
+      - -v
+      - ON_ERROR_STOP=1
+      - -h
+      - db
+      - -U
+      - ${POSTGRES_USER}
+      - -d
+      - ${POSTGRES_DB}
+      - -f
+      - /grants.sql
+
+  #  PGBADGER — оффлайн-анализатор логов PostgreSQL.
+  #  Запускается по cron'у внутри контейнера, читает /var/log/postgresql
+  #  и складывает HTML-отчёты в /var/www/pgbadger. Открыть через gateway:
+  #    http://localhost:${GATEWAY_PORT}/pgbadger/
+  #  (см. соответствующий location в deployments/nginx/nginx.conf).
+  pgbadger:
+    image: ghcr.io/dalibo/pgbadger:13.0
+    container_name: pgbadger
+    restart: unless-stopped
+    user: "postgres"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mkdir -p /var/www/pgbadger &&
+        while true; do
+          pgbadger -I -q
+            -O /var/www/pgbadger
+            -f csv
+            --prefix '%t [%p]: user=%u,db=%d,app=%a,client=%h '
+            /var/log/postgresql/postgresql-*.csv || true;
+          sleep 300;
+        done
+    volumes:
+      - pglogs:/var/log/postgresql:ro
+      - pgbadger_reports:/var/www/pgbadger
+    depends_on:
+      db:
+        condition: service_healthy
+
+  #  POSTGRES EXPORTER — экспорт метрик postgres в Prometheus.
+  #  Подключается под сервисной учёткой clover_monitoring (роль pg_monitor).
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://clover_monitoring:${MONITORING_DB_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      db:
+        condition: service_healthy
+
   #  AUTH SERVICE (http 8001, grpc 9001 — services/auth/config/local.json)
+  #  Подключается к БД под сервисной ролью auth_app с правами SELECT/INSERT/
+  #  UPDATE только на таблицу "user" (см. db/security/01_create_app_users.sql).
+  #  Клиентские таймауты заданы через options= в DSN (см. db/README.md).
   auth:
     container_name: auth
     build:
@@ -63,7 +178,7 @@ services:
     env_file:
       - ../.env
     environment:
-      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - DATABASE_DSN=postgres://auth_app:${AUTH_DB_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable&application_name=auth&options=-c%20statement_timeout%3D30000%20-c%20lock_timeout%3D5000%20-c%20idle_in_transaction_session_timeout%3D60000
       - REDIS_ADDR=${REDIS_ADDR}
       - KAFKA_BROKERS=kafka:29092
     restart: unless-stopped
@@ -71,7 +186,7 @@ services:
       - "${AUTH_HTTP_PORT}:8001"
       - "${AUTH_GRPC_PORT}:9001"
     depends_on:
-      db_migrate:
+      db_grants:
         condition: service_completed_successfully
       redis:
         condition: service_started
@@ -79,6 +194,7 @@ services:
         condition: service_healthy
 
   #  SUPPORT SERVICE (http 8002 — services/support/config/local.json)
+  #  Сервисная роль: support_app.
   support:
     container_name: support
     build:
@@ -87,14 +203,14 @@ services:
     env_file:
       - ../.env
     environment:
-      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - DATABASE_DSN=postgres://support_app:${SUPPORT_DB_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable&application_name=support&options=-c%20statement_timeout%3D30000%20-c%20lock_timeout%3D5000%20-c%20idle_in_transaction_session_timeout%3D60000
       - AUTH_GRPC_ADDR=auth:9001
       - KAFKA_BROKERS=kafka:29092
     restart: unless-stopped
     ports:
       - "${SUPPORT_HTTP_PORT}:8002"
     depends_on:
-      db_migrate:
+      db_grants:
         condition: service_completed_successfully
       auth:
         condition: service_started
@@ -102,6 +218,7 @@ services:
         condition: service_healthy
 
   #  CATALOG SERVICE (http 8004, grpc 9004 — services/catalog/config/local.json)
+  #  Сервисная роль: catalog_app.
   catalog:
     container_name: catalog
     build:
@@ -110,7 +227,7 @@ services:
     env_file:
       - ../.env
     environment:
-      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - DATABASE_DSN=postgres://catalog_app:${CATALOG_DB_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable&application_name=catalog&options=-c%20statement_timeout%3D30000%20-c%20lock_timeout%3D5000%20-c%20idle_in_transaction_session_timeout%3D60000
       - REDIS_ADDR=${REDIS_ADDR}
       - AUTH_GRPC_ADDR=auth:9001
       - KAFKA_BROKERS=kafka:29092
@@ -120,7 +237,7 @@ services:
       - "${CATALOG_HTTP_PORT}:8004"
       - "${CATALOG_GRPC_PORT}:9004"
     depends_on:
-      db_migrate:
+      db_grants:
         condition: service_completed_successfully
       redis:
         condition: service_started
@@ -130,6 +247,7 @@ services:
         condition: service_healthy
 
   #  COMMERCE SERVICE (http 8006 — services/commerce/config/local.json)
+  #  Сервисная роль: commerce_app.
   commerce:
     container_name: commerce
     build:
@@ -138,7 +256,7 @@ services:
     env_file:
       - ../.env
     environment:
-      - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - DATABASE_DSN=postgres://commerce_app:${COMMERCE_DB_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable&application_name=commerce&options=-c%20statement_timeout%3D30000%20-c%20lock_timeout%3D5000%20-c%20idle_in_transaction_session_timeout%3D60000
       - AUTH_GRPC_ADDR=auth:9001
       - CATALOG_GRPC_ADDR=catalog:9004
       - KAFKA_BROKERS=kafka:29092
@@ -147,7 +265,7 @@ services:
     ports:
       - "${COMMERCE_HTTP_PORT}:8006"
     depends_on:
-      db_migrate:
+      db_grants:
         condition: service_completed_successfully
       auth:
         condition: service_started
@@ -292,6 +410,8 @@ services:
 
 volumes:
   pgdata:
+  pglogs:               # логи postgres в формате CSV для pgbadger
+  pgbadger_reports:     # HTML-отчёты, отдаются через gateway
   redis_data:
   kafka_data:
   clickhouse_data:

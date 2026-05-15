@@ -6,8 +6,27 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Параметры пула — обоснование значений описано в db/README.md.
+// Catalog — самый «тяжёлый» по запросам сервис (поиск, листинг,
+// фильтры по характеристикам), поэтому MaxConns выше, чем у auth.
+const (
+	maxConns         = 15
+	minConns         = 3
+	maxConnLifetime  = 30 * time.Minute
+	maxConnIdleTime  = 5 * time.Minute
+	healthCheckEvery = 30 * time.Second
+)
+
+// Клиентские таймауты (см. db/README.md, раздел «Таймауты»).
+const (
+	statementTimeoutMS       = "30000"
+	lockTimeoutMS            = "5000"
+	idleInTxSessionTimeoutMS = "60000"
 )
 
 // Client реализует обёртку над пулом соединений к PostgreSQL.
@@ -25,8 +44,13 @@ func New(dsn string) (*Client, error) {
 		return nil, fmt.Errorf("postgres.New: parse config: %w", err)
 	}
 
-	cfg.MaxConns = 10
-	cfg.MinConns = 2
+	applyClientTimeouts(cfg.ConnConfig)
+
+	cfg.MaxConns = maxConns
+	cfg.MinConns = minConns
+	cfg.MaxConnLifetime = maxConnLifetime
+	cfg.MaxConnIdleTime = maxConnIdleTime
+	cfg.HealthCheckPeriod = healthCheckEvery
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
@@ -38,6 +62,15 @@ func New(dsn string) (*Client, error) {
 	}
 
 	return &Client{Pool: pool}, nil
+}
+
+func applyClientTimeouts(cc *pgx.ConnConfig) {
+	if cc.RuntimeParams == nil {
+		cc.RuntimeParams = make(map[string]string)
+	}
+	cc.RuntimeParams["statement_timeout"] = statementTimeoutMS
+	cc.RuntimeParams["lock_timeout"] = lockTimeoutMS
+	cc.RuntimeParams["idle_in_transaction_session_timeout"] = idleInTxSessionTimeoutMS
 }
 
 // Close закрывает пул соединений.

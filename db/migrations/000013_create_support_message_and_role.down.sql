@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS support_message;
+ALTER TABLE "user" DROP COLUMN IF EXISTS role;
