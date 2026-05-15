@@ -24,19 +24,20 @@ import (
 var ErrQueryTooShort = errors.New("search query is too short")
 
 const (
-	opGetAllAds                 = "usecase.ads.GetAllAds"
-	opSearchAds                 = "usecase.ads.SearchAds"
-	opUploadAdPhotos            = "usecase.ads.UploadAdPhotos"
-	opCreateAd                  = "usecase.ads.CreateAd"
-	opGetAdByID                 = "usecase.ads.GetAdByID"
-	opUpdateAd                  = "usecase.ads.UpdateAd"
-	opDeleteAd                  = "usecase.ads.DeleteAd"
-	opCloseAd                   = "usecase.ads.CloseAd"
-	opGetAdsByUserID            = "usecase.ads.GetAdsByUserID"
-	opAddFavorite               = "usecase.ads.AddFavorite"
-	opRemoveFavorite            = "usecase.ads.RemoveFavorite"
-	opGetUserFavorites          = "usecase.ads.GetUserFavorites"
+	opGetAllAds                  = "usecase.ads.GetAllAds"
+	opSearchAds                  = "usecase.ads.SearchAds"
+	opUploadAdPhotos             = "usecase.ads.UploadAdPhotos"
+	opCreateAd                   = "usecase.ads.CreateAd"
+	opGetAdByID                  = "usecase.ads.GetAdByID"
+	opUpdateAd                   = "usecase.ads.UpdateAd"
+	opDeleteAd                   = "usecase.ads.DeleteAd"
+	opCloseAd                    = "usecase.ads.CloseAd"
+	opGetAdsByUserID             = "usecase.ads.GetAdsByUserID"
+	opAddFavorite                = "usecase.ads.AddFavorite"
+	opRemoveFavorite             = "usecase.ads.RemoveFavorite"
+	opGetUserFavorites           = "usecase.ads.GetUserFavorites"
 	opGetCategoryCharacteristics = "usecase.ads.GetCategoryCharacteristics"
+	opGetPriceHistory            = "usecase.ads.GetPriceHistory"
 )
 
 type AdsProvider interface {
@@ -56,6 +57,7 @@ type AdsProvider interface {
 	SetProductCharacteristics(ctx context.Context, productID int64, inputs []dto.CharacteristicInput) error
 	SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
+	GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error)
 }
 
 // FileStorage описывает интерфейс для работы с файлами в объектном хранилище
@@ -638,4 +640,33 @@ func toValidatorDefs(in []models.CategoryCharacteristic) []validator.CategoryCha
 		out[i] = validator.CategoryCharacteristicDef{ID: d.ID, AllowedValues: d.AllowedValues}
 	}
 	return out
+}
+
+func (a *Ads) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
+	a.log.DebugContext(ctx, "getting price history",
+		slog.String("op", opGetPriceHistory),
+		slog.Int64("ad_id", adID),
+	)
+
+	_, err := a.adsStorage.GetAdByID(ctx, adID)
+	if err != nil {
+		a.log.ErrorContext(ctx, "failed to get ad for price history",
+			slog.String("op", opGetPriceHistory),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("%s: %w", opGetPriceHistory, err)
+	}
+
+	history, err := a.adsStorage.GetPriceHistory(ctx, adID)
+	if err != nil {
+		a.log.ErrorContext(ctx, "failed to get ad's price history",
+			slog.String("op", opGetPriceHistory),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("%s: %w", opGetPriceHistory, err)
+	}
+
+	return history, nil
 }

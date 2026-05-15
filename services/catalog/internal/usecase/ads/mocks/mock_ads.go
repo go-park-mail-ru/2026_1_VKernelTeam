@@ -183,6 +183,21 @@ func (mr *MockAdsProviderMockRecorder) GetCategoryCharacteristics(ctx, categoryI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).GetCategoryCharacteristics), ctx, categoryID)
 }
 
+// GetPriceHistory mocks base method.
+func (m *MockAdsProvider) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPriceHistory", ctx, adID)
+	ret0, _ := ret[0].([]models.PricePoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPriceHistory indicates an expected call of GetPriceHistory.
+func (mr *MockAdsProviderMockRecorder) GetPriceHistory(ctx, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceHistory", reflect.TypeOf((*MockAdsProvider)(nil).GetPriceHistory), ctx, adID)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAdsProvider) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -319,4 +334,55 @@ func (m *MockFileStorage) UploadFile(ctx context.Context, file multipart.File, f
 func (mr *MockFileStorageMockRecorder) UploadFile(ctx, file, folder, extension interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadFile", reflect.TypeOf((*MockFileStorage)(nil).UploadFile), ctx, file, folder, extension)
+}
+
+// MockEventPublisher is a mock of EventPublisher interface.
+type MockEventPublisher struct {
+	ctrl     *gomock.Controller
+	recorder *MockEventPublisherMockRecorder
+}
+
+// MockEventPublisherMockRecorder is the mock recorder for MockEventPublisher.
+type MockEventPublisherMockRecorder struct {
+	mock *MockEventPublisher
+}
+
+// NewMockEventPublisher creates a new mock instance.
+func NewMockEventPublisher(ctrl *gomock.Controller) *MockEventPublisher {
+	mock := &MockEventPublisher{ctrl: ctrl}
+	mock.recorder = &MockEventPublisherMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockEventPublisher) EXPECT() *MockEventPublisherMockRecorder {
+	return m.recorder
+}
+
+// PublishAdDeleted mocks base method.
+func (m *MockEventPublisher) PublishAdDeleted(ctx context.Context, adID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishAdDeleted", ctx, adID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishAdDeleted indicates an expected call of PublishAdDeleted.
+func (mr *MockEventPublisherMockRecorder) PublishAdDeleted(ctx, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishAdDeleted", reflect.TypeOf((*MockEventPublisher)(nil).PublishAdDeleted), ctx, adID)
+}
+
+// PublishAdSold mocks base method.
+func (m *MockEventPublisher) PublishAdSold(ctx context.Context, adID, buyerID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishAdSold", ctx, adID, buyerID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishAdSold indicates an expected call of PublishAdSold.
+func (mr *MockEventPublisherMockRecorder) PublishAdSold(ctx, adID, buyerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishAdSold", reflect.TypeOf((*MockEventPublisher)(nil).PublishAdSold), ctx, adID, buyerID)
 }

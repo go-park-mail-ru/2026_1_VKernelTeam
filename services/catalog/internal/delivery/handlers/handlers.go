@@ -46,6 +46,7 @@ type Ads interface {
 	GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error)
 	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
+	GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error)
 }
 
 // Views — методы usecase просмотров.

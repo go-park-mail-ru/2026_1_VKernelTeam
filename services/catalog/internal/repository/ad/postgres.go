@@ -15,24 +15,25 @@ import (
 )
 
 const (
-	opGetAdByID                      = "db.ad.GetAdByID"
-	opGetAllAds                      = "db.ad.GetAllAds"
-	opSearchAds                      = "db.ad.SearchAds"
-	opCreateAd                       = "db.ad.CreateAd"
-	opAddProductImages               = "db.ad.AddProductImages"
-	opDeleteProductImages            = "db.ad.DeleteProductImages"
-	opUpdateAd                       = "db.ad.UpdateAd"
-	opDeleteAd                       = "db.ad.DeleteAd"
-	opCloseAd                        = "db.ad.CloseAd"
-	opGetAdsByUserID                 = "db.ad.GetAdsByUserID"
-	opAddFavorite                    = "db.ad.AddFavorite"
-	opRemoveFavorite                 = "db.ad.RemoveFavorite"
-	opGetUserFavorites               = "db.ad.GetUserFavorites"
-	opGetProductCharacteristics      = "db.ad.getProductCharacteristics"
+	opGetAdByID                       = "db.ad.GetAdByID"
+	opGetAllAds                       = "db.ad.GetAllAds"
+	opSearchAds                       = "db.ad.SearchAds"
+	opCreateAd                        = "db.ad.CreateAd"
+	opAddProductImages                = "db.ad.AddProductImages"
+	opDeleteProductImages             = "db.ad.DeleteProductImages"
+	opUpdateAd                        = "db.ad.UpdateAd"
+	opDeleteAd                        = "db.ad.DeleteAd"
+	opCloseAd                         = "db.ad.CloseAd"
+	opGetAdsByUserID                  = "db.ad.GetAdsByUserID"
+	opAddFavorite                     = "db.ad.AddFavorite"
+	opRemoveFavorite                  = "db.ad.RemoveFavorite"
+	opGetUserFavorites                = "db.ad.GetUserFavorites"
+	opGetProductCharacteristics       = "db.ad.getProductCharacteristics"
 	opGetProductCustomCharacteristics = "db.ad.getProductCustomCharacteristics"
-	opSetProductCharacteristics      = "db.ad.SetProductCharacteristics"
+	opSetProductCharacteristics       = "db.ad.SetProductCharacteristics"
 	opSetProductCustomCharacteristics = "db.ad.SetProductCustomCharacteristics"
-	opGetCategoryCharacteristics     = "db.ad.GetCategoryCharacteristics"
+	opGetCategoryCharacteristics      = "db.ad.GetCategoryCharacteristics"
+	opGetPriceHistory                 = "db.ad.GetPriceHistory"
 )
 
 // PgxPool интерфейс для пула соединений (или транзакции),
@@ -1143,4 +1144,47 @@ func (s *AdStorage) UpdateAdStatus(ctx context.Context, id int64, newStatus stri
 	}
 	_ = query // silence unused-const in case future refactor
 	return prevStatus, nil
+}
+
+func (s *AdStorage) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
+	const query = `
+		SELECT price, changed_at
+		FROM product_price_history
+		WHERE product_id = $1
+		ORDER BY changed_at ASC;
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetPriceHistory),
+		slog.Int64("ad_id", adID),
+	)
+
+	rows, err := s.pool.Query(ctx, query, adID)
+	if err != nil {
+		s.log.ErrorContext(ctx, "failed to query price history",
+			slog.String("op", opGetPriceHistory),
+			slog.String("error", err.Error()),
+		)
+		return nil, fmt.Errorf("GetPriceHistory: query: %w", err)
+	}
+	defer rows.Close()
+
+	var history []models.PricePoint
+	for rows.Next() {
+		var pp models.PricePoint
+		if err := rows.Scan(&pp.Price, &pp.ChangedAt); err != nil {
+			s.log.ErrorContext(ctx, "failed to scan price point",
+				slog.String("op", opGetPriceHistory),
+				slog.String("error", err.Error()),
+			)
+			return nil, fmt.Errorf("GetPriceHistory: scan: %w", err)
+		}
+		history = append(history, pp)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("GetPriceHistory: rows: %w", err)
+	}
+
+	return history, nil
 }

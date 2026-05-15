@@ -595,3 +595,43 @@ func TestAds_GetCategoryCharacteristics(t *testing.T) {
 		assert.Nil(t, chars)
 	})
 }
+
+func TestAds_GetPriceHistory(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStorage := mocks.NewMockAdsProvider(ctrl)
+	mockFileStorage := mocks.NewMockFileStorage(ctrl)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	usecase := New(logger, mockStorage, mockFileStorage, config.SearchConfig{}, nil)
+
+	ctx := context.Background()
+	adID := int64(1)
+
+	t.Run("Success", func(t *testing.T) {
+		want := []models.PricePoint{{Price: 15000}, {Price: 12000}}
+		mockStorage.EXPECT().GetAdByID(ctx, adID).Return(models.Ad{ID: adID}, nil)
+		mockStorage.EXPECT().GetPriceHistory(ctx, adID).Return(want, nil)
+
+		history, err := usecase.GetPriceHistory(ctx, adID)
+		assert.NoError(t, err)
+		assert.Equal(t, want, history)
+	})
+
+	t.Run("AdNotFound", func(t *testing.T) {
+		mockStorage.EXPECT().GetAdByID(ctx, adID).Return(models.Ad{}, errors.New("not found"))
+
+		history, err := usecase.GetPriceHistory(ctx, adID)
+		assert.Error(t, err)
+		assert.Nil(t, history)
+	})
+
+	t.Run("StorageError", func(t *testing.T) {
+		mockStorage.EXPECT().GetAdByID(ctx, adID).Return(models.Ad{ID: adID}, nil)
+		mockStorage.EXPECT().GetPriceHistory(ctx, adID).Return(nil, errors.New("db error"))
+
+		history, err := usecase.GetPriceHistory(ctx, adID)
+		assert.Error(t, err)
+		assert.Nil(t, history)
+	})
+}

@@ -170,6 +170,7 @@ func buildHTTPServer(
 	mux.HandleFunc("GET "+prefix+"/ads", ads.HandleGetAds)
 	mux.HandleFunc("GET "+prefix+"/ads/search", ads.HandleSearchAds)
 	mux.HandleFunc("GET "+prefix+"/ads/{id}", ads.HandleGetAdByID)
+	mux.HandleFunc("GET "+prefix+"/ads/{id}/price-history", ads.HandleGetPriceHistory)
 	mux.HandleFunc("GET "+prefix+"/categories/{id}/characteristics", ads.HandleGetCategoryCharacteristics)
 	mux.HandleFunc("GET "+prefix+"/users/{id}/ads", ads.HandleGetUserAds)
 
