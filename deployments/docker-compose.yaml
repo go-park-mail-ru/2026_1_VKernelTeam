@@ -190,6 +190,8 @@ services:
     image: apache/kafka:3.9.0
     container_name: kafka
     restart: unless-stopped
+    init: true
+    mem_limit: 768m
     ports:
       - "${KAFKA_PORT}:9092"
     environment:
@@ -203,34 +205,43 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_HEAP_OPTS: "-Xmx384m -Xms256m"
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:29092 --list || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/29092' || exit 1"]
+      interval: 60s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 5
+      start_period: 60s
 
   #  OBSERVABILITY
   clickhouse:
     image: clickhouse/clickhouse-server:24-alpine
     container_name: clickhouse
     restart: unless-stopped
+    mem_limit: 1500m
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
     ports:
       - "${CLICKHOUSE_PORT}:8123"
     environment:
       CLICKHOUSE_USER: ${CLICKHOUSE_USER}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
       CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+      CLICKHOUSE_MAX_SERVER_MEMORY_USAGE: "1073741824"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "clickhouse-client --query 'SELECT 1' || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8123/ping || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   vector:
     image: timberio/vector:0.43.1-alpine
@@ -274,8 +285,9 @@ services:
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.time=7d"
       - "--web.enable-lifecycle"
+    mem_limit: 384m
 
   grafana:
     image: grafana/grafana:11.6.0
