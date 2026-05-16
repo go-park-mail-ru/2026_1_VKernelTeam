@@ -1,7 +1,7 @@
 {
 	"info": {
 		"name": "Clover API",
-		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :8080) → микросервисы.\n\n- Auth Service (:8001 HTTP, :8003 gRPC)\n- Support Service (:8002 HTTP)\n- Catalog Service (:8004 HTTP, :8005 gRPC) — объявления, поиск, избранное, просмотры, категории\n- Commerce Service (:8006 HTTP) — корзина, чаты, заказы\n\nПеременные:\n- `gateway` — через nginx (http://localhost:8080)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `catalogDirect` — напрямую к catalog (http://localhost:8004)\n- `commerceDirect` — напрямую к commerce (http://localhost:8006)",
+		"description": "API маркетплейса Клевер.\n\nАрхитектура: API Gateway (nginx :8080) → микросервисы.\n\n- Auth Service (:8001 HTTP, :8003 gRPC)\n- Support Service (:8002 HTTP)\n- Catalog Service (:8004 HTTP, :8005 gRPC) — объявления, поиск, избранное, просмотры, категории\n- Commerce Service (:8006 HTTP) — корзина, чаты, заказы\n\nПеременные:\n- `gateway` — через nginx (http://localhost:8080)\n- `authDirect` — напрямую к auth (http://localhost:8001)\n- `supportDirect` — напрямую к support (http://localhost:8002)\n- `catalogDirect` — напрямую к catalog (http://localhost:8004)\n- `commerceDirect` — напрямую к commerce (http://localhost:8006)\n\nНовые группы (с миграции 000020):\n- Wallet (Commerce) — внутренний кошелёк пользователя\n- Promotion (Commerce) — платное продвижение объявлений (boost/highlight)",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -58,6 +58,16 @@
 		{
 			"key": "ticketId",
 			"value": "1"
+		},
+		{
+			"key": "planCode",
+			"value": "boost_7d",
+			"description": "Код тарифа продвижения (см. GET /promotion/plans)"
+		},
+		{
+			"key": "topupAmount",
+			"value": "500",
+			"description": "Сумма пополнения кошелька в рублях"
 		}
 	],
 	"event": [
@@ -103,7 +113,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -111,8 +124,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/register",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "register"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
 						},
 						"description": "Регистрация + автоматический логин. Устанавливает cookie: token, csrf_token, refresh_token."
 					}
@@ -139,7 +157,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -147,8 +168,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/auth/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "login"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
 						}
 					}
 				},
@@ -159,8 +185,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/auth/login",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "login"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
 						},
 						"description": "Если cookie token уже есть — валидирует токен и возвращает профиль без body."
 					}
@@ -172,8 +203,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/auth/refresh",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "refresh"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"refresh"
+							]
 						},
 						"description": "Обновление access token по refresh token из cookie. Ротирует оба токена."
 					}
@@ -183,12 +219,20 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/auth/logout",
-							"host": ["{{baseUrl}}"],
-							"path": ["auth", "logout"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
 						},
 						"description": "Добавляет JWT в blacklist, удаляет refresh token, очищает cookie."
 					}
@@ -198,12 +242,19 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/profile",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile"
+							]
 						},
 						"description": "Профиль текущего пользователя (по JWT из cookie)."
 					}
@@ -213,8 +264,14 @@
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -222,8 +279,12 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profile",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile"
+							]
 						}
 					}
 				},
@@ -232,7 +293,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "formdata",
@@ -246,8 +310,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/profile/avatar",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile", "avatar"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile",
+								"avatar"
+							]
 						},
 						"description": "JPEG/PNG/WebP/GIF, max 5MB."
 					}
@@ -259,8 +328,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["users", "{{userId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userId}}"
+							]
 						},
 						"description": "Публичный профиль (без авторизации). Имя, аватар, рейтинг, кол-во объявлений."
 					}
@@ -278,8 +352,12 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/ads",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads"
+							]
 						}
 					}
 				},
@@ -290,8 +368,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/ads/search?query=iPhone",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "search"],
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"search"
+							],
 							"query": [
 								{
 									"key": "query",
@@ -315,8 +398,13 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}"
+							]
 						}
 					}
 				},
@@ -325,7 +413,10 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "formdata",
@@ -344,8 +435,12 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/ads",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads"
+							]
 						}
 					}
 				},
@@ -354,7 +449,10 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "formdata",
@@ -368,8 +466,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}"
+							]
 						}
 					}
 				},
@@ -378,12 +481,20 @@
 					"request": {
 						"method": "DELETE",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}"
+							]
 						}
 					}
 				},
@@ -392,12 +503,21 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/close",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "close"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"close"
+							]
 						}
 					}
 				},
@@ -408,8 +528,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/users/{{userId}}/ads",
-							"host": ["{{baseUrl}}"],
-							"path": ["users", "{{userId}}", "ads"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userId}}",
+								"ads"
+							]
 						}
 					}
 				},
@@ -420,8 +546,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/view",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "view"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"view"
+							]
 						},
 						"description": "Записать просмотр (опциональная авторизация, дедупликация 24ч)."
 					}
@@ -436,12 +568,21 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/favorite",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "favorite"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"favorite"
+							]
 						}
 					}
 				},
@@ -450,12 +591,21 @@
 					"request": {
 						"method": "DELETE",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/favorite",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "favorite"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"favorite"
+							]
 						}
 					}
 				},
@@ -464,12 +614,20 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/profile/favorites",
-							"host": ["{{baseUrl}}"],
-							"path": ["profile", "favorites"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile",
+								"favorites"
+							]
 						}
 					}
 				}
@@ -483,12 +641,19 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/cart",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart"
+							]
 						}
 					}
 				},
@@ -497,8 +662,14 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -506,8 +677,12 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/cart",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart"
+							]
 						}
 					}
 				},
@@ -516,12 +691,20 @@
 					"request": {
 						"method": "DELETE",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/cart/{{productId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["cart", "{{productId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cart",
+								"{{productId}}"
+							]
 						}
 					}
 				}
@@ -535,12 +718,21 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/order",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "order"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"order"
+							]
 						},
 						"description": "Создать заказ и чат с продавцом."
 					}
@@ -550,12 +742,21 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/chats/{{chatId}}/confirm",
-							"host": ["{{baseUrl}}"],
-							"path": ["chats", "{{chatId}}", "confirm"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"chats",
+								"{{chatId}}",
+								"confirm"
+							]
 						}
 					}
 				},
@@ -564,12 +765,19 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/chats",
-							"host": ["{{baseUrl}}"],
-							"path": ["chats"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"chats"
+							]
 						}
 					}
 				},
@@ -578,13 +786,297 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/chats/{{chatId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["chats", "{{chatId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"chats",
+								"{{chatId}}"
+							]
 						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Wallet (Commerce)",
+			"description": "Внутренний кошелёк пользователя (services/commerce).\nРоуты: /wallet, /wallet/transactions, /wallet/topup\n\nВалюта: рубли (целые числа). Все суммы — bigint.",
+			"item": [
+				{
+					"name": "Get Wallet Balance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/wallet",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallet"
+							]
+						},
+						"description": "Текущий баланс кошелька. При первом обращении кошелёк создаётся с balance=0."
+					}
+				},
+				{
+					"name": "List Wallet Transactions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/wallet/transactions?limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallet",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "По умолчанию 20, максимум 100"
+								},
+								{
+									"key": "cursor",
+									"value": "0",
+									"description": "ID последнего элемента предыдущей страницы. 0 — первая страница",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Лента операций по кошельку: пополнения, списания за промо."
+					}
+				},
+				{
+					"name": "Topup Wallet",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Автогенерация uuid для idempotency_key",
+									"pm.variables.set('topupIdemKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.test('Balance increased', () => {",
+									"        pm.expect(body.balance).to.be.above(0);",
+									"        pm.expect(body.payment_id).to.be.above(0);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": {{topupAmount}},\n  \"idempotency_key\": \"{{topupIdemKey}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/wallet/topup",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"wallet",
+								"topup"
+							]
+						},
+						"description": "Пополнение кошелька через мок-провайдера (мгновенно).\n\nКоды ошибок:\n- 400 INVALID_AMOUNT — некорректная сумма (0/отриц./слишком большая)\n- 400 INVALID_REQUEST — нет idempotency_key\n\nПовторный вызов с тем же `idempotency_key` вернёт тот же результат без двойного списания."
+					}
+				}
+			]
+		},
+		{
+			"name": "Promotion (Commerce)",
+			"description": "Платное продвижение объявлений (services/commerce).\nРоуты: /promotion/plans, /ads/{id}/promotions, /profile/promotions\n\nДва типа продвижения:\n- **boost** — поднятие в выдаче (сортируется выше)\n- **highlight** — визуальное выделение карточки (флаг для фронта)\n\nТарифы (seed): boost_1d (49₽), boost_7d (199₽), highlight_1d (29₽), highlight_7d (99₽).",
+			"item": [
+				{
+					"name": "Get Promotion Plans",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const plans = pm.response.json();",
+									"    pm.test('Plans returned', () => {",
+									"        pm.expect(plans).to.be.an('array');",
+									"        pm.expect(plans.length).to.be.above(0);",
+									"    });",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/promotion/plans",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"promotion",
+								"plans"
+							]
+						},
+						"description": "Список активных тарифов продвижения. Публичный, без авторизации. Кэшируется в Redis на 5 минут."
+					}
+				},
+				{
+					"name": "Purchase Promotion",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Автогенерация uuid для idempotency_key",
+									"pm.variables.set('promoIdemKey', pm.variables.replaceIn('{{$guid}}'));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const body = pm.response.json();",
+									"    pm.test('Promotion created', () => {",
+									"        pm.expect(body.promotion.id).to.be.above(0);",
+									"        pm.expect(body.wallet_balance).to.be.a('number');",
+									"    });",
+									"    pm.collectionVariables.set('promotionId', body.promotion.id);",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"plan_code\": \"{{planCode}}\",\n  \"idempotency_key\": \"{{promoIdemKey}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/promotions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"promotions"
+							]
+						},
+						"description": "Купить продвижение для своего объявления. Списывает цену тарифа с кошелька. Поддерживает продление: повторная покупка того же типа добавляет дни к существующему `expires_at`.\n\nКоды ошибок:\n- 400 INSUFFICIENT_FUNDS — недостаточно средств на кошельке\n- 400 PLAN_NOT_FOUND / PLAN_INACTIVE — неверный или неактивный тариф\n- 400 INVALID_AD_STATUS — объявление не в статусе active/reserved\n- 400 INVALID_REQUEST — нет plan_code или idempotency_key\n- 403 NOT_AD_OWNER — попытка продвинуть чужое объявление\n- 404 AD_NOT_FOUND"
+					}
+				},
+				{
+					"name": "List Active Promotions For Ad",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/promotions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"promotions"
+							]
+						},
+						"description": "Активные (не истёкшие) промо для объявления. Публично — каждый может проверить, продвигается ли объявление."
+					}
+				},
+				{
+					"name": "List My Promotions History",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/profile/promotions?limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile",
+								"promotions"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "cursor",
+									"value": "0",
+									"disabled": true
+								}
+							]
+						},
+						"description": "История всех купленных промо текущего пользователя (включая истёкшие)."
 					}
 				}
 			]
@@ -598,8 +1090,14 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -607,8 +1105,13 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets"
+							]
 						}
 					}
 				},
@@ -617,12 +1120,20 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets"
+							]
 						}
 					}
 				},
@@ -631,12 +1142,21 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}"
+							]
 						}
 					}
 				},
@@ -645,8 +1165,14 @@
 					"request": {
 						"method": "PUT",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -654,8 +1180,14 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}"
+							]
 						}
 					}
 				},
@@ -664,8 +1196,14 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -673,8 +1211,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/rate",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}", "rate"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}",
+								"rate"
+							]
 						}
 					}
 				},
@@ -683,8 +1228,14 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -692,8 +1243,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/messages",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}", "messages"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}",
+								"messages"
+							]
 						}
 					}
 				},
@@ -702,12 +1260,22 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/messages",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}", "messages"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}",
+								"messages"
+							]
 						}
 					}
 				},
@@ -716,8 +1284,14 @@
 					"request": {
 						"method": "PATCH",
 						"header": [
-							{"key": "Content-Type", "value": "application/json"},
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"body": {
 							"mode": "raw",
@@ -725,8 +1299,15 @@
 						},
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/{{ticketId}}/status",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "{{ticketId}}", "status"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"{{ticketId}}",
+								"status"
+							]
 						},
 						"description": "Только для ролей support/admin."
 					}
@@ -736,12 +1317,21 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/all",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "all"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"all"
+							]
 						},
 						"description": "Только для ролей support/admin."
 					}
@@ -751,12 +1341,21 @@
 					"request": {
 						"method": "GET",
 						"header": [
-							{"key": "X-CSRF-Token", "value": "{{csrfToken}}"}
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
 						],
 						"url": {
 							"raw": "{{baseUrl}}/support/tickets/stats",
-							"host": ["{{baseUrl}}"],
-							"path": ["support", "tickets", "stats"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"support",
+								"tickets",
+								"stats"
+							]
 						},
 						"description": "Только для ролей support/admin."
 					}
@@ -773,8 +1372,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/categories/{{categoryId}}/characteristics",
-							"host": ["{{baseUrl}}"],
-							"path": ["categories", "{{categoryId}}", "characteristics"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"categories",
+								"{{categoryId}}",
+								"characteristics"
+							]
 						}
 					}
 				}

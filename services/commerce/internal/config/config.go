@@ -15,6 +15,7 @@ type Config struct {
 	DatabaseDSN     string
 	AuthGRPCAddr    string
 	CatalogGRPCAddr string
+	RedisAddr       string
 	HTTP            HTTPConfig
 	Kafka           KafkaConfig
 }
@@ -74,6 +75,7 @@ func MustLoadConfig() *Config {
 		DatabaseDSN:     mustEnv("DATABASE_DSN"),
 		AuthGRPCAddr:    envOrDefault("AUTH_GRPC_ADDR", "localhost:9001"),
 		CatalogGRPCAddr: envOrDefault("CATALOG_GRPC_ADDR", "localhost:9004"),
+		RedisAddr:       envOrDefault("REDIS_ADDR", "localhost:6379"),
 		HTTP:            raw.HTTP,
 		Kafka: KafkaConfig{
 			Brokers:      envOrDefault("KAFKA_BROKERS", "localhost:9092"),

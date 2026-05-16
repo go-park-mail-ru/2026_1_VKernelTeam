@@ -1,5 +1,18 @@
 basePath: /api/v1
 definitions:
+  dto.AdPreview:
+    properties:
+      ad_id:
+        type: integer
+      photo:
+        type: string
+      price:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
   dto.AddToCartRequest:
     properties:
       product_id:
@@ -29,21 +42,63 @@ definitions:
       total_price:
         type: integer
     type: object
-  dto.CheckoutResponse:
+  dto.ChangeStatusRequest:
     properties:
-      order_ids:
+      status:
+        type: string
+    type: object
+  dto.ChatDetailResponse:
+    properties:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      messages:
         items:
-          type: integer
+          $ref: '#/definitions/dto.MessageItem'
         type: array
-      sellers:
-        additionalProperties:
-          $ref: '#/definitions/dto.SellerContact'
-        description: Ключ — ID продавца
-        type: object
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
+    type: object
+  dto.ChatListResponse:
+    properties:
+      chats:
+        items:
+          $ref: '#/definitions/dto.ChatPreview'
+        type: array
+    type: object
+  dto.ChatPreview:
+    properties:
+      ad:
+        $ref: '#/definitions/dto.AdPreview'
+      chat_id:
+        type: integer
+      last_message:
+        $ref: '#/definitions/dto.LastMessagePreview'
+      partner:
+        $ref: '#/definitions/dto.UserPreview'
+    type: object
+  dto.CreateTicketRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
     type: object
   dto.ErrorResponse:
     properties:
       error:
+        type: string
+    type: object
+  dto.LastMessagePreview:
+    properties:
+      created_at:
+        type: string
+      text:
+        type: string
+      type:
         type: string
     type: object
   dto.LoginRequest:
@@ -59,8 +114,82 @@ definitions:
         type: string
       name:
         type: string
+      role:
+        type: string
       user_id:
         type: integer
+    type: object
+  dto.MessageItem:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      sender_id:
+        type: integer
+      text:
+        type: string
+      type:
+        type: string
+    type: object
+  dto.MessageResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      text:
+        type: string
+      ticket_id:
+        type: integer
+      user_id:
+        type: integer
+    type: object
+  dto.OrderResponse:
+    properties:
+      chat_id:
+        type: integer
+      message:
+        type: string
+    type: object
+  dto.PromotionListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.PromotionResponse'
+        type: array
+      next_cursor:
+        type: integer
+    type: object
+  dto.PromotionPlanResponse:
+    properties:
+      code:
+        type: string
+      duration_days:
+        type: integer
+      id:
+        type: integer
+      kind:
+        type: string
+      price:
+        type: integer
+    type: object
+  dto.PromotionResponse:
+    properties:
+      expires_at:
+        type: string
+      id:
+        type: integer
+      kind:
+        type: string
+      plan_code:
+        type: string
+      price_paid:
+        type: integer
+      product_id:
+        type: integer
+      starts_at:
+        type: string
     type: object
   dto.PublicUserResponse:
     properties:
@@ -79,6 +208,25 @@ definitions:
       reviews_count:
         type: integer
     type: object
+  dto.PurchasePromotionRequest:
+    properties:
+      idempotency_key:
+        type: string
+      plan_code:
+        type: string
+    type: object
+  dto.PurchasePromotionResponse:
+    properties:
+      promotion:
+        $ref: '#/definitions/dto.PromotionResponse'
+      wallet_balance:
+        type: integer
+    type: object
+  dto.RateTicketRequest:
+    properties:
+      rating:
+        type: integer
+    type: object
   dto.RegisterRequest:
     properties:
       email:
@@ -88,14 +236,72 @@ definitions:
       password:
         type: string
     type: object
-  dto.SellerContact:
+  dto.SendMessageRequest:
     properties:
-      email:
+      text:
+        type: string
+    type: object
+  dto.StatsResponse:
+    properties:
+      by_category:
+        additionalProperties:
+          type: integer
+        type: object
+      by_status:
+        additionalProperties:
+          type: integer
+        type: object
+      total:
+        type: integer
+    type: object
+  dto.SuccessConfirmOrderResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  dto.TicketResponse:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
         type: string
       id:
         type: integer
-      name:
+      rating:
+        type: integer
+      status:
         type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  dto.TicketStatusResponse:
+    properties:
+      id:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.TopupWalletRequest:
+    properties:
+      amount:
+        type: integer
+      idempotency_key:
+        type: string
+    type: object
+  dto.TopupWalletResponse:
+    properties:
+      balance:
+        type: integer
+      payment_id:
+        type: integer
     type: object
   dto.UpdateProfileRequest:
     properties:
@@ -105,6 +311,24 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UpdateTicketRequest:
+    properties:
+      category:
+        type: string
+      description:
+        type: string
+      title:
+        type: string
+    type: object
+  dto.UserPreview:
+    properties:
+      avatar_path:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   dto.ValidationErrors:
     properties:
@@ -131,46 +355,50 @@ definitions:
       user_id:
         type: string
     type: object
-  models.Ad:
+  dto.WalletResponse:
     properties:
-      category_characteristics:
+      balance:
+        type: integer
+      currency:
+        type: string
+    type: object
+  dto.WalletTransactionListResponse:
+    properties:
+      items:
         items:
-          $ref: '#/definitions/models.ProductCharacteristic'
+          $ref: '#/definitions/dto.WalletTransactionResponse'
         type: array
-      category_id:
+      next_cursor:
+        type: integer
+    type: object
+  dto.WalletTransactionResponse:
+    properties:
+      amount:
         type: integer
       created_at:
         type: string
-      custom_characteristics:
-        items:
-          $ref: '#/definitions/models.ProductCustomCharacteristic'
-        type: array
-      deleted_at:
-        type: string
-      description:
-        type: string
-      favorites_count:
-        type: integer
       id:
         type: integer
-      location:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
-      price:
+      reference_id:
         type: integer
-      seller_id:
+      type:
+        type: string
+    type: object
+  models.Ad:
+    properties:
+      id:
+        format: int64
+        type: integer
+      price:
+        format: int64
+        type: integer
+      sellerID:
+        format: int64
         type: integer
       status:
         type: string
       title:
         type: string
-      updated_at:
-        type: string
-      views_count:
-        type: integer
     type: object
   models.CategoryCharacteristic:
     properties:
@@ -186,20 +414,6 @@ definitions:
         type: string
       sort_order:
         type: integer
-    type: object
-  models.ProductCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
-    type: object
-  models.ProductCustomCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
     type: object
   models.User:
     properties:
@@ -223,6 +437,8 @@ definitions:
         type: number
       reviews_count:
         type: integer
+      role:
+        type: string
       unread_messages_count:
         type: integer
       updated_at:
@@ -562,6 +778,121 @@ paths:
       summary: Создать запрос на покупку товара
       tags:
       - orders
+  /ads/{id}/promotions:
+    get:
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PromotionResponse'
+            type: array
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Активные промо объявления
+      tags:
+      - promotion
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: plan_code и idempotency_key
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PurchasePromotionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PurchasePromotionResponse'
+        "400":
+          description: INSUFFICIENT_FUNDS / PLAN_NOT_FOUND / PLAN_INACTIVE / INVALID_AD_STATUS
+            / INVALID_REQUEST
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: NOT_AD_OWNER
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: AD_NOT_FOUND
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Купить продвижение объявления
+      tags:
+      - promotion
+  /ads/{id}/view:
+    post:
+      description: Записывает просмотр с дедупликацией и возвращает актуальный счётчик
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: UUID v4 идентификатор устройства
+        in: header
+        name: X-Device-ID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: views_count
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+        "400":
+          description: invalid ad id / invalid X-Device-ID
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: ad not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Зафиксировать просмотр объявления
+      tags:
+      - ads
   /ads/search:
     get:
       description: Поиск объявлений по заголовку и описанию с поддержкой триграмм,
@@ -813,35 +1144,6 @@ paths:
       summary: Удалить из корзины
       tags:
       - cart
-  /cart/checkout:
-    post:
-      description: Совершает покупку всех товаров из корзины и возвращает контакты
-        продавцов
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: успешное оформление заказа
-          schema:
-            $ref: '#/definitions/dto.CheckoutResponse'
-        "400":
-          description: 'cart is empty / one or more products are no longer available:
-            Ошибка оформления заказа'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "401":
-          description: 'unauthorized: Пользователь не авторизован'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-        "500":
-          description: 'internal error: Ошибка сервера'
-          schema:
-            $ref: '#/definitions/dto.ErrorResponse'
-      security:
-      - CookieAuth: []
-      summary: Оформить заказ
-      tags:
-      - cart
   /categories/{id}/characteristics:
     get:
       description: Возвращает список предопределённых характеристик категории с допустимыми
@@ -872,6 +1174,103 @@ paths:
       summary: Получить характеристики категории
       tags:
       - categories
+  /chats:
+    get:
+      description: |-
+        Возвращает чаты, в которых участвует текущий пользователь,
+        отсортированные по времени последнего сообщения.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: список чатов
+          schema:
+            $ref: '#/definitions/dto.ChatListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить список чатов
+      tags:
+      - chats
+  /chats/{id}:
+    get:
+      description: |-
+        Возвращает объявление, собеседника и все сообщения чата.
+        Доступ только у участников чата — для остальных 400.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: детали чата
+          schema:
+            $ref: '#/definitions/dto.ChatDetailResponse'
+        "400":
+          description: chat not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Получить чат
+      tags:
+      - chats
+  /chats/{id}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,
+        объявление переводится в статус 'sold' и удаляется из корзин всех пользователей.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: покупка подтверждена успешно
+          schema:
+            $ref: '#/definitions/dto.SuccessConfirmOrderResponse'
+        "400":
+          description: 'invalid chat id / forbidden: not the seller / ad is not active'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Подтвердить покупку товара
+      tags:
+      - orders
   /profile:
     get:
       description: Возвращает данные профиля на основе userID из контекста (JWT)
@@ -993,6 +1392,55 @@ paths:
       summary: Получить избранное
       tags:
       - favorites
+  /profile/promotions:
+    get:
+      parameters:
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PromotionListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: История покупок продвижения
+      tags:
+      - promotion
+  /promotion/plans:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PromotionPlanResponse'
+            type: array
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Список тарифов продвижения
+      tags:
+      - promotion
   /support/tickets:
     get:
       description: Возвращает список обращений текущего пользователя
@@ -1430,6 +1878,94 @@ paths:
       summary: Получить объявления пользователя
       tags:
       - ads
+  /wallet:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WalletResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить баланс кошелька
+      tags:
+      - wallet
+  /wallet/topup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Сумма в рублях и idempotency_key
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TopupWalletRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TopupWalletResponse'
+        "400":
+          description: INVALID_AMOUNT / INVALID_REQUEST
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Пополнить кошелёк
+      tags:
+      - wallet
+  /wallet/transactions:
+    get:
+      parameters:
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WalletTransactionListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: История операций по кошельку
+      tags:
+      - wallet
 securityDefinitions:
   CookieAuth:
     description: JWT session token
