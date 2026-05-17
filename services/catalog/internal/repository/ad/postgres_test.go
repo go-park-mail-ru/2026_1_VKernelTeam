@@ -13,6 +13,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	colID          = "id"
+	colSellerID    = "seller_id"
+	colCategoryID  = "category_id"
+	colTitle       = "title"
+	colDescription = "description"
+	colPrice       = "price"
+	colStatus      = "status"
+	colLocation    = "location"
+	colCreatedAt   = "created_at"
+	colUpdatedAt   = "updated_at"
+	colPhotos      = "photos"
+	colViewsCount  = "views_count"
+	colFavorites   = "favorites_count"
+	photoP1        = "p1.jpg"
+)
+
 // expectEmptyCharacteristics добавляет mock-ожидания для двух запросов характеристик (пустые результаты).
 func expectEmptyCharacteristics(mock pgxmock.PgxPoolIface, ids []int64) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
@@ -48,7 +65,7 @@ func TestAdStorage_GetAdByID(t *testing.T) {
 		ad, err := storage.GetAdByID(ctx, adID)
 		assert.NoError(t, err)
 		assert.Equal(t, adID, ad.ID)
-		assert.Equal(t, []string{"p1.jpg"}, ad.Photos)
+		assert.Equal(t, []string{photoP1}, ad.Photos)
 	})
 
 	t.Run("NotFound", func(t *testing.T) {

@@ -10,8 +10,10 @@ import (
 	sharedkafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/shared/kafka"
 )
 
+const testBrokerAddr = "localhost:9092"
+
 func TestNewConsumer_RegistersHandlers(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	c := NewConsumer([]string{testBrokerAddr}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if c == nil {
 		t.Fatal("expected consumer")
 	}
@@ -21,8 +23,8 @@ func TestNewConsumer_RegistersHandlers(t *testing.T) {
 }
 
 func TestHandleUserDeleted_NoOp(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
-	defer c.Close()
+	c := NewConsumer([]string{testBrokerAddr}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	defer func() { _ = c.Close() }()
 
 	payload, _ := json.Marshal(sharedkafka.UserPayload{UserID: 7})
 	ev := sharedkafka.Event{EventType: sharedkafka.EventUserDeleted, EventID: "id", Payload: payload}
@@ -32,8 +34,8 @@ func TestHandleUserDeleted_NoOp(t *testing.T) {
 }
 
 func TestHandleUserUpdated_NoOp(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
-	defer c.Close()
+	c := NewConsumer([]string{testBrokerAddr}, "test-group", slog.New(slog.NewTextHandler(io.Discard, nil)))
+	defer func() { _ = c.Close() }()
 
 	payload, _ := json.Marshal(sharedkafka.UserPayload{UserID: 7})
 	ev := sharedkafka.Event{EventType: sharedkafka.EventUserUpdated, EventID: "id", Payload: payload}

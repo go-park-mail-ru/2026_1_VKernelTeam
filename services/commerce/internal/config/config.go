@@ -25,9 +25,9 @@ type HTTPConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers     string
+	Brokers      string
 	AdEventTopic string
-	GroupID     string
+	GroupID      string
 }
 
 // MustLoadConfig читает path из --config / CONFIG_PATH и .env.
@@ -46,7 +46,7 @@ func MustLoadConfig() *Config {
 	if err != nil {
 		panic("failed to open config file: " + err.Error())
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var raw struct {
 		Env  string     `json:"env"`

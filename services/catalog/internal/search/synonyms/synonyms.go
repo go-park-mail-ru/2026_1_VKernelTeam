@@ -2,10 +2,19 @@ package synonyms
 
 import "strings"
 
+// aifonSpelling — одно из альтернативных написаний "iphone".
+const aifonSpelling = "aifon"
+
+// aiphoneSpelling — ещё одно альтернативное написание "iphone".
+const aiphoneSpelling = "aiphone"
+
+// aifonCyrillic — кириллическое написание "iphone".
+const aifonCyrillic = "айфон"
+
 // synonymGroups содержит группы синонимов для брендов и сложных заимствований.
 // Каждая группа — это набор написаний одного и того же слова.
 var synonymGroups = [][]string{
-	{"iphone", "айфон", "aifon", "aiphone"},
+	{"iphone", aifonCyrillic, aifonSpelling, aiphoneSpelling},
 	{"apple", "апле", "эпл", "эппл"},
 	{"xiaomi", "сяоми", "ксиоми", "ксиаоми", "шаоми"},
 	{"samsung", "самсунг", "самсун"},

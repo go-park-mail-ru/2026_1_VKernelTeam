@@ -11,12 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// kafkaTestBroker — фиктивный адрес брокера, используемый в тестах пакета.
+const kafkaTestBroker = "localhost:9092"
+
 func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func TestNewProducer_AndClose(t *testing.T) {
-	p := NewProducer([]string{"localhost:9092"}, "test.topic", discardLogger())
+	p := NewProducer([]string{kafkaTestBroker}, "test.topic", discardLogger())
 	require.NotNil(t, p)
 	require.NotNil(t, p.writer)
 	assert.Equal(t, "test.topic", p.topic)
@@ -24,8 +27,8 @@ func TestNewProducer_AndClose(t *testing.T) {
 }
 
 func TestProducer_Publish_MarshalError(t *testing.T) {
-	p := NewProducer([]string{"localhost:9092"}, "test.topic", discardLogger())
-	defer p.Close()
+	p := NewProducer([]string{kafkaTestBroker}, "test.topic", discardLogger())
+	defer func() { _ = p.Close() }()
 
 	// функция в payload не сериализуется в JSON.
 	err := p.Publish(context.Background(), "key", EventUserUpdated, func() {})
@@ -35,7 +38,7 @@ func TestProducer_Publish_MarshalError(t *testing.T) {
 func TestProducer_Publish_WriteFails(t *testing.T) {
 	// Адрес заведомо закрыт; короткий дедлайн не даст висеть.
 	p := NewProducer([]string{"127.0.0.1:1"}, "test.topic", discardLogger())
-	defer p.Close()
+	defer func() { _ = p.Close() }()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()

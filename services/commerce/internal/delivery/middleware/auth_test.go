@@ -21,7 +21,7 @@ func TestGRPCAuthMiddleware_NoCookie(t *testing.T) {
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", rr.Code)
@@ -36,7 +36,7 @@ func TestGRPCAuthMiddleware_InvalidToken(t *testing.T) {
 	mw := GRPCAuthMiddleware(newTestLog(), tv)
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "token", Value: "x"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -58,7 +58,7 @@ func TestGRPCAuthMiddleware_PutsUserIDInContext(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "token", Value: "x"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const statusActive = "active"
+
 func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 }
@@ -31,7 +33,7 @@ func TestAddToCart(t *testing.T) {
 		adsMock := mocks.NewMockAdsProvider(ctrl)
 		uc := cart.New(log, cartMock, adsMock)
 
-		ad := models.Ad{ID: 10, SellerID: 2, Status: "active"}
+		ad := models.Ad{ID: 10, SellerID: 2, Status: statusActive}
 		adsMock.EXPECT().GetAdByID(gomock.Any(), int64(10)).Return(ad, nil)
 		cartMock.EXPECT().Add(gomock.Any(), int64(1), int64(10)).Return(nil)
 
@@ -47,7 +49,7 @@ func TestAddToCart(t *testing.T) {
 		adsMock := mocks.NewMockAdsProvider(ctrl)
 		uc := cart.New(log, cartMock, adsMock)
 
-		ad := models.Ad{ID: 10, SellerID: 1, Status: "active"}
+		ad := models.Ad{ID: 10, SellerID: 1, Status: statusActive}
 		adsMock.EXPECT().GetAdByID(gomock.Any(), int64(10)).Return(ad, nil)
 
 		err := uc.AddToCart(context.Background(), 1, 10)
@@ -94,7 +96,7 @@ func TestAddToCart(t *testing.T) {
 		adsMock := mocks.NewMockAdsProvider(ctrl)
 		uc := cart.New(log, cartMock, adsMock)
 
-		ad := models.Ad{ID: 10, SellerID: 2, Status: "active"}
+		ad := models.Ad{ID: 10, SellerID: 2, Status: statusActive}
 		adsMock.EXPECT().GetAdByID(gomock.Any(), int64(10)).Return(ad, nil)
 		cartMock.EXPECT().Add(gomock.Any(), int64(1), int64(10)).Return(errors.New("product already in cart"))
 
@@ -241,4 +243,3 @@ func TestGetCart(t *testing.T) {
 		assert.Equal(t, int64(700), result.TotalPrice)
 	})
 }
-

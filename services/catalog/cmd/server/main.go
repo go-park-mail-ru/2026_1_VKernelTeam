@@ -24,7 +24,6 @@ import (
 	catalogv1 "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/proto/gen/catalog/v1"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/config"
-	authgrpc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/grpc"
 	cataloggrpc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/grpc"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/handlers"
 	catalogkafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/kafka"
@@ -69,7 +68,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	authClient, err := authgrpc.NewAuthClient(cfg.AuthGRPCAddr)
+	authClient, err := cataloggrpc.NewAuthClient(cfg.AuthGRPCAddr)
 	if err != nil {
 		log.Error("auth grpc client failed", slog.String("error", err.Error()))
 		os.Exit(1)
@@ -116,7 +115,7 @@ func main() {
 
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.GRPC.Port)
-		lis, err := net.Listen("tcp", addr)
+		lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 		if err != nil {
 			grpcErr <- fmt.Errorf("grpc listen %s: %w", addr, err)
 			return
@@ -158,7 +157,7 @@ func buildHTTPServer(
 	port int,
 	ads *handlers.AdsHandlers,
 	views *handlers.ViewsHandlers,
-	authClient *authgrpc.AuthClient,
+	authClient *cataloggrpc.AuthClient,
 ) *http.Server {
 	mux := http.NewServeMux()
 	prefix := api.ApiPrefix

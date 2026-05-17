@@ -1,0 +1,29 @@
+name: CD
+
+# Запускается после успешного workflow CI на ветке dev.
+# К этому моменту свежие образы уже лежат в ghcr.io.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [dev]
+
+concurrency:
+  group: cd-dev
+  cancel-in-progress: false        # деплои не отменяем - дожидаемся
+
+jobs:
+  deploy:
+    # Деплоим только если CI завершился успехом.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VM over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            cd ~/2026_1_VKernelTeam
+            make deploy

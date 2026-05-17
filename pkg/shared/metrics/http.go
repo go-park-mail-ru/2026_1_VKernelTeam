@@ -23,6 +23,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
+// labelService — имя ConstLabel'а, в который попадает имя сервиса.
+const labelService = "service"
+
 // HTTPMetrics — набор HTTP-метрик одного сервиса.
 type HTTPMetrics struct {
 	requests *prometheus.CounterVec
@@ -50,13 +53,13 @@ func New(service string) *HTTPMetrics {
 		requests: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name:        "http_requests_total",
 			Help:        "Количество обработанных HTTP-запросов.",
-			ConstLabels: prometheus.Labels{"service": service},
+			ConstLabels: prometheus.Labels{labelService: service},
 		}, []string{"method", "path", "status"}),
 		duration: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:        "http_request_duration_seconds",
 			Help:        "Длительность обработки HTTP-запросов в секундах.",
 			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"service": service},
+			ConstLabels: prometheus.Labels{labelService: service},
 		}, []string{"method", "path"}),
 	}
 	httpRegistry[service] = m

@@ -34,7 +34,7 @@ func New(pool *redis.Pool, log *slog.Logger, streamKey, consumerGroup, consumerN
 // EnsureConsumerGroup создаёт consumer group, если она не существует.
 func (s *ViewStream) EnsureConsumerGroup() error {
 	conn := s.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// XGROUP CREATE key groupname $ MKSTREAM — создаёт группу и стрим
 	_, err := conn.Do("XGROUP", "CREATE", s.streamKey, s.consumerGroup, "$", "MKSTREAM")
@@ -53,7 +53,7 @@ func (s *ViewStream) EnsureConsumerGroup() error {
 // Publish отправляет событие просмотра в Redis Stream.
 func (s *ViewStream) Publish(_ context.Context, event models.ViewEvent) error {
 	conn := s.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	userIDStr := ""
 	if event.UserID != nil {
@@ -74,7 +74,7 @@ func (s *ViewStream) Publish(_ context.Context, event models.ViewEvent) error {
 // ReadBatch читает пачку событий из Redis Stream через consumer group.
 func (s *ViewStream) ReadBatch(_ context.Context, count int64, blockTimeout time.Duration) ([]models.ViewEvent, error) {
 	conn := s.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	blockMs := int(blockTimeout.Milliseconds())
 
@@ -102,7 +102,7 @@ func (s *ViewStream) Ack(_ context.Context, messageIDs []string) error {
 	}
 
 	conn := s.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	args := make([]any, 0, len(messageIDs)+2)
 	args = append(args, s.streamKey, s.consumerGroup)
@@ -180,4 +180,3 @@ func (s *ViewStream) parseStreamReply(reply []any) ([]models.ViewEvent, error) {
 
 	return events, nil
 }
-

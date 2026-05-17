@@ -16,6 +16,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	statusOpen   = "open"
+	statusClosed = "closed"
+	descValue    = "Desc"
+	titleValue   = "Title"
+	categoryBug  = "bug"
+)
+
 func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError}))
 }
@@ -34,16 +42,16 @@ func TestSupportTicketService_CreateTicket(t *testing.T) {
 
 	storageMock.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, t *models.SupportTicket) (int64, error) {
 		t.ID = 100
-		t.Status = "open"
+		t.Status = statusOpen
 		t.CreatedAt = now
 		t.UpdatedAt = now
 		return int64(100), nil
 	})
 
-	resp, err := service.CreateTicket(ctx, int64(9), &dto.CreateTicketRequest{Category: "bug", Title: "Title", Description: "Desc"})
+	resp, err := service.CreateTicket(ctx, int64(9), &dto.CreateTicketRequest{Category: categoryBug, Title: titleValue, Description: descValue})
 	require.NoError(t, err)
 	assert.Equal(t, int64(100), resp.ID)
-	assert.Equal(t, "open", resp.Status)
+	assert.Equal(t, statusOpen, resp.Status)
 }
 
 func TestSupportTicketService_CreateTicket_InvalidInput(t *testing.T) {
@@ -62,7 +70,7 @@ func TestSupportTicketService_GetMyTickets(t *testing.T) {
 	storageMock := mocks.NewMockTicketStorage(ctrl)
 	service := supportticket.New(log, storageMock)
 
-	tickets := []models.SupportTicket{{ID: 10, UserID: 5, Category: "bug", Status: "open", Title: "Title", Description: "Desc", CreatedAt: time.Now(), UpdatedAt: time.Now()}}
+	tickets := []models.SupportTicket{{ID: 10, UserID: 5, Category: categoryBug, Status: statusOpen, Title: titleValue, Description: descValue, CreatedAt: time.Now(), UpdatedAt: time.Now()}}
 	storageMock.EXPECT().GetByUserID(ctx, int64(5)).Return(tickets, nil)
 
 	resp, err := service.GetMyTickets(ctx, 5)
@@ -81,7 +89,7 @@ func TestSupportTicketService_GetAllTickets(t *testing.T) {
 	storageMock := mocks.NewMockTicketStorage(ctrl)
 	service := supportticket.New(log, storageMock)
 
-	tickets := []models.SupportTicket{{ID: 11, UserID: 6, Category: "complaint", Status: "open", Title: "Title", Description: "Desc", CreatedAt: time.Now(), UpdatedAt: time.Now()}}
+	tickets := []models.SupportTicket{{ID: 11, UserID: 6, Category: "complaint", Status: statusOpen, Title: titleValue, Description: descValue, CreatedAt: time.Now(), UpdatedAt: time.Now()}}
 	storageMock.EXPECT().GetAll(ctx).Return(tickets, nil)
 
 	resp, err := service.GetAllTickets(ctx)
@@ -117,11 +125,11 @@ func TestSupportTicketService_ChangeStatus_Success(t *testing.T) {
 	service := supportticket.New(log, storageMock)
 
 	timeValue := time.Now()
-	storageMock.EXPECT().UpdateStatus(ctx, int64(4), "closed").Return(timeValue, nil)
+	storageMock.EXPECT().UpdateStatus(ctx, int64(4), statusClosed).Return(timeValue, nil)
 
-	resp, err := service.ChangeStatus(ctx, 4, &dto.ChangeStatusRequest{Status: "closed"})
+	resp, err := service.ChangeStatus(ctx, 4, &dto.ChangeStatusRequest{Status: statusClosed})
 	require.NoError(t, err)
-	assert.Equal(t, "closed", resp.Status)
+	assert.Equal(t, statusClosed, resp.Status)
 	assert.WithinDuration(t, timeValue, resp.UpdatedAt, time.Second)
 }
 
@@ -135,7 +143,7 @@ func TestSupportTicketService_RateTicket_AlreadyRated(t *testing.T) {
 	storageMock := mocks.NewMockTicketStorage(ctrl)
 	service := supportticket.New(log, storageMock)
 
-	storageMock.EXPECT().GetByID(ctx, int64(5)).Return(&models.SupportTicket{ID: 5, UserID: 7, Status: "closed", Rating: ptr(3)}, nil)
+	storageMock.EXPECT().GetByID(ctx, int64(5)).Return(&models.SupportTicket{ID: 5, UserID: 7, Status: statusClosed, Rating: ptr(3)}, nil)
 
 	_, err := service.RateTicket(ctx, 7, 5, 4)
 	assert.ErrorIs(t, err, supportticket.ErrAlreadyRated)
@@ -153,7 +161,7 @@ func TestSupportTicketService_UpdateTicket(t *testing.T) {
 	storageMock := mocks.NewMockTicketStorage(ctrl)
 	service := supportticket.New(log, storageMock)
 
-	ticket := &models.SupportTicket{ID: 3, UserID: 5, Status: "open", Category: "bug", Title: "Old", Description: "Old desc", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	ticket := &models.SupportTicket{ID: 3, UserID: 5, Status: statusOpen, Category: categoryBug, Title: "Old", Description: "Old desc", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	storageMock.EXPECT().GetByID(ctx, int64(3)).Return(ticket, nil)
 	storageMock.EXPECT().Update(ctx, gomock.Any()).Return(nil)
@@ -180,7 +188,7 @@ func TestSupportTicketService_RateTicket(t *testing.T) {
 	storageMock := mocks.NewMockTicketStorage(ctrl)
 	service := supportticket.New(log, storageMock)
 
-	storageMock.EXPECT().GetByID(ctx, int64(5)).Return(&models.SupportTicket{ID: 5, UserID: 7, Status: "closed", Rating: nil}, nil)
+	storageMock.EXPECT().GetByID(ctx, int64(5)).Return(&models.SupportTicket{ID: 5, UserID: 7, Status: statusClosed, Rating: nil}, nil)
 	storageMock.EXPECT().SetRating(ctx, int64(5), 4).Return(nil)
 
 	resp, err := service.RateTicket(ctx, 7, 5, 4)
