@@ -9,7 +9,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-const serviceLabel = "commerce"
+const (
+	labelService = "service"
+	serviceLabel = "commerce"
+)
 
 // Business — набор бизнес-метрик commerce.
 type Business struct {
@@ -31,22 +34,22 @@ func Get() *Business {
 			PromotionPurchases: promauto.NewCounterVec(prometheus.CounterOpts{
 				Name:        "commerce_promotion_purchases_total",
 				Help:        "Количество успешных покупок продвижения.",
-				ConstLabels: prometheus.Labels{"service": serviceLabel},
+				ConstLabels: prometheus.Labels{labelService: serviceLabel},
 			}, []string{"kind", "plan_code"}),
 			PromotionPurchaseErrors: promauto.NewCounterVec(prometheus.CounterOpts{
 				Name:        "commerce_promotion_purchase_errors_total",
 				Help:        "Количество ошибок при покупке продвижения по типам.",
-				ConstLabels: prometheus.Labels{"service": serviceLabel},
+				ConstLabels: prometheus.Labels{labelService: serviceLabel},
 			}, []string{"error_code"}),
 			WalletTopups: promauto.NewCounter(prometheus.CounterOpts{
 				Name:        "commerce_wallet_topups_total",
 				Help:        "Количество успешных пополнений кошелька.",
-				ConstLabels: prometheus.Labels{"service": serviceLabel},
+				ConstLabels: prometheus.Labels{labelService: serviceLabel},
 			}),
 			WalletTopupsAmount: promauto.NewCounter(prometheus.CounterOpts{
 				Name:        "commerce_wallet_topups_amount_rubles_total",
 				Help:        "Суммарный объём пополнений кошелька в рублях.",
-				ConstLabels: prometheus.Labels{"service": serviceLabel},
+				ConstLabels: prometheus.Labels{labelService: serviceLabel},
 			}),
 		}
 	})
