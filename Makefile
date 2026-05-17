@@ -1,7 +1,10 @@
 .PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install \
        logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
-include .env
+# -include (со знаком «минус») - не падать, если .env нет.
+# В CI .env отсутствует (он в .gitignore); CI-цели lint-ci/test-ci/build-* его не требуют.
+# Локально и на VM .env есть - переменные подхватятся как раньше.
+-include .env
 export
 
 COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml

@@ -20,9 +20,10 @@ jobs:
         with:
           go-version: '1.26.0'
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        # v7 - версия action, совместимая с golangci-lint v2 (наш .golangci.yaml).
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: latest          # v2.x, понимает наш .golangci.yaml
+          version: latest          # golangci-lint v2.x
           args: --timeout=5m ./pkg/... ./services/...
 
   test:
