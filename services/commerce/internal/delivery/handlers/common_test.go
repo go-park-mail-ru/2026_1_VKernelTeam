@@ -9,6 +9,12 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
+const (
+	keyProductID = "product_id"
+	titleIPhone  = "iPhone"
+	nameIvan     = "Иван"
+)
+
 func setupCartHandlers(t *testing.T) (*CartHandlers, *mocks.MockCart) {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))

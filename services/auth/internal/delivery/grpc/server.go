@@ -24,6 +24,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// roleAdmin — роль администратора, имеющая доступ ко всему.
+const roleAdmin = "admin"
+
 // UserProvider — интерфейс для получения данных пользователей из БД.
 // Auth gRPC сервер работает напрямую с repository, а не через usecase,
 // потому что gRPC методы — это простые запросы данных без бизнес-логики.
@@ -166,7 +169,7 @@ func (s *Server) CheckRole(ctx context.Context, req *authv1.CheckRoleRequest) (*
 	}
 
 	// admin имеет доступ ко всему
-	allowed := role == req.GetRequiredRole() || role == "admin"
+	allowed := role == req.GetRequiredRole() || role == roleAdmin
 
 	return &authv1.CheckRoleResponse{
 		Allowed:    allowed,

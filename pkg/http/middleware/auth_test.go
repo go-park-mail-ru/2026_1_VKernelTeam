@@ -14,6 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// cookieNameToken — имя cookie с JWT, используемое в тестах middleware.
+const cookieNameToken = "token"
+
 // mintTestToken — локальная мини-реализация подписи JWT для тестов middleware.
 // Раньше использовался удалённый pkg/jwt из монолита; теперь auth-сервис
 // держит свою копию у себя, а тесту middleware достаточно прямого вызова
@@ -69,7 +72,7 @@ func TestAuthMiddleware(t *testing.T) {
 	validToken := mintTestToken(t, 42, time.Hour, secret)
 
 	t.Run("MissingToken", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)
@@ -79,8 +82,8 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("InvalidToken", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: "invalid.token.str"})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: "invalid.token.str"})
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)
@@ -90,8 +93,8 @@ func TestAuthMiddleware(t *testing.T) {
 	})
 
 	t.Run("ValidToken", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: validToken})
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)
@@ -106,8 +109,8 @@ func TestAuthMiddleware(t *testing.T) {
 
 		bl.Add(jti, time.Now().Add(time.Hour))
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: validToken})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: validToken})
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)
@@ -120,8 +123,8 @@ func TestAuthMiddleware(t *testing.T) {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{})
 		invalidClaimsToken, _ := token.SignedString([]byte(secret))
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: invalidClaimsToken})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: invalidClaimsToken})
 		rr := httptest.NewRecorder()
 
 		handlerToTest.ServeHTTP(rr, req)

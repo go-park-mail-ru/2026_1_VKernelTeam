@@ -15,6 +15,15 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 )
 
+const (
+	colCreatedAt = "created_at"
+	colEmail     = "email"
+	colFirstName = "first_name"
+	colPassHash  = "password_hash"
+	colRole      = "role"
+	colUpdatedAt = "updated_at"
+)
+
 func TestUserStorage_SaveUser(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -57,7 +66,7 @@ func TestUserStorage_User(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		now := time.Now()
-		rows := pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "role", "created_at", "updated_at"}).
+		rows := pgxmock.NewRows([]string{"id", colFirstName, colEmail, colPassHash, colRole, colCreatedAt, colUpdatedAt}).
 			AddRow(int64(1), "Ivan", email, []byte("hash"), "user", now, now)
 
 		mock.ExpectQuery(`SELECT id, first_name, email`).
@@ -90,8 +99,8 @@ func TestUserStorage_UserByID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		now := time.Now()
 		columns := []string{
-			"id", "first_name", "email", "password_hash", "avatar_path",
-			"rating", "role", "created_at", "updated_at",
+			"id", colFirstName, "email", colPassHash, "avatar_path",
+			"rating", colRole, colCreatedAt, colUpdatedAt,
 		}
 
 		rows := pgxmock.NewRows(columns).
@@ -121,7 +130,7 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 
 		mock.ExpectQuery(`UPDATE "user"`).
 			WithArgs(newName, userID).
-			WillReturnRows(pgxmock.NewRows([]string{"id", "first_name", "email", "password_hash", "role", "created_at", "updated_at"}).
+			WillReturnRows(pgxmock.NewRows([]string{"id", colFirstName, "email", colPassHash, colRole, colCreatedAt, colUpdatedAt}).
 				AddRow(userID, newName, "test@mail.ru", []byte("hash"), "user", time.Now(), time.Now()))
 
 		u, err := repo.UpdateUser(ctx, userID, newName)

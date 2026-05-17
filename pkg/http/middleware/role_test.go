@@ -31,7 +31,7 @@ func TestRoleMiddleware_NoUserID(t *testing.T) {
 		t.Fatal("must not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -44,7 +44,7 @@ func TestRoleMiddleware_ProviderError(t *testing.T) {
 		t.Fatal("must not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req = req.WithContext(context.WithValue(req.Context(), UserIDKey, int64(1)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -58,7 +58,7 @@ func TestRoleMiddleware_RoleNotAllowed(t *testing.T) {
 		t.Fatal("must not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req = req.WithContext(context.WithValue(req.Context(), UserIDKey, int64(1)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -75,7 +75,7 @@ func TestRoleMiddleware_Allowed(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req = req.WithContext(context.WithValue(req.Context(), UserIDKey, int64(1)))
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)

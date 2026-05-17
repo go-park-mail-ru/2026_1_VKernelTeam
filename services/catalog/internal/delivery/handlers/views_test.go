@@ -23,7 +23,7 @@ func newViewsMock(t *testing.T) (*ViewsHandlers, *mocks.MockViews) {
 
 func TestHandleRecordView_InvalidAdID(t *testing.T) {
 	h, _ := newViewsMock(t)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/ads/abc/view", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/ads/abc/view", nil)
 	req.SetPathValue("id", "abc")
 	rr := httptest.NewRecorder()
 	h.HandleRecordView(rr, req)
@@ -34,7 +34,7 @@ func TestHandleRecordView_InvalidAdID(t *testing.T) {
 
 func TestHandleRecordView_MissingDeviceID(t *testing.T) {
 	h, _ := newViewsMock(t)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/ads/1/view", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/ads/1/view", nil)
 	req.SetPathValue("id", "1")
 	rr := httptest.NewRecorder()
 	h.HandleRecordView(rr, req)
@@ -49,7 +49,7 @@ func TestHandleRecordView_Success(t *testing.T) {
 		gomock.Any(), int64(1), gomock.Nil(), "550e8400-e29b-41d4-a716-446655440000",
 	).Return(int64(10), nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/ads/1/view", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/ads/1/view", nil)
 	req.SetPathValue("id", "1")
 	req.Header.Set("X-Device-ID", "550e8400-e29b-41d4-a716-446655440000")
 	rr := httptest.NewRecorder()
@@ -64,7 +64,7 @@ func TestHandleRecordView_UsecaseError(t *testing.T) {
 	mv.EXPECT().RecordView(gomock.Any(), int64(1), gomock.Nil(), gomock.Any()).
 		Return(int64(0), errors.New("redis down"))
 
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/ads/1/view", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/ads/1/view", nil)
 	req.SetPathValue("id", "1")
 	req.Header.Set("X-Device-ID", "550e8400-e29b-41d4-a716-446655440000")
 	rr := httptest.NewRecorder()

@@ -103,7 +103,7 @@ func main() {
 
 	go func() {
 		addr := fmt.Sprintf(":%d", cfg.GRPC.Port)
-		lis, err := net.Listen("tcp", addr)
+		lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
 		if err != nil {
 			grpcErr <- fmt.Errorf("grpc listen %s: %w", addr, err)
 			return

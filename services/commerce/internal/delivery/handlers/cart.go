@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/validator"
 )
 
@@ -131,4 +131,3 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "removed"})
 }
-

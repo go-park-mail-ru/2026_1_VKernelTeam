@@ -8,9 +8,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	chatRepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/chat"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,7 +18,7 @@ import (
 // newChatReq строит запрос с user_id в контексте и path-param "id".
 func newChatReq(t *testing.T, method, target, pathID string, userID int64) *http.Request {
 	t.Helper()
-	req := httptest.NewRequest(method, target, nil)
+	req := httptest.NewRequestWithContext(t.Context(), method, target, nil)
 	if pathID != "" {
 		req.SetPathValue("id", pathID)
 	}
@@ -48,7 +48,7 @@ func TestHandleCreateOrder(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		h, _ := setupChatHandlers(t)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/ads/38/order", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/ads/38/order", nil)
 		req.SetPathValue("id", "38")
 		rr := httptest.NewRecorder()
 		h.HandleCreateOrder(rr, req)
@@ -109,7 +109,7 @@ func TestHandleConfirmOrder(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		h, _ := setupChatHandlers(t)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/chats/5/confirm", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/chats/5/confirm", nil)
 		req.SetPathValue("id", "5")
 		rr := httptest.NewRecorder()
 		h.HandleConfirmOrder(rr, req)
@@ -174,8 +174,8 @@ func TestHandleGetAllChats(t *testing.T) {
 			Chats: []dto.ChatPreview{
 				{
 					ChatID:  7,
-					Ad:      dto.AdPreview{ID: 38, Title: "iPhone", Price: 1000, Status: "active"},
-					Partner: dto.UserPreview{ID: 2, Name: "Иван"},
+					Ad:      dto.AdPreview{ID: 38, Title: titleIPhone, Price: 1000, Status: "active"},
+					Partner: dto.UserPreview{ID: 2, Name: nameIvan},
 				},
 			},
 		}
@@ -197,7 +197,7 @@ func TestHandleGetAllChats(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		h, _ := setupChatHandlers(t)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/chats", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/chats", nil)
 		rr := httptest.NewRecorder()
 		h.HandleGetAllChats(rr, req)
 
@@ -225,8 +225,8 @@ func TestHandleGetChat(t *testing.T) {
 
 		expected := dto.ChatDetailResponse{
 			ChatID:   5,
-			Ad:       dto.AdPreview{ID: 38, Title: "iPhone", Price: 1000, Status: "active"},
-			Partner:  dto.UserPreview{ID: 2, Name: "Иван"},
+			Ad:       dto.AdPreview{ID: 38, Title: titleIPhone, Price: 1000, Status: "active"},
+			Partner:  dto.UserPreview{ID: 2, Name: nameIvan},
 			Messages: []dto.MessageItem{{ID: 1, SenderID: 1, Text: "hi", Type: "order"}},
 		}
 		mockChat.EXPECT().
@@ -247,7 +247,7 @@ func TestHandleGetChat(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		h, _ := setupChatHandlers(t)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/chats/5", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/chats/5", nil)
 		req.SetPathValue("id", "5")
 		rr := httptest.NewRecorder()
 		h.HandleGetChat(rr, req)

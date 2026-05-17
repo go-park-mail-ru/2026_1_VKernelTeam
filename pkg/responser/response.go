@@ -26,7 +26,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 	w.WriteHeader(code)
 
 	// записываем данные
-	w.Write(response)
+	_, _ = w.Write(response)
 }
 
 // RespondWithError отправляет структурированную ошибку

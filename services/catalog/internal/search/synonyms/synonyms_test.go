@@ -11,16 +11,16 @@ func TestExpand(t *testing.T) {
 	t.Run("known word returns siblings without itself", func(t *testing.T) {
 		got := Expand("iphone")
 		assert.NotContains(t, got, "iphone")
-		assert.ElementsMatch(t, []string{"айфон", "aifon", "aiphone"}, got)
+		assert.ElementsMatch(t, []string{aifonCyrillic, aifonSpelling, aiphoneSpelling}, got)
 	})
 
 	t.Run("case and whitespace are normalized", func(t *testing.T) {
 		got := Expand("  IPhone  ")
-		assert.ElementsMatch(t, []string{"айфон", "aifon", "aiphone"}, got)
+		assert.ElementsMatch(t, []string{aifonCyrillic, aifonSpelling, aiphoneSpelling}, got)
 	})
 
 	t.Run("cyrillic input finds latin sibling", func(t *testing.T) {
-		got := Expand("айфон")
+		got := Expand(aifonCyrillic)
 		assert.Contains(t, got, "iphone")
 	})
 

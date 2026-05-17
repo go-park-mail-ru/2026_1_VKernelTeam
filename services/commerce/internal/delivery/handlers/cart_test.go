@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/dto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,11 +23,11 @@ func TestHandleAddToCart(t *testing.T) {
 		mockCart.EXPECT().AddToCart(gomock.Any(), int64(1), int64(10)).Return(nil)
 
 		body := map[string]interface{}{
-			"product_id": 10,
+			keyProductID: 10,
 		}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -45,10 +45,10 @@ func TestHandleAddToCart(t *testing.T) {
 	t.Run("Unauthorized - no user in context", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		body := map[string]interface{}{"product_id": 10}
+		body := map[string]interface{}{keyProductID: 10}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		rr := httptest.NewRecorder()
 
 		cartH.HandleAddToCart(rr, req)
@@ -59,7 +59,7 @@ func TestHandleAddToCart(t *testing.T) {
 	t.Run("Invalid request body - broken JSON", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBufferString("{invalid"))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBufferString("{invalid"))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -72,10 +72,10 @@ func TestHandleAddToCart(t *testing.T) {
 	t.Run("Invalid product ID - negative", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		body := map[string]interface{}{"product_id": -5}
+		body := map[string]interface{}{keyProductID: -5}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -88,10 +88,10 @@ func TestHandleAddToCart(t *testing.T) {
 	t.Run("Invalid product ID - zero", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		body := map[string]interface{}{"product_id": 0}
+		body := map[string]interface{}{keyProductID: 0}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -106,10 +106,10 @@ func TestHandleAddToCart(t *testing.T) {
 
 		mockCart.EXPECT().AddToCart(gomock.Any(), int64(1), int64(10)).Return(errors.New("product is not active"))
 
-		body := map[string]interface{}{"product_id": 10}
+		body := map[string]interface{}{keyProductID: 10}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -124,10 +124,10 @@ func TestHandleAddToCart(t *testing.T) {
 
 		mockCart.EXPECT().AddToCart(gomock.Any(), int64(1), int64(10)).Return(errors.New("cannot add own product to cart"))
 
-		body := map[string]interface{}{"product_id": 10}
+		body := map[string]interface{}{keyProductID: 10}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -147,10 +147,10 @@ func TestHandleAddToCart(t *testing.T) {
 
 		mockCart.EXPECT().AddToCart(gomock.Any(), int64(1), int64(10)).Return(errors.New("product already in cart"))
 
-		body := map[string]interface{}{"product_id": 10}
+		body := map[string]interface{}{keyProductID: 10}
 		jsonBody, _ := json.Marshal(body)
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/cart", bytes.NewBuffer(jsonBody))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -167,7 +167,7 @@ func TestHandleGetCart(t *testing.T) {
 
 		expectedResponse := &dto.CartResponse{
 			Items: []dto.CartItemResponse{
-				{ProductID: 1, Title: "iPhone", Price: 100000, SellerID: 2, SellerName: "Иван"},
+				{ProductID: 1, Title: titleIPhone, Price: 100000, SellerID: 2, SellerName: nameIvan},
 				{ProductID: 2, Title: "MacBook", Price: 200000, SellerID: 3, SellerName: "Петр"},
 			},
 			TotalPrice: 300000,
@@ -175,7 +175,7 @@ func TestHandleGetCart(t *testing.T) {
 
 		mockCart.EXPECT().GetCart(gomock.Any(), int64(1)).Return(expectedResponse, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/cart", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/cart", nil)
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -189,7 +189,7 @@ func TestHandleGetCart(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(300000), response.TotalPrice)
 		assert.Len(t, response.Items, 2)
-		assert.Equal(t, "iPhone", response.Items[0].Title)
+		assert.Equal(t, titleIPhone, response.Items[0].Title)
 	})
 
 	t.Run("Success empty cart", func(t *testing.T) {
@@ -202,7 +202,7 @@ func TestHandleGetCart(t *testing.T) {
 
 		mockCart.EXPECT().GetCart(gomock.Any(), int64(1)).Return(expectedResponse, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/cart", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/cart", nil)
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -221,7 +221,7 @@ func TestHandleGetCart(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/cart", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/cart", nil)
 		rr := httptest.NewRecorder()
 
 		cartH.HandleGetCart(rr, req)
@@ -234,7 +234,7 @@ func TestHandleGetCart(t *testing.T) {
 
 		mockCart.EXPECT().GetCart(gomock.Any(), int64(1)).Return(nil, errors.New("db error"))
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/cart", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/cart", nil)
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -251,7 +251,7 @@ func TestHandleRemoveFromCart(t *testing.T) {
 
 		mockCart.EXPECT().RemoveFromCart(gomock.Any(), int64(1), int64(10)).Return(nil)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/cart/10", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/cart/10", nil)
 		req.SetPathValue("id", "10")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -270,7 +270,7 @@ func TestHandleRemoveFromCart(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/cart/10", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/cart/10", nil)
 		req.SetPathValue("id", "10")
 		rr := httptest.NewRecorder()
 
@@ -282,7 +282,7 @@ func TestHandleRemoveFromCart(t *testing.T) {
 	t.Run("Invalid path param - non numeric", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/cart/invalid", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/cart/invalid", nil)
 		req.SetPathValue("id", "invalid")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -296,7 +296,7 @@ func TestHandleRemoveFromCart(t *testing.T) {
 	t.Run("Invalid path param - negative ID", func(t *testing.T) {
 		cartH, _ := setupCartHandlers(t)
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/cart/-5", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/cart/-5", nil)
 		req.SetPathValue("id", "-5")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -312,7 +312,7 @@ func TestHandleRemoveFromCart(t *testing.T) {
 
 		mockCart.EXPECT().RemoveFromCart(gomock.Any(), int64(1), int64(99)).Return(errors.New("cart item not found"))
 
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/cart/99", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/v1/cart/99", nil)
 		req.SetPathValue("id", "99")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -323,4 +323,3 @@ func TestHandleRemoveFromCart(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 }
-
