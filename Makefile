@@ -1,4 +1,4 @@
-.PHONY: help run rebuild stop deploy test build-auth build-support build-catalog build-commerce lint fmt vet clean proto proto-install swag swag-install \
+.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install \
        logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
 include .env
@@ -167,6 +167,10 @@ proto:
 
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
+# Цель для CI: тесты с честным exit code (упал тест => пайплайн красный).
+test-ci:
+	go test -race -coverprofile=coverage.out ./pkg/... ./services/...
+
 test:
 	@go test -coverprofile=coverage.tmp ./pkg/... ./services/... >/dev/null 2>&1 || true
 	@# Из покрытия исключаем то, что не наш «бизнес-код»:
@@ -207,15 +211,23 @@ test:
 
 # ─── Деплой ───────────────────────────────────────────────────────────────────
 
+# Деплой на VM: образы уже собраны в CI и лежат в ghcr.io.
+# VM ничего не компилирует, только тянет готовые образы и пересоздаёт контейнеры.
+# git pull нужен для свежих docker-compose.yaml, миграций и nginx-конфига.
 deploy:
 	sudo git pull
-	$(COMPOSE) up -d --build --remove-orphans
+	$(COMPOSE) pull
+	$(COMPOSE) up -d --remove-orphans
 	docker image prune -f
 
 # ─── Утилиты ──────────────────────────────────────────────────────────────────
 
 lint:
 	golangci-lint run --fix ./pkg/... ./services/...
+
+# Цель для CI: линтер без --fix, реальный exit code.
+lint-ci:
+	golangci-lint run --timeout=5m ./pkg/... ./services/...
 
 fmt:
 	go fmt ./...
