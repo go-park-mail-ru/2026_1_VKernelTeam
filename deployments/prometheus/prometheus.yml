@@ -42,3 +42,12 @@ scrape_configs:
     static_configs:
       - targets: ["vector:9598"]
     metrics_path: /metrics
+
+  # PostgreSQL метрики (postgres_exporter под ролью clover_monitoring).
+  # Эта job отвечает за пункт «Мониторинг нагрузки на сервер БД»:
+  # количество соединений, скорости commit/rollback, hit-ratio buffers,
+  # locks, replication-лаг, размер WAL и т.д.
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+    metrics_path: /metrics
