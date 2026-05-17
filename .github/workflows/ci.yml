@@ -85,5 +85,9 @@ jobs:
           tags: |
             ghcr.io/go-park-mail-ru/2026_1_vkernelteam/${{ matrix.service }}:dev
             ghcr.io/go-park-mail-ru/2026_1_vkernelteam/${{ matrix.service }}:${{ github.sha }}
+          # Привязывает пакет к репозиторию: пакет автоматически наследует доступ
+          # репозитория, и коллабораторы могут его тянуть без admin-прав на пакет.
+          labels: |
+            org.opencontainers.image.source=https://github.com/go-park-mail-ru/2026_1_VKernelTeam
           cache-from: type=gha
           cache-to: type=gha,mode=max
