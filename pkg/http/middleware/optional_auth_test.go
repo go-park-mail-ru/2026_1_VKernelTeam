@@ -33,15 +33,15 @@ func TestOptionalAuthMiddleware(t *testing.T) {
 	}
 
 	t.Run("no cookie -> anonymous, 200", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		rec := httptest.NewRecorder()
 		mw(makeHandler(t, false, 0)).ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
 	})
 
 	t.Run("invalid token -> anonymous, 200", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: "garbage"})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: "garbage"})
 		rec := httptest.NewRecorder()
 		mw(makeHandler(t, false, 0)).ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -49,8 +49,8 @@ func TestOptionalAuthMiddleware(t *testing.T) {
 
 	t.Run("valid token -> uid in ctx", func(t *testing.T) {
 		tok := mintTestToken(t, 77, time.Hour, secret)
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: tok})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: tok})
 		rec := httptest.NewRecorder()
 		mw(makeHandler(t, true, 77)).ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -64,8 +64,8 @@ func TestOptionalAuthMiddleware(t *testing.T) {
 		require.NotEmpty(t, jti)
 		bl.revoked[jti] = true
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: tok})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: tok})
 		rec := httptest.NewRecorder()
 		mw(makeHandler(t, false, 0)).ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -79,8 +79,8 @@ func TestOptionalAuthMiddleware(t *testing.T) {
 		tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 		require.NoError(t, err)
 
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
-		req.AddCookie(&http.Cookie{Name: "token", Value: tok})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+		req.AddCookie(&http.Cookie{Name: cookieNameToken, Value: tok})
 		rec := httptest.NewRecorder()
 		mw(makeHandler(t, false, 0)).ServeHTTP(rec, req)
 		assert.Equal(t, http.StatusOK, rec.Code)

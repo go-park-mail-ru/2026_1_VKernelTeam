@@ -32,7 +32,7 @@ func TestGRPCAuthMiddleware_NoCookie(t *testing.T) {
 		t.Fatal("next handler must not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -49,7 +49,7 @@ func TestGRPCAuthMiddleware_InvalidToken(t *testing.T) {
 		t.Fatal("next handler must not be called")
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "token", Value: "bad"})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -74,7 +74,7 @@ func TestGRPCAuthMiddleware_OK_PutsUserIDInContext(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "token", Value: "good"})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)

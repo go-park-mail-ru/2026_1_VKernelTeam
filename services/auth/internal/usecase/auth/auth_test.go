@@ -11,15 +11,20 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/jwt"
 	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 	mock_auth "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth/mocks"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/jwt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const testSecret = "test-secret-key"
+
+const (
+	testEmail    = "test@example.com"
+	testPassword = "password123"
+)
 
 func getTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -34,8 +39,8 @@ func TestRegisterNewUser_Success(t *testing.T) {
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
 
-	email := "test@example.com"
-	password := "password123"
+	email := testEmail
+	password := testPassword
 
 	auth := New(log,
 		storageMock,
@@ -89,7 +94,7 @@ func TestRegisterNewUser_UserExists(t *testing.T) {
 		Return(int64(0), db.ErrUserExists).
 		Times(1)
 
-	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", "password123", "Existing User")
+	_, err := auth.RegisterNewUser(context.Background(), "existing@example.com", testPassword, "Existing User")
 	if err == nil {
 		t.Fatalf("expected error for existing user")
 	}
@@ -107,8 +112,8 @@ func TestLogin_Success(t *testing.T) {
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
-	password := "password123"
-	email := "test@example.com"
+	password := testPassword
+	email := testEmail
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
@@ -157,8 +162,8 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	storageMock := mock_auth.NewMockUserProviderSaver(ctrl)
 	tokenRevoker := mock_auth.NewMockTokenRevoker(ctrl)
 
-	password := "password123"
-	email := "test@example.com"
+	password := testPassword
+	email := testEmail
 	passHash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
 	refreshMock := mock_auth.NewMockRefreshStorage(ctrl)
@@ -218,7 +223,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 		Return(models.User{}, db.ErrUserNotFound).
 		Times(1)
 
-	_, _, _, err := auth.Login(context.Background(), email, "password123")
+	_, _, _, err := auth.Login(context.Background(), email, testPassword)
 
 	if err == nil {
 		t.Fatalf("expected error for non-existent user")
@@ -246,11 +251,11 @@ func TestRegisterNewUser_SaveError(t *testing.T) {
 	)
 
 	storageMock.EXPECT().
-		SaveUser(gomock.Any(), "test@example.com", gomock.Any(), "Test User").
+		SaveUser(gomock.Any(), testEmail, gomock.Any(), "Test User").
 		Return(int64(0), errors.New("db failure")).
 		Times(1)
 
-	_, err := auth.RegisterNewUser(context.Background(), "test@example.com", "password123", "Test User")
+	_, err := auth.RegisterNewUser(context.Background(), testEmail, testPassword, "Test User")
 	if err == nil {
 		t.Fatalf("expected error when saving user fails")
 	}
@@ -503,16 +508,16 @@ func TestUpdateAvatar_Success(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = part.Write(fileContent)
 	assert.NoError(t, err)
-	writer.Close()
+	_ = writer.Close()
 
 	reader := multipart.NewReader(body, writer.Boundary())
 	form, err := reader.ReadForm(10 << 20)
 	assert.NoError(t, err)
-	defer form.RemoveAll()
+	defer func() { _ = form.RemoveAll() }()
 
 	file, err := form.File["avatar"][0].Open()
 	assert.NoError(t, err)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	oldAvatarURL := "https://hb.vkcs.cloud/my-bucket/avatars/old-uuid.png"
 	currentUser := models.User{
@@ -591,16 +596,16 @@ func TestUpdateAvatar_DeleteOldFails(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = part.Write(fileContent)
 	assert.NoError(t, err)
-	writer.Close()
+	_ = writer.Close()
 
 	reader := multipart.NewReader(body, writer.Boundary())
 	form, err := reader.ReadForm(10 << 20)
 	assert.NoError(t, err)
-	defer form.RemoveAll()
+	defer func() { _ = form.RemoveAll() }()
 
 	file, err := form.File["avatar"][0].Open()
 	assert.NoError(t, err)
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	currentUser := models.User{
 		ID:         userID,

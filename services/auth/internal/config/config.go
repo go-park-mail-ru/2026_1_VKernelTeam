@@ -43,7 +43,7 @@ type S3Config struct {
 	RegionName      string
 	BucketName      string
 	AccessKeyID     string
-	SecretAccessKey  string
+	SecretAccessKey string
 }
 
 func MustLoadConfig() *Config {
@@ -62,7 +62,7 @@ func MustLoadConfig() *Config {
 	if err != nil {
 		panic("failed to open config file: " + err.Error())
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var rawConfig struct {
 		Env        string     `json:"env"`
@@ -101,10 +101,10 @@ func MustLoadConfig() *Config {
 		HTTP:        rawConfig.HTTP,
 		GRPC:        rawConfig.GRPC,
 		S3Storage: S3Config{
-			EndpointURL:    mustEnv("S3_ENDPOINT_URL"),
-			RegionName:     mustEnv("S3_REGION_NAME"),
-			BucketName:     mustEnv("S3_BUCKET_NAME"),
-			AccessKeyID:    mustEnv("S3_ACCESS_KEY_ID"),
+			EndpointURL:     mustEnv("S3_ENDPOINT_URL"),
+			RegionName:      mustEnv("S3_REGION_NAME"),
+			BucketName:      mustEnv("S3_BUCKET_NAME"),
+			AccessKeyID:     mustEnv("S3_ACCESS_KEY_ID"),
 			SecretAccessKey: mustEnv("S3_SECRET_ACCESS_KEY"),
 		},
 		Kafka: KafkaConfig{

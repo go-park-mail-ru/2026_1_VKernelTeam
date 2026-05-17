@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/validator"
 )
 
@@ -159,7 +159,7 @@ func (h *AuthHandlers) HandleUploadAvatar(w http.ResponseWriter, r *http.Request
 		responser.RespondWithError(w, http.StatusBadRequest, ErrFailedToGetFile)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	updatedUser, err := h.auth.UpdateAvatar(r.Context(), userID, file, header.Filename)
 	if err != nil {

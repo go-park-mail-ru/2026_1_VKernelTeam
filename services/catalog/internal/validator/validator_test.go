@@ -7,19 +7,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	validName   = "valid"
+	validMinLen = "valid min length"
+	validMaxLen = "valid max length"
+	emptyName   = "empty"
+	tooShort    = "too short"
+	tooLong     = "too long"
+	redValue    = "red"
+	colorField  = "Цвет"
+)
+
 func TestValidateAdTitle(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		wantErr error
 	}{
-		{"valid", "iPhone 14 Pro", nil},
+		{validName, "iPhone 14 Pro", nil},
 		{"valid cyrillic", "Айфон 14 Про", nil},
-		{"valid min length", "12345", nil},
-		{"valid max length", strings.Repeat("a", 150), nil},
-		{"empty", "", ErrAdTitleEmpty},
-		{"too short", "abcd", ErrAdTitleTooShort},
-		{"too long", strings.Repeat("a", 151), ErrAdTitleTooLong},
+		{validMinLen, "12345", nil},
+		{validMaxLen, strings.Repeat("a", 150), nil},
+		{emptyName, "", ErrAdTitleEmpty},
+		{tooShort, "abcd", ErrAdTitleTooShort},
+		{tooLong, strings.Repeat("a", 151), ErrAdTitleTooLong},
 	}
 
 	for _, tt := range tests {
@@ -40,12 +51,12 @@ func TestValidateAdDescription(t *testing.T) {
 		input   string
 		wantErr error
 	}{
-		{"valid", "Хорошее объявление с описанием", nil},
-		{"valid min length", "1234567890", nil},
-		{"valid max length", strings.Repeat("a", 5000), nil},
-		{"empty", "", ErrAdDescriptionEmpty},
-		{"too short", "short", ErrAdDescriptionTooShort},
-		{"too long", strings.Repeat("a", 5001), ErrAdDescriptionTooLong},
+		{validName, "Хорошее объявление с описанием", nil},
+		{validMinLen, "1234567890", nil},
+		{validMaxLen, strings.Repeat("a", 5000), nil},
+		{emptyName, "", ErrAdDescriptionEmpty},
+		{tooShort, "short", ErrAdDescriptionTooShort},
+		{tooLong, strings.Repeat("a", 5001), ErrAdDescriptionTooLong},
 	}
 
 	for _, tt := range tests {
@@ -118,12 +129,12 @@ func TestValidateAdLocation(t *testing.T) {
 		input   string
 		wantErr error
 	}{
-		{"valid", "Москва", nil},
-		{"valid min length", "ab", nil},
-		{"valid max length", strings.Repeat("a", 100), nil},
-		{"empty", "", ErrAdLocationEmpty},
-		{"too short", "a", ErrAdLocationTooShort},
-		{"too long", strings.Repeat("a", 101), ErrAdLocationTooLong},
+		{validName, "Москва", nil},
+		{validMinLen, "ab", nil},
+		{validMaxLen, strings.Repeat("a", 100), nil},
+		{emptyName, "", ErrAdLocationEmpty},
+		{tooShort, "a", ErrAdLocationTooShort},
+		{tooLong, strings.Repeat("a", 101), ErrAdLocationTooLong},
 	}
 
 	for _, tt := range tests {
@@ -140,13 +151,13 @@ func TestValidateAdLocation(t *testing.T) {
 
 func TestValidateCharacteristics(t *testing.T) {
 	defs := []CategoryCharacteristicDef{
-		{ID: 1, AllowedValues: []string{"red", "green", "blue"}},
+		{ID: 1, AllowedValues: []string{redValue, "green", "blue"}},
 		{ID: 2, AllowedValues: nil}, // free-form
 	}
 
 	t.Run("all valid enum + free-form", func(t *testing.T) {
 		err := ValidateCharacteristics([]CharacteristicInput{
-			{CategoryCharacteristicID: 1, Value: "red"},
+			{CategoryCharacteristicID: 1, Value: redValue},
 			{CategoryCharacteristicID: 2, Value: "any text"},
 		}, defs)
 		assert.NoError(t, err)
@@ -161,7 +172,7 @@ func TestValidateCharacteristics(t *testing.T) {
 
 	t.Run("unknown id rejected", func(t *testing.T) {
 		err := ValidateCharacteristics([]CharacteristicInput{
-			{CategoryCharacteristicID: 99, Value: "red"},
+			{CategoryCharacteristicID: 99, Value: redValue},
 		}, defs)
 		assert.ErrorIs(t, err, ErrCharacteristicIDInvalid)
 	})
@@ -186,9 +197,9 @@ func TestValidateCharacteristics(t *testing.T) {
 }
 
 func TestValidateCustomCharacteristics(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
+	t.Run(validName, func(t *testing.T) {
 		err := ValidateCustomCharacteristics([]CustomCharacteristicInput{
-			{Name: "Цвет", Value: "Красный"},
+			{Name: colorField, Value: "Красный"},
 			{Name: "Материал", Value: "Хлопок"},
 		})
 		assert.NoError(t, err)
@@ -223,8 +234,8 @@ func TestValidateCustomCharacteristics(t *testing.T) {
 
 	t.Run("duplicate names", func(t *testing.T) {
 		err := ValidateCustomCharacteristics([]CustomCharacteristicInput{
-			{Name: "Цвет", Value: "красный"},
-			{Name: "Цвет", Value: "синий"},
+			{Name: colorField, Value: "красный"},
+			{Name: colorField, Value: "синий"},
 		})
 		assert.ErrorIs(t, err, ErrCustomCharNameDuplicate)
 	})
@@ -238,7 +249,7 @@ func TestValidateCustomCharacteristics(t *testing.T) {
 
 	t.Run("empty value allowed", func(t *testing.T) {
 		err := ValidateCustomCharacteristics([]CustomCharacteristicInput{
-			{Name: "Цвет", Value: ""},
+			{Name: colorField, Value: ""},
 		})
 		assert.NoError(t, err)
 	})

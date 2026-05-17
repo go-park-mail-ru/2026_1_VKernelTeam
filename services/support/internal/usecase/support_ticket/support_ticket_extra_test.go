@@ -59,7 +59,7 @@ func TestRateTicket_Forbidden(t *testing.T) {
 	svc := supportticket.New(discardLogger(), mockStorage)
 
 	mockStorage.EXPECT().GetByID(gomock.Any(), int64(5)).
-		Return(&models.SupportTicket{ID: 5, UserID: 999, Status: "closed"}, nil)
+		Return(&models.SupportTicket{ID: 5, UserID: 999, Status: statusClosed}, nil)
 
 	_, err := svc.RateTicket(context.Background(), 7, 5, 3)
 	assert.ErrorIs(t, err, supportticket.ErrForbidden)
@@ -73,7 +73,7 @@ func TestRateTicket_NotClosed(t *testing.T) {
 	svc := supportticket.New(discardLogger(), mockStorage)
 
 	mockStorage.EXPECT().GetByID(gomock.Any(), int64(5)).
-		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: "open"}, nil)
+		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: statusOpen}, nil)
 
 	_, err := svc.RateTicket(context.Background(), 7, 5, 3)
 	assert.ErrorIs(t, err, supportticket.ErrTicketNotClosed)
@@ -88,7 +88,7 @@ func TestRateTicket_AlreadyRated(t *testing.T) {
 
 	rating := 4
 	mockStorage.EXPECT().GetByID(gomock.Any(), int64(5)).
-		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: "closed", Rating: &rating}, nil)
+		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: statusClosed, Rating: &rating}, nil)
 
 	_, err := svc.RateTicket(context.Background(), 7, 5, 3)
 	assert.ErrorIs(t, err, supportticket.ErrAlreadyRated)
@@ -115,7 +115,7 @@ func TestRateTicket_SetRatingError(t *testing.T) {
 	svc := supportticket.New(discardLogger(), mockStorage)
 
 	mockStorage.EXPECT().GetByID(gomock.Any(), int64(5)).
-		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: "closed"}, nil)
+		Return(&models.SupportTicket{ID: 5, UserID: 7, Status: statusClosed}, nil)
 	mockStorage.EXPECT().SetRating(gomock.Any(), int64(5), 3).Return(errors.New("db"))
 
 	_, err := svc.RateTicket(context.Background(), 7, 5, 3)

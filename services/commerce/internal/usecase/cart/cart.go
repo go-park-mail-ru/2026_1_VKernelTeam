@@ -160,4 +160,3 @@ func (u *Usecase) GetCart(ctx context.Context, userID int64) (*dto.CartResponse,
 		TotalPrice: total,
 	}, nil
 }
-

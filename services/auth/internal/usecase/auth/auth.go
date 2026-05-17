@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
-	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/jwt"
+	db "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 	"github.com/google/uuid"
 
 	jwtlib "github.com/golang-jwt/jwt/v5"

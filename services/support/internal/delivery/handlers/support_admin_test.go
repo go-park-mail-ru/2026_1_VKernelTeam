@@ -27,11 +27,11 @@ func TestHandleChangeStatus(t *testing.T) {
 			&Services{SupportTicket: mockSupport},
 		)
 
-		expected := &dto.TicketStatusResponse{ID: 12, Status: "closed", UpdatedAt: time.Now()}
+		expected := &dto.TicketStatusResponse{ID: 12, Status: statusClosed, UpdatedAt: time.Now()}
 		mockSupport.EXPECT().ChangeStatus(gomock.Any(), int64(12), gomock.Any()).Return(expected, nil)
 
-		body, _ := json.Marshal(dto.ChangeStatusRequest{Status: "closed"})
-		req := httptest.NewRequest(http.MethodPatch, "/api/v1/support/tickets/12/status", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.ChangeStatusRequest{Status: statusClosed})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/v1/support/tickets/12/status", bytes.NewBuffer(body))
 		req.SetPathValue("id", "12")
 		rr := httptest.NewRecorder()
 
@@ -59,7 +59,7 @@ func TestHandleChangeStatus(t *testing.T) {
 		mockSupport.EXPECT().ChangeStatus(gomock.Any(), int64(5), gomock.Any()).Return(nil, supportticketUC.ErrInvalidStatus)
 
 		body, _ := json.Marshal(dto.ChangeStatusRequest{Status: "invalid_status"})
-		req := httptest.NewRequest(http.MethodPatch, "/api/v1/support/tickets/5/status", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/v1/support/tickets/5/status", bytes.NewBuffer(body))
 		req.SetPathValue("id", "5")
 		rr := httptest.NewRecorder()
 
@@ -80,8 +80,8 @@ func TestHandleChangeStatus(t *testing.T) {
 
 		mockSupport.EXPECT().ChangeStatus(gomock.Any(), int64(100), gomock.Any()).Return(nil, supportticketRepo.ErrTicketNotFound)
 
-		body, _ := json.Marshal(dto.ChangeStatusRequest{Status: "closed"})
-		req := httptest.NewRequest(http.MethodPatch, "/api/v1/support/tickets/100/status", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.ChangeStatusRequest{Status: statusClosed})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/api/v1/support/tickets/100/status", bytes.NewBuffer(body))
 		req.SetPathValue("id", "100")
 		rr := httptest.NewRecorder()
 
@@ -105,7 +105,7 @@ func TestHandleGetAllTickets(t *testing.T) {
 		expected := []dto.TicketResponse{{ID: 1, Title: "Test ticket"}}
 		mockSupport.EXPECT().GetAllTickets(gomock.Any()).Return(expected, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/all", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/all", nil)
 		rr := httptest.NewRecorder()
 
 		handlers.HandleGetAllTickets(rr, req)
@@ -131,7 +131,7 @@ func TestHandleGetAllTickets(t *testing.T) {
 
 		mockSupport.EXPECT().GetAllTickets(gomock.Any()).Return(nil, assert.AnError)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/all", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/all", nil)
 		rr := httptest.NewRecorder()
 
 		handlers.HandleGetAllTickets(rr, req)
@@ -154,7 +154,7 @@ func TestHandleGetStats(t *testing.T) {
 		expected := &dto.StatsResponse{Total: 42}
 		mockSupport.EXPECT().GetStats(gomock.Any()).Return(expected, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/stats", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/stats", nil)
 		rr := httptest.NewRecorder()
 
 		handlers.HandleGetStats(rr, req)
@@ -179,7 +179,7 @@ func TestHandleGetStats(t *testing.T) {
 
 		mockSupport.EXPECT().GetStats(gomock.Any()).Return(nil, assert.AnError)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/stats", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/stats", nil)
 		rr := httptest.NewRecorder()
 
 		handlers.HandleGetStats(rr, req)

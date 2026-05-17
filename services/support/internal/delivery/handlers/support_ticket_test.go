@@ -19,6 +19,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testTicketTitle = "Test ticket"
+	statusClosed    = "closed"
+	categoryGeneral = "general"
+	titleUpdated    = "Updated"
+)
+
 func newLogger(t *testing.T) *slog.Logger {
 	t.Helper()
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -32,11 +39,11 @@ func TestHandleCreateTicket(t *testing.T) {
 		mockSupport := mocks.NewMockSupportTicket(ctrl)
 		handlers := NewSupportTicketHandlers(newLogger(t), &Services{SupportTicket: mockSupport})
 
-		expected := &dto.TicketResponse{ID: 1, Title: "Test ticket", Category: "general"}
+		expected := &dto.TicketResponse{ID: 1, Title: testTicketTitle, Category: categoryGeneral}
 		mockSupport.EXPECT().CreateTicket(gomock.Any(), int64(1), gomock.Any()).Return(expected, nil)
 
-		body, _ := json.Marshal(dto.CreateTicketRequest{Title: "Test ticket", Description: "Test desc", Category: "general"})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.CreateTicketRequest{Title: testTicketTitle, Description: "Test desc", Category: categoryGeneral})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets", bytes.NewBuffer(body))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -54,7 +61,7 @@ func TestHandleCreateTicket(t *testing.T) {
 	t.Run("Unauthorized", func(t *testing.T) {
 		handlers := NewSupportTicketHandlers(newLogger(t), &Services{})
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets", bytes.NewBufferString(`{"title":"Test"}`))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets", bytes.NewBufferString(`{"title":"Test"}`))
 		rr := httptest.NewRecorder()
 
 		handlers.HandleCreateTicket(rr, req)
@@ -71,8 +78,8 @@ func TestHandleCreateTicket(t *testing.T) {
 
 		mockSupport.EXPECT().CreateTicket(gomock.Any(), int64(1), gomock.Any()).Return(nil, supportticketUC.ErrTitleRequired)
 
-		body, _ := json.Marshal(dto.CreateTicketRequest{Title: "", Description: "Test desc", Category: "general"})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.CreateTicketRequest{Title: "", Description: "Test desc", Category: categoryGeneral})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets", bytes.NewBuffer(body))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
 
@@ -94,7 +101,7 @@ func TestHandleGetTicket(t *testing.T) {
 		expected := &dto.TicketResponse{ID: 2, Title: "Ticket"}
 		mockSupport.EXPECT().GetTicket(gomock.Any(), int64(2), int64(1)).Return(expected, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/2", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/2", nil)
 		req.SetPathValue("id", "2")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -113,7 +120,7 @@ func TestHandleGetTicket(t *testing.T) {
 	t.Run("Invalid ticket ID", func(t *testing.T) {
 		handlers := NewSupportTicketHandlers(newLogger(t), &Services{})
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/abc", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/abc", nil)
 		req.SetPathValue("id", "abc")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -133,7 +140,7 @@ func TestHandleGetTicket(t *testing.T) {
 
 		mockSupport.EXPECT().GetTicket(gomock.Any(), int64(2), int64(1)).Return(nil, supportticketUC.ErrForbidden)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/2", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/2", nil)
 		req.SetPathValue("id", "2")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -153,11 +160,11 @@ func TestHandleUpdateTicket(t *testing.T) {
 		mockSupport := mocks.NewMockSupportTicket(ctrl)
 		handlers := NewSupportTicketHandlers(newLogger(t), &Services{SupportTicket: mockSupport})
 
-		expected := &dto.TicketResponse{ID: 3, Title: "Updated"}
+		expected := &dto.TicketResponse{ID: 3, Title: titleUpdated}
 		mockSupport.EXPECT().UpdateTicket(gomock.Any(), int64(3), int64(1), gomock.Any()).Return(expected, nil)
 
-		body, _ := json.Marshal(dto.UpdateTicketRequest{Title: "Updated", Description: "New desc"})
-		req := httptest.NewRequest(http.MethodPut, "/api/v1/support/tickets/3", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.UpdateTicketRequest{Title: titleUpdated, Description: "New desc"})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/v1/support/tickets/3", bytes.NewBuffer(body))
 		req.SetPathValue("id", "3")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -182,8 +189,8 @@ func TestHandleUpdateTicket(t *testing.T) {
 
 		mockSupport.EXPECT().UpdateTicket(gomock.Any(), int64(5), int64(1), gomock.Any()).Return(nil, supportticketRepo.ErrTicketNotFound)
 
-		body, _ := json.Marshal(dto.UpdateTicketRequest{Title: "Updated", Description: "New desc"})
-		req := httptest.NewRequest(http.MethodPut, "/api/v1/support/tickets/5", bytes.NewBuffer(body))
+		body, _ := json.Marshal(dto.UpdateTicketRequest{Title: titleUpdated, Description: "New desc"})
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/v1/support/tickets/5", bytes.NewBuffer(body))
 		req.SetPathValue("id", "5")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -206,7 +213,7 @@ func TestHandleRateTicket(t *testing.T) {
 		mockSupport.EXPECT().RateTicket(gomock.Any(), int64(1), int64(6), int(0)).Return(nil, supportticketUC.ErrInvalidRating)
 
 		body, _ := json.Marshal(dto.RateTicketRequest{Rating: 0})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets/6/rate", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets/6/rate", bytes.NewBuffer(body))
 		req.SetPathValue("id", "6")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -228,7 +235,7 @@ func TestHandleRateTicket(t *testing.T) {
 		mockSupport.EXPECT().RateTicket(gomock.Any(), int64(1), int64(7), int(5)).Return(expected, nil)
 
 		body, _ := json.Marshal(dto.RateTicketRequest{Rating: 5})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets/7/rate", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets/7/rate", bytes.NewBuffer(body))
 		req.SetPathValue("id", "7")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)

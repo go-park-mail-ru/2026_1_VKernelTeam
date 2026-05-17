@@ -1,0 +1,62 @@
+<clickhouse>
+    <text_log remove="1"/>
+    <trace_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <error_log remove="1"/>
+    <query_metric_log remove="1"/>
+    <part_log remove="1"/>
+    <query_thread_log remove="1"/>
+    <query_views_log remove="1"/>
+    <opentelemetry_span_log remove="1"/>
+    <crash_log remove="1"/>
+    <session_log remove="1"/>
+    <backup_log remove="1"/>
+    <blob_storage_log remove="1"/>
+    <zookeeper_log remove="1"/>
+    <s3queue_log remove="1"/>
+
+    <metric_log replace="1">
+        <database>system</database>
+        <table>metric_log</table>
+        <flush_interval_milliseconds>60000</flush_interval_milliseconds>
+        <collect_interval_milliseconds>10000</collect_interval_milliseconds>
+        <max_size_rows>1048576</max_size_rows>
+        <reserved_size_rows>8192</reserved_size_rows>
+        <buffer_size_rows_flush_threshold>524288</buffer_size_rows_flush_threshold>
+        <engine>
+            ENGINE = MergeTree
+            PARTITION BY toYYYYMM(event_date)
+            ORDER BY (event_date, event_time)
+            TTL event_date + INTERVAL 3 DAY DELETE
+            SETTINGS ttl_only_drop_parts=1
+        </engine>
+    </metric_log>
+
+    <asynchronous_metric_log replace="1">
+        <database>system</database>
+        <table>asynchronous_metric_log</table>
+        <flush_interval_milliseconds>60000</flush_interval_milliseconds>
+        <max_size_rows>1048576</max_size_rows>
+        <engine>
+            ENGINE = MergeTree
+            PARTITION BY toYYYYMM(event_date)
+            ORDER BY (event_date, event_time)
+            TTL event_date + INTERVAL 3 DAY DELETE
+            SETTINGS ttl_only_drop_parts=1
+        </engine>
+    </asynchronous_metric_log>
+
+    <query_log replace="1">
+        <database>system</database>
+        <table>query_log</table>
+        <flush_interval_milliseconds>30000</flush_interval_milliseconds>
+        <max_size_rows>1048576</max_size_rows>
+        <engine>
+            ENGINE = MergeTree
+            PARTITION BY toYYYYMM(event_date)
+            ORDER BY (event_date, event_time)
+            TTL event_date + INTERVAL 7 DAY DELETE
+            SETTINGS ttl_only_drop_parts=1
+        </engine>
+    </query_log>
+</clickhouse>

@@ -9,6 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// pathProtected — путь, защищённый CSRF-проверкой, для тестов middleware.
+const pathProtected = "/api/v1/protected"
+
 func TestCSRFMiddleware(t *testing.T) {
 	// хендлер, который можно обернуть в middleware
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,13 +43,13 @@ func TestCSRFMiddleware(t *testing.T) {
 		{
 			name:           "Deny POST without cookie",
 			method:         http.MethodPost,
-			path:           "/api/v1/protected",
+			path:           pathProtected,
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Deny POST with mismatching tokens",
 			method:         http.MethodPost,
-			path:           "/api/v1/protected",
+			path:           pathProtected,
 			cookieToken:    "token1",
 			headerToken:    "token2",
 			expectedStatus: http.StatusBadRequest,
@@ -54,7 +57,7 @@ func TestCSRFMiddleware(t *testing.T) {
 		{
 			name:           "Allow POST with matching tokens",
 			method:         http.MethodPost,
-			path:           "/api/v1/protected",
+			path:           pathProtected,
 			cookieToken:    "matching_token",
 			headerToken:    "matching_token",
 			expectedStatus: http.StatusOK,
@@ -99,7 +102,7 @@ func TestCSRFMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, nil)
 
 			// если в тесте есть кука - добавляем
 			if tt.cookieToken != "" {

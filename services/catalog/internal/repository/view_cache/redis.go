@@ -28,7 +28,7 @@ func New(pool *redis.Pool, dedupTTL, countCacheTTL time.Duration) *ViewCache {
 // Возвращает true, если просмотр новый (ключ создан).
 func (c *ViewCache) CheckAndSetDedup(_ context.Context, productID int64, identifier string) (bool, error) {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	key := fmt.Sprintf("view:%d:%s", productID, identifier)
 	ttlSeconds := int(c.dedupTTL.Seconds())
@@ -48,7 +48,7 @@ func (c *ViewCache) CheckAndSetDedup(_ context.Context, productID int64, identif
 // Возвращает новое значение.
 func (c *ViewCache) IncrementCount(_ context.Context, productID int64) (int64, error) {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	key := fmt.Sprintf("views:count:%d", productID)
 
@@ -68,7 +68,7 @@ func (c *ViewCache) IncrementCount(_ context.Context, productID int64) (int64, e
 // Второе возвращаемое значение — true, если ключ найден.
 func (c *ViewCache) GetCount(_ context.Context, productID int64) (int64, bool, error) {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	key := fmt.Sprintf("views:count:%d", productID)
 
@@ -90,7 +90,7 @@ func (c *ViewCache) GetCount(_ context.Context, productID int64) (int64, bool, e
 // SetCount устанавливает кэшированный счётчик (при cache miss после загрузки из БД).
 func (c *ViewCache) SetCount(_ context.Context, productID int64, count int64) error {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	key := fmt.Sprintf("views:count:%d", productID)
 	ttlSeconds := int(c.countCacheTTL.Seconds())

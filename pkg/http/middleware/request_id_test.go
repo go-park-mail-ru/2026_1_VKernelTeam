@@ -14,7 +14,7 @@ func TestRequestIDMiddleware_GeneratesIDWhenAbsent(t *testing.T) {
 		ctxValue = r.Context().Value(RequestIDKey)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -30,7 +30,7 @@ func TestRequestIDMiddleware_PreservesIncomingID(t *testing.T) {
 		ctxValue = r.Context().Value(RequestIDKey)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	req.Header.Set("X-Request-ID", "preset-id-123")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)

@@ -1,7 +1,10 @@
-.PHONY: help run rebuild stop deploy test build-auth build-support build-catalog build-commerce lint fmt vet clean proto proto-install swag swag-install \
+.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install \
        logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
-include .env
+# -include (со знаком «минус») - не падать, если .env нет.
+# В CI .env отсутствует (он в .gitignore); CI-цели lint-ci/test-ci/build-* его не требуют.
+# Локально и на VM .env есть - переменные подхватятся как раньше.
+-include .env
 export
 
 COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml
@@ -167,6 +170,10 @@ proto:
 
 # ─── Тесты ────────────────────────────────────────────────────────────────────
 
+# Цель для CI: тесты с честным exit code (упал тест => пайплайн красный).
+test-ci:
+	go test -race -coverprofile=coverage.out ./pkg/... ./services/...
+
 test:
 	@go test -coverprofile=coverage.tmp ./pkg/... ./services/... >/dev/null 2>&1 || true
 	@# Из покрытия исключаем то, что не наш «бизнес-код»:
@@ -207,6 +214,8 @@ test:
 
 # ─── Деплой ───────────────────────────────────────────────────────────────────
 
+# Деплой на VM: подтягивает свежий код и пересобирает контейнеры на месте.
+# Вызывается автоматически из CD (.github/workflows/cd.yml) по SSH.
 deploy:
 	sudo git pull
 	$(COMPOSE) up -d --build --remove-orphans
@@ -216,6 +225,10 @@ deploy:
 
 lint:
 	golangci-lint run --fix ./pkg/... ./services/...
+
+# Цель для CI: линтер без --fix, реальный exit code.
+lint-ci:
+	golangci-lint run --timeout=5m ./pkg/... ./services/...
 
 fmt:
 	go fmt ./...

@@ -24,18 +24,18 @@ import (
 var ErrQueryTooShort = errors.New("search query is too short")
 
 const (
-	opGetAllAds                 = "usecase.ads.GetAllAds"
-	opSearchAds                 = "usecase.ads.SearchAds"
-	opUploadAdPhotos            = "usecase.ads.UploadAdPhotos"
-	opCreateAd                  = "usecase.ads.CreateAd"
-	opGetAdByID                 = "usecase.ads.GetAdByID"
-	opUpdateAd                  = "usecase.ads.UpdateAd"
-	opDeleteAd                  = "usecase.ads.DeleteAd"
-	opCloseAd                   = "usecase.ads.CloseAd"
-	opGetAdsByUserID            = "usecase.ads.GetAdsByUserID"
-	opAddFavorite               = "usecase.ads.AddFavorite"
-	opRemoveFavorite            = "usecase.ads.RemoveFavorite"
-	opGetUserFavorites          = "usecase.ads.GetUserFavorites"
+	opGetAllAds                  = "usecase.ads.GetAllAds"
+	opSearchAds                  = "usecase.ads.SearchAds"
+	opUploadAdPhotos             = "usecase.ads.UploadAdPhotos"
+	opCreateAd                   = "usecase.ads.CreateAd"
+	opGetAdByID                  = "usecase.ads.GetAdByID"
+	opUpdateAd                   = "usecase.ads.UpdateAd"
+	opDeleteAd                   = "usecase.ads.DeleteAd"
+	opCloseAd                    = "usecase.ads.CloseAd"
+	opGetAdsByUserID             = "usecase.ads.GetAdsByUserID"
+	opAddFavorite                = "usecase.ads.AddFavorite"
+	opRemoveFavorite             = "usecase.ads.RemoveFavorite"
+	opGetUserFavorites           = "usecase.ads.GetUserFavorites"
 	opGetCategoryCharacteristics = "usecase.ads.GetCategoryCharacteristics"
 )
 

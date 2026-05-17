@@ -40,7 +40,7 @@ func (c *RedisCache) Close() error {
 // Set сохраняет значение в Redis с указанным ключом и временем жизни (TTL).
 func (c *RedisCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	var err error
 	if ttl > 0 {
@@ -57,7 +57,7 @@ func (c *RedisCache) Set(ctx context.Context, key string, value string, ttl time
 
 func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	val, err := redis.String(conn.Do("GET", key))
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 // Delete удаляет значение из Redis по указанному ключу.
 func (c *RedisCache) Delete(ctx context.Context, key string) error {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	_, err := conn.Do("DEL", key)
 	if err != nil {
@@ -84,7 +84,7 @@ func (c *RedisCache) Delete(ctx context.Context, key string) error {
 // Exists проверяет, существует ли ключ в Redis.
 func (c *RedisCache) Exists(ctx context.Context, key string) bool {
 	conn := c.pool.Get()
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	exists, _ := redis.Bool(conn.Do("EXISTS", key))
 	return exists

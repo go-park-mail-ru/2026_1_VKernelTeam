@@ -13,6 +13,8 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
+const tokenCookieName = "token"
+
 func newTestLog() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
@@ -28,7 +30,7 @@ func TestGRPCAuthMiddleware_NoCookie(t *testing.T) {
 	mw := GRPCAuthMiddleware(newTestLog(), newValidator(t))
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401, got %d", rr.Code)
@@ -41,8 +43,8 @@ func TestGRPCAuthMiddleware_InvalidToken(t *testing.T) {
 
 	mw := GRPCAuthMiddleware(newTestLog(), v)
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(200) }))
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.AddCookie(&http.Cookie{Name: "token", Value: "x"})
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "x"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 
@@ -62,8 +64,8 @@ func TestGRPCAuthMiddleware_ValidPutsUserIDInContext(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.AddCookie(&http.Cookie{Name: "token", Value: "x"})
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "x"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 
@@ -77,7 +79,7 @@ func TestGRPCOptionalAuthMiddleware_NoCookieStillCallsNext(t *testing.T) {
 	called := false
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { called = true; w.WriteHeader(200) }))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/", nil))
+	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 
 	if !called || rr.Code != 200 {
 		t.Fatalf("expected next called and 200, got called=%v code=%d", called, rr.Code)
@@ -95,8 +97,8 @@ func TestGRPCOptionalAuthMiddleware_ValidPutsUserIDInContext(t *testing.T) {
 		w.WriteHeader(200)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.AddCookie(&http.Cookie{Name: "token", Value: "x"})
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "x"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 
