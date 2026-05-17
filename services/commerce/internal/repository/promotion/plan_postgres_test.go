@@ -20,6 +20,7 @@ const (
 	colDurationDays = "duration_days"
 	colIsActive     = "is_active"
 	colPrice        = "price"
+	colUpdatedAt    = "updated_at"
 )
 
 func newPlanStorage(t *testing.T) (*PlanStorage, pgxmock.PgxPoolIface) {
@@ -41,7 +42,7 @@ func TestPlanStorage_GetActivePlans_Success(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("FROM promotion_plan")).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, "updated_at",
+				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, colUpdatedAt,
 			}).
 				AddRow(planRow(now, true)...).
 				AddRow(int64(8), "highlight_7d", "highlight", 7, int64(99), true, now, now),
@@ -76,7 +77,7 @@ func TestPlanStorage_GetByCode_Success(t *testing.T) {
 		WithArgs("boost_7d").
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, "updated_at",
+				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, colUpdatedAt,
 			}).AddRow(planRow(now, true)...),
 		)
 
@@ -107,7 +108,7 @@ func TestPlanStorage_GetByCode_Inactive(t *testing.T) {
 		WithArgs("boost_7d").
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, "updated_at",
+				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, colUpdatedAt,
 			}).AddRow(planRow(now, false)...),
 		)
 
@@ -124,7 +125,7 @@ func TestPlanStorage_GetByID_Success(t *testing.T) {
 		WithArgs(int64(7)).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, "updated_at",
+				"id", colCode, colKind, colDurationDays, colPrice, colIsActive, colCreatedAt, colUpdatedAt,
 			}).AddRow(planRow(now, true)...),
 		)
 
