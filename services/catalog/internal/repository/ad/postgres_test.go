@@ -27,6 +27,7 @@ const (
 	colPhotos      = "photos"
 	colViewsCount  = "views_count"
 	colFavorites   = "favorites_count"
+	colChangedAt   = "changed_at"
 	photoP1        = "p1.jpg"
 )
 
@@ -530,7 +531,7 @@ func TestAdStorage_GetPriceHistory(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
-		rows := pgxmock.NewRows([]string{"price", "changed_at"}).
+		rows := pgxmock.NewRows([]string{colPrice, colChangedAt}).
 			AddRow(int64(15000), now.Add(-48*time.Hour)).
 			AddRow(int64(12000), now)
 
@@ -548,7 +549,7 @@ func TestAdStorage_GetPriceHistory(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).
 			WithArgs(adID).
-			WillReturnRows(pgxmock.NewRows([]string{"price", "changed_at"}))
+			WillReturnRows(pgxmock.NewRows([]string{colPrice, colChangedAt}))
 
 		history, err := storage.GetPriceHistory(ctx, adID)
 		assert.NoError(t, err)
@@ -566,7 +567,7 @@ func TestAdStorage_GetPriceHistory(t *testing.T) {
 	})
 
 	t.Run("ScanError", func(t *testing.T) {
-		rows := pgxmock.NewRows([]string{"price", "changed_at"}).
+		rows := pgxmock.NewRows([]string{colPrice, colChangedAt}).
 			AddRow("not-a-number", time.Now())
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).

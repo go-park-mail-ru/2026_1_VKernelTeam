@@ -601,7 +601,7 @@ func TestHandleGetPriceHistory_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/1/price-history", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -624,7 +624,7 @@ func TestHandleGetPriceHistory_NotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/1/price-history", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -638,7 +638,7 @@ func TestHandleGetPriceHistory_InvalidID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/abc/price-history", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/abc/price-history", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -656,7 +656,7 @@ func TestHandleGetPriceHistory_InternalError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/1/price-history", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
