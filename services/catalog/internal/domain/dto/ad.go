@@ -1,5 +1,7 @@
 package dto
 
+import "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/models"
+
 // CharacteristicInput описывает входные данные категорийной характеристики.
 type CharacteristicInput struct {
 	CategoryCharacteristicID int64  `json:"category_characteristic_id"`
@@ -44,4 +46,9 @@ type UpdateAdRequest struct {
 // FavoriteRequest — структура для добавления объявления в избранное.
 type FavoriteRequest struct {
 	AdID int64 `json:"ad_id"`
+}
+
+// PriceHistoryResponse — ответ ручки истории цен.
+type PriceHistoryResponse struct {
+	History []models.PricePoint `json:"history"`
 }
