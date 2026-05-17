@@ -22,6 +22,8 @@ import (
 	promouc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/promotion"
 )
 
+const planCodeBoost7d = "boost_7d"
+
 func setupPromotionHandlers(t *testing.T) (*PromotionHandlers, *mocks.MockPromotionService) {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -36,9 +38,9 @@ func setupPromotionHandlers(t *testing.T) (*PromotionHandlers, *mocks.MockPromot
 func reqWithPath(method, target, idValue string, body []byte, userID int64) *http.Request {
 	var r *http.Request
 	if body == nil {
-		r = httptest.NewRequest(method, target, nil)
+		r = httptest.NewRequestWithContext(context.Background(), method, target, nil)
 	} else {
-		r = httptest.NewRequest(method, target, bytes.NewBuffer(body))
+		r = httptest.NewRequestWithContext(context.Background(), method, target, bytes.NewBuffer(body))
 	}
 	r.SetPathValue("id", idValue)
 	if userID > 0 {
@@ -58,7 +60,7 @@ func TestHandleGetPromotionPlans_Success(t *testing.T) {
 		}, nil)
 
 	rr := httptest.NewRecorder()
-	h.HandleGetPromotionPlans(rr, httptest.NewRequest(http.MethodGet, "/api/v1/promotion/plans", nil))
+	h.HandleGetPromotionPlans(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/promotion/plans", nil))
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	var plans []dto.PromotionPlanResponse
@@ -72,7 +74,7 @@ func TestHandleGetPromotionPlans_InternalError(t *testing.T) {
 	m.EXPECT().GetPlans(gomock.Any()).Return(nil, errors.New("db down"))
 
 	rr := httptest.NewRecorder()
-	h.HandleGetPromotionPlans(rr, httptest.NewRequest(http.MethodGet, "/api/v1/promotion/plans", nil))
+	h.HandleGetPromotionPlans(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/promotion/plans", nil))
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
@@ -82,16 +84,16 @@ func TestHandleGetPromotionPlans_InternalError(t *testing.T) {
 func TestHandlePurchasePromotion_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
 	m.EXPECT().
-		Purchase(gomock.Any(), int64(1), int64(10), "boost_7d", "uuid-1").
+		Purchase(gomock.Any(), int64(1), int64(10), planCodeBoost7d, "uuid-1").
 		Return(dto.PurchasePromotionResponse{
 			Promotion: dto.PromotionResponse{
-				ID: 555, ProductID: 10, Kind: models.PromotionKindBoost, PlanCode: "boost_7d",
+				ID: 555, ProductID: 10, Kind: models.PromotionKindBoost, PlanCode: planCodeBoost7d,
 			},
 			WalletBalance: 801,
 		}, nil)
 
 	body, _ := json.Marshal(dto.PurchasePromotionRequest{
-		PlanCode: "boost_7d", IdempotencyKey: "uuid-1",
+		PlanCode: planCodeBoost7d, IdempotencyKey: "uuid-1",
 	})
 	rr := httptest.NewRecorder()
 	h.HandlePurchasePromotion(rr, reqWithPath(http.MethodPost, "/api/v1/ads/10/promotions", "10", body, 1))
@@ -107,7 +109,7 @@ func TestHandlePurchasePromotion_Unauthorized(t *testing.T) {
 	h, _ := setupPromotionHandlers(t)
 	body, _ := json.Marshal(dto.PurchasePromotionRequest{PlanCode: "x", IdempotencyKey: "k"})
 
-	r := httptest.NewRequest(http.MethodPost, "/api/v1/ads/10/promotions", bytes.NewBuffer(body))
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/ads/10/promotions", bytes.NewBuffer(body))
 	r.SetPathValue("id", "10")
 
 	rr := httptest.NewRecorder()
@@ -177,7 +179,7 @@ func TestHandleListAdPromotions_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
 	m.EXPECT().ListActiveByAd(gomock.Any(), int64(10)).
 		Return([]dto.PromotionResponse{
-			{ID: 1, ProductID: 10, Kind: models.PromotionKindBoost, PlanCode: "boost_7d"},
+			{ID: 1, ProductID: 10, Kind: models.PromotionKindBoost, PlanCode: planCodeBoost7d},
 		}, nil)
 
 	rr := httptest.NewRecorder()
@@ -212,10 +214,10 @@ func TestHandleListUserPromotions_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
 	m.EXPECT().ListByUser(gomock.Any(), int64(1), int64(50), 5).
 		Return(dto.PromotionListResponse{
-			Items: []dto.PromotionResponse{{ID: 1, PlanCode: "boost_7d"}},
+			Items: []dto.PromotionResponse{{ID: 1, PlanCode: planCodeBoost7d}},
 		}, nil)
 
-	r := httptest.NewRequest(http.MethodGet, "/api/v1/profile/promotions?limit=5&cursor=50", nil)
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/profile/promotions?limit=5&cursor=50", nil)
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, int64(1))
 	r = r.WithContext(ctx)
 
@@ -231,7 +233,7 @@ func TestHandleListUserPromotions_Success(t *testing.T) {
 func TestHandleListUserPromotions_Unauthorized(t *testing.T) {
 	h, _ := setupPromotionHandlers(t)
 	rr := httptest.NewRecorder()
-	h.HandleListUserPromotions(rr, httptest.NewRequest(http.MethodGet, "/api/v1/profile/promotions", nil))
+	h.HandleListUserPromotions(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/profile/promotions", nil))
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
@@ -240,7 +242,7 @@ func TestHandleListUserPromotions_InternalError(t *testing.T) {
 	m.EXPECT().ListByUser(gomock.Any(), int64(1), int64(0), 0).
 		Return(dto.PromotionListResponse{}, errors.New("db down"))
 
-	r := httptest.NewRequest(http.MethodGet, "/api/v1/profile/promotions", nil)
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/profile/promotions", nil)
 	ctx := context.WithValue(r.Context(), middleware.UserIDKey, int64(1))
 	r = r.WithContext(ctx)
 

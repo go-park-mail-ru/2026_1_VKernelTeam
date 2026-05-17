@@ -29,9 +29,9 @@ const (
 
 // Бизнес-ошибки usecase.
 var (
-	ErrInvalidAmount   = errors.New("INVALID_AMOUNT")
-	ErrInvalidRequest  = errors.New("INVALID_REQUEST")
-	ErrAmountTooLarge  = errors.New("INVALID_AMOUNT")
+	ErrInvalidAmount  = errors.New("INVALID_AMOUNT")
+	ErrInvalidRequest = errors.New("INVALID_REQUEST")
+	ErrAmountTooLarge = errors.New("INVALID_AMOUNT")
 )
 
 // TxRunner — узкий контракт пула: открыть транзакцию.

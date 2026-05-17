@@ -27,10 +27,15 @@ func promotionRow(id, productID, userID, planID int64, kind string, expires time
 	return []any{id, productID, userID, planID, kind, now, expires, int64(199), now}
 }
 
+const (
+	colKind      = "kind"
+	colCreatedAt = "created_at"
+)
+
 func promotionCols() []string {
 	return []string{
-		"id", "product_id", "user_id", "plan_id", "kind",
-		"starts_at", "expires_at", "price_paid", "created_at",
+		"id", "product_id", "user_id", "plan_id", colKind,
+		"starts_at", "expires_at", "price_paid", colCreatedAt,
 	}
 }
 

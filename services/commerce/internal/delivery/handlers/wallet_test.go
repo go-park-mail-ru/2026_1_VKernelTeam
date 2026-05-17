@@ -33,9 +33,9 @@ func setupWalletHandlers(t *testing.T) (*WalletHandlers, *mocks.MockWalletServic
 func authedRequest(method, target string, body []byte, userID int64) *http.Request {
 	var r *http.Request
 	if body == nil {
-		r = httptest.NewRequest(method, target, nil)
+		r = httptest.NewRequestWithContext(context.Background(), method, target, nil)
 	} else {
-		r = httptest.NewRequest(method, target, bytes.NewBuffer(body))
+		r = httptest.NewRequestWithContext(context.Background(), method, target, bytes.NewBuffer(body))
 	}
 	if userID > 0 {
 		ctx := context.WithValue(r.Context(), middleware.UserIDKey, userID)
@@ -65,7 +65,7 @@ func TestHandleGetWallet_Unauthorized(t *testing.T) {
 	h, _ := setupWalletHandlers(t)
 
 	rr := httptest.NewRecorder()
-	h.HandleGetWallet(rr, httptest.NewRequest(http.MethodGet, "/api/v1/wallet", nil))
+	h.HandleGetWallet(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/wallet", nil))
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -117,7 +117,7 @@ func TestHandleListWalletTransactions_DefaultParams(t *testing.T) {
 func TestHandleListWalletTransactions_Unauthorized(t *testing.T) {
 	h, _ := setupWalletHandlers(t)
 	rr := httptest.NewRecorder()
-	h.HandleListWalletTransactions(rr, httptest.NewRequest(http.MethodGet, "/api/v1/wallet/transactions", nil))
+	h.HandleListWalletTransactions(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/wallet/transactions", nil))
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
@@ -143,7 +143,7 @@ func TestHandleTopupWallet_Unauthorized(t *testing.T) {
 	h, _ := setupWalletHandlers(t)
 	body, _ := json.Marshal(dto.TopupWalletRequest{Amount: 100, IdempotencyKey: "k"})
 	rr := httptest.NewRecorder()
-	h.HandleTopupWallet(rr, httptest.NewRequest(http.MethodPost, "/api/v1/wallet/topup", bytes.NewBuffer(body)))
+	h.HandleTopupWallet(rr, httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/v1/wallet/topup", bytes.NewBuffer(body)))
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
