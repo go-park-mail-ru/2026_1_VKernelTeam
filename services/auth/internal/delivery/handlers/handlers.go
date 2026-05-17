@@ -11,13 +11,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
 
 const (
 	MaxUploadSize = 5 << 20
+
+	cookieNameToken = "token"
+	cookieNameCSRF  = "csrf_token"
 
 	ErrInvalidRequestBody   = "invalid request body"
 	ErrUserAlreadyExists    = "user already exists"
@@ -67,7 +70,7 @@ func NewAuthHandlers(log *slog.Logger, auth Auth, tokenTTL time.Duration, refres
 // setAuthCookie устанавливает cookie с JWT-токеном и CSRF-токеном
 func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfToken string) {
 	http.SetCookie(w, &http.Cookie{
-		Name:     "token",
+		Name:     cookieNameToken,
 		Value:    token,
 		HttpOnly: true,
 		Path:     "/",
@@ -75,7 +78,7 @@ func (h *AuthHandlers) setAuthCookie(w http.ResponseWriter, token string, csrfTo
 		MaxAge:   int(h.tokenTTL.Seconds()),
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:     "csrf_token",
+		Name:     cookieNameCSRF,
 		Value:    csrfToken,
 		HttpOnly: false,
 		Path:     "/",

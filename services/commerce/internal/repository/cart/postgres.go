@@ -214,7 +214,6 @@ func (s *CartStorage) Clear(ctx context.Context, userID int64) error {
 	return nil
 }
 
-
 // RemoveProductFromAllCarts удаляет товар из корзин всех пользователей.
 // Вызывается из Kafka-consumer'а при получении ad.deleted из catalog.
 func (s *CartStorage) RemoveProductFromAllCarts(ctx context.Context, productID int64) (int64, error) {

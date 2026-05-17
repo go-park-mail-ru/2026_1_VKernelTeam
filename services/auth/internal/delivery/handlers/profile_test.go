@@ -10,9 +10,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +28,7 @@ func TestHandleGetProfile(t *testing.T) {
 			Name:  "Ivan",
 		}
 
-		req, _ := http.NewRequest(http.MethodGet, "/profile", nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/profile", nil)
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
 		req = req.WithContext(ctx)
 
@@ -49,7 +49,7 @@ func TestHandleGetProfile(t *testing.T) {
 	})
 
 	t.Run("NoUserIDInContext", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/profile", nil)
 		rr := httptest.NewRecorder()
 
 		authH.HandleGetProfile(rr, req)
@@ -59,7 +59,7 @@ func TestHandleGetProfile(t *testing.T) {
 	t.Run("InternalError", func(t *testing.T) {
 		userID := int64(1)
 
-		req, _ := http.NewRequest(http.MethodGet, "/profile", nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/profile", nil)
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
 		req = req.WithContext(ctx)
 
@@ -86,7 +86,7 @@ func TestHandleUpdateProfile(t *testing.T) {
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
-		req, _ := http.NewRequest(http.MethodPatch, "/profile", bytes.NewBuffer(bodyBytes))
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPatch, "/profile", bytes.NewBuffer(bodyBytes))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
 		req = req.WithContext(ctx)
 
@@ -114,7 +114,7 @@ func TestHandleUpdateProfile(t *testing.T) {
 	t.Run("InvalidJSON", func(t *testing.T) {
 		userID := int64(42)
 
-		req, _ := http.NewRequest(http.MethodPatch, "/profile", bytes.NewBuffer([]byte("{invalid}")))
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPatch, "/profile", bytes.NewBuffer([]byte("{invalid}")))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
 		req = req.WithContext(ctx)
 
@@ -133,7 +133,7 @@ func TestHandleUpdateProfile(t *testing.T) {
 
 		bodyBytes, _ := json.Marshal(reqBody)
 
-		req, _ := http.NewRequest(http.MethodPatch, "/profile", bytes.NewBuffer(bodyBytes))
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPatch, "/profile", bytes.NewBuffer(bodyBytes))
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
 		req = req.WithContext(ctx)
 
@@ -161,7 +161,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 			Rating: 4.8,
 		}
 
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/"+idStr, nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/"+idStr, nil)
 		req.SetPathValue("id", idStr)
 
 		rr := httptest.NewRecorder()
@@ -182,7 +182,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 	})
 
 	t.Run("InvalidID", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/not-an-int", nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/not-an-int", nil)
 		req.SetPathValue("id", "not-an-int")
 		rr := httptest.NewRecorder()
 
@@ -193,7 +193,7 @@ func TestHandleGetPublicProfile(t *testing.T) {
 
 	t.Run("UserNotFound", func(t *testing.T) {
 		userID := int64(404)
-		req, _ := http.NewRequest(http.MethodGet, "/api/v1/users/404", nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/404", nil)
 		req.SetPathValue("id", "404")
 		rr := httptest.NewRecorder()
 
@@ -221,9 +221,9 @@ func TestHandleUploadAvatar(t *testing.T) {
 		part, err := writer.CreateFormFile("avatar", filename)
 		assert.NoError(t, err)
 		_, _ = part.Write(fileContent)
-		writer.Close()
+		_ = writer.Close()
 
-		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", body)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "/profile/avatar", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)
@@ -246,7 +246,7 @@ func TestHandleUploadAvatar(t *testing.T) {
 	})
 
 	t.Run("Unauthorized", func(t *testing.T) {
-		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", nil)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "/profile/avatar", nil)
 
 		rr := httptest.NewRecorder()
 
@@ -259,9 +259,9 @@ func TestHandleUploadAvatar(t *testing.T) {
 		userID := int64(42)
 		body := &bytes.Buffer{}
 		writer := multipart.NewWriter(body)
-		writer.Close()
+		_ = writer.Close()
 
-		req, _ := http.NewRequest(http.MethodPost, "/profile/avatar", body)
+		req, _ := http.NewRequestWithContext(t.Context(), http.MethodPost, "/profile/avatar", body)
 		req.Header.Set("Content-Type", writer.FormDataContentType())
 
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, userID)

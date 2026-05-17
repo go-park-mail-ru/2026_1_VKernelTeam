@@ -83,7 +83,7 @@ func MustLoadConfig() *Config {
 	if err != nil {
 		panic("failed to open config file: " + err.Error())
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var raw struct {
 		Env    string       `json:"env"`

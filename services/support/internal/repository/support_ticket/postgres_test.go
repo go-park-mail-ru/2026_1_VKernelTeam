@@ -15,6 +15,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	colCreatedAt   = "created_at"
+	colCategory    = "category"
+	colCount       = "count"
+	colRating      = "rating"
+	colDescription = "description"
+	colStatus      = "status"
+	colTitle       = "title"
+	colUpdatedAt   = "updated_at"
+	colUserID      = "user_id"
+)
+
 func TestSupportTicketStorage_Create(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -27,7 +39,7 @@ func TestSupportTicketStorage_Create(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO support_ticket")).
 		WithArgs(ticket.UserID, ticket.Category, ticket.Title, ticket.Description).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "status", "rating", "created_at", "updated_at"}).
+		WillReturnRows(pgxmock.NewRows([]string{"id", colStatus, colRating, colCreatedAt, colUpdatedAt}).
 			AddRow(int64(12), "open", nil, now, now))
 
 	id, err := storage.Create(ctx, ticket)
@@ -57,7 +69,7 @@ func TestSupportTicketStorage_GetByID(t *testing.T) {
 	ticketID := int64(8)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"id", "user_id", "category", "status", "title", "description", "rating", "created_at", "updated_at"}).
+	rows := pgxmock.NewRows([]string{"id", colUserID, colCategory, colStatus, colTitle, colDescription, colRating, colCreatedAt, colUpdatedAt}).
 		AddRow(ticketID, int64(7), "bug", "open", "Title", "Desc", nil, now, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, category, status, title, description, rating, created_at, updated_at")).
@@ -89,7 +101,7 @@ func TestSupportTicketStorage_GetByUserID(t *testing.T) {
 	userID := int64(7)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"id", "user_id", "category", "status", "title", "description", "rating", "created_at", "updated_at"}).
+	rows := pgxmock.NewRows([]string{"id", colUserID, colCategory, colStatus, colTitle, colDescription, colRating, colCreatedAt, colUpdatedAt}).
 		AddRow(int64(1), userID, "bug", "open", "Title", "Desc", nil, now, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, category, status, title, description, rating, created_at, updated_at")).
@@ -104,7 +116,7 @@ func TestSupportTicketStorage_GetByUserID(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, category, status, title, description, rating, created_at, updated_at")).
 			WithArgs(userID).
-			WillReturnRows(pgxmock.NewRows([]string{"id", "user_id", "category", "status", "title", "description", "rating", "created_at", "updated_at"}))
+			WillReturnRows(pgxmock.NewRows([]string{"id", colUserID, colCategory, colStatus, colTitle, colDescription, colRating, colCreatedAt, colUpdatedAt}))
 
 		tickets, err := storage.GetByUserID(ctx, userID)
 		assert.NoError(t, err)
@@ -122,7 +134,7 @@ func TestSupportTicketStorage_GetAll(t *testing.T) {
 	ctx := context.Background()
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"id", "user_id", "category", "status", "title", "description", "rating", "created_at", "updated_at"}).
+	rows := pgxmock.NewRows([]string{"id", colUserID, colCategory, colStatus, colTitle, colDescription, colRating, colCreatedAt, colUpdatedAt}).
 		AddRow(int64(2), int64(8), "suggestion", "open", "Title", "Desc", nil, now, now)
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, category, status, title, description, rating, created_at, updated_at")).
@@ -135,7 +147,7 @@ func TestSupportTicketStorage_GetAll(t *testing.T) {
 
 	t.Run("Empty", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, user_id, category, status, title, description, rating, created_at, updated_at")).
-			WillReturnRows(pgxmock.NewRows([]string{"id", "user_id", "category", "status", "title", "description", "rating", "created_at", "updated_at"}))
+			WillReturnRows(pgxmock.NewRows([]string{"id", colUserID, colCategory, colStatus, colTitle, colDescription, colRating, colCreatedAt, colUpdatedAt}))
 
 		tickets, err := storage.GetAll(ctx)
 		assert.NoError(t, err)
@@ -155,7 +167,7 @@ func TestSupportTicketStorage_UpdateStatus(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta("UPDATE support_ticket")).
 		WithArgs("in_progress", ticketID).
-		WillReturnRows(pgxmock.NewRows([]string{"updated_at"}).AddRow(updatedAt))
+		WillReturnRows(pgxmock.NewRows([]string{colUpdatedAt}).AddRow(updatedAt))
 
 	got, err := storage.UpdateStatus(ctx, ticketID, "in_progress")
 	assert.NoError(t, err)
@@ -180,11 +192,11 @@ func TestSupportTicketStorage_GetStats(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT COUNT(*) FROM support_ticket")).
-		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int(5)))
+		WillReturnRows(pgxmock.NewRows([]string{colCount}).AddRow(int(5)))
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT status, COUNT(*) FROM support_ticket GROUP BY status")).
-		WillReturnRows(pgxmock.NewRows([]string{"status", "count"}).AddRow("open", int(3)))
+		WillReturnRows(pgxmock.NewRows([]string{colStatus, colCount}).AddRow("open", int(3)))
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT category, COUNT(*) FROM support_ticket GROUP BY category")).
-		WillReturnRows(pgxmock.NewRows([]string{"category", "count"}).AddRow("bug", int(2)))
+		WillReturnRows(pgxmock.NewRows([]string{colCategory, colCount}).AddRow("bug", int(2)))
 
 	stats, err := storage.GetStats(ctx)
 	assert.NoError(t, err)
@@ -230,7 +242,7 @@ func TestSupportTicketStorage_Update(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta("UPDATE support_ticket")).
 		WithArgs(ticket.Category, ticket.Title, ticket.Description, ticket.ID, ticket.UserID).
-		WillReturnRows(pgxmock.NewRows([]string{"updated_at"}).AddRow(time.Now()))
+		WillReturnRows(pgxmock.NewRows([]string{colUpdatedAt}).AddRow(time.Now()))
 
 	err = storage.Update(ctx, ticket)
 	assert.NoError(t, err)

@@ -12,16 +12,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const statusActive = "active"
+
 func TestCatalogClient_GetAdByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mock := mocks.NewMockCatalogServiceClient(ctrl)
 	mock.EXPECT().
 		GetAd(gomock.Any(), &catalogv1.GetAdRequest{AdId: 1}).
-		Return(&catalogv1.AdResponse{Id: 1, SellerId: 7, Title: "X", Price: 100, Status: "active"}, nil)
+		Return(&catalogv1.AdResponse{Id: 1, SellerId: 7, Title: "X", Price: 100, Status: statusActive}, nil)
 
 	c := &CatalogClient{client: mock}
 	ad, err := c.GetAdByID(context.Background(), 1)
-	if err != nil || ad.ID != 1 || ad.SellerID != 7 || ad.Status != "active" {
+	if err != nil || ad.ID != 1 || ad.SellerID != 7 || ad.Status != statusActive {
 		t.Fatalf("unexpected: %+v %v", ad, err)
 	}
 }
@@ -59,11 +61,11 @@ func TestCatalogClient_CheckAdStatus_Success(t *testing.T) {
 	mock := mocks.NewMockCatalogServiceClient(ctrl)
 	mock.EXPECT().
 		CheckAdStatus(gomock.Any(), &catalogv1.CheckAdStatusRequest{AdId: 5}).
-		Return(&catalogv1.CheckAdStatusResponse{Available: true, CurrentStatus: "active"}, nil)
+		Return(&catalogv1.CheckAdStatusResponse{Available: true, CurrentStatus: statusActive}, nil)
 
 	c := &CatalogClient{client: mock}
 	avail, st, err := c.CheckAdStatus(context.Background(), 5)
-	if err != nil || !avail || st != "active" {
+	if err != nil || !avail || st != statusActive {
 		t.Fatalf("unexpected: %v %s %v", avail, st, err)
 	}
 }
@@ -86,11 +88,11 @@ func TestCatalogClient_UpdateAdStatus_Success(t *testing.T) {
 	mock := mocks.NewMockCatalogServiceClient(ctrl)
 	mock.EXPECT().
 		UpdateAdStatus(gomock.Any(), &catalogv1.UpdateAdStatusRequest{AdId: 1, NewStatus: "sold", BuyerId: 42}).
-		Return(&catalogv1.UpdateAdStatusResponse{Success: true, PreviousStatus: "active"}, nil)
+		Return(&catalogv1.UpdateAdStatusResponse{Success: true, PreviousStatus: statusActive}, nil)
 
 	c := &CatalogClient{client: mock}
 	prev, err := c.UpdateAdStatus(context.Background(), 1, "sold", 42)
-	if err != nil || prev != "active" {
+	if err != nil || prev != statusActive {
 		t.Fatalf("unexpected: %s %v", prev, err)
 	}
 }

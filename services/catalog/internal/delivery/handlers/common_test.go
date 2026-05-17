@@ -20,15 +20,3 @@ func setupAdsHandlers(t *testing.T) (*AdsHandlers, *mocks.MockAds) {
 	adsH := NewAdsHandlers(logger, mockAds)
 	return adsH, mockAds
 }
-
-// setupViewsHandlers создаёт *ViewsHandlers с моком Views.
-func setupViewsHandlers(t *testing.T) (*ViewsHandlers, *mocks.MockViews) {
-	t.Helper()
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
-	ctrl := gomock.NewController(t)
-	t.Cleanup(ctrl.Finish)
-
-	mockViews := mocks.NewMockViews(ctrl)
-	viewsH := NewViewsHandlers(logger, mockViews)
-	return viewsH, mockViews
-}

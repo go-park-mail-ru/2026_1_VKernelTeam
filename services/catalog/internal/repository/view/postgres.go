@@ -51,7 +51,7 @@ func (s *ViewStorage) BatchInsertViews(ctx context.Context, events []InsertEvent
 	if err != nil {
 		return fmt.Errorf("%s: begin tx: %w", opBatchInsertViews, err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Batch INSERT в product_view
 	var sb strings.Builder

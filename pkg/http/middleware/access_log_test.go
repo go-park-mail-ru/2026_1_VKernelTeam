@@ -29,7 +29,7 @@ func TestAccessLogMiddleware_LogsAtAllSeverities(t *testing.T) {
 				_, _ = w.Write([]byte("ok"))
 			}))
 
-			req := httptest.NewRequest(http.MethodGet, "/x", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/x", nil)
 			rec := httptest.NewRecorder()
 			handler.ServeHTTP(rec, req)
 
@@ -45,7 +45,7 @@ func TestAccessLogMiddleware_DefaultStatusIsOK(t *testing.T) {
 		_, _ = w.Write([]byte("ok"))
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

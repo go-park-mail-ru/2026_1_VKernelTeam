@@ -7,11 +7,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
-	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth"
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/sanitizer"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/dto"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/validator"
 )
 
@@ -207,12 +207,12 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Очищаем все cookie
-	for _, name := range []string{"token", "csrf_token", "refresh_token"} {
+	for _, name := range []string{cookieNameToken, cookieNameCSRF, "refresh_token"} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
 			Value:    "",
 			Path:     "/",
-			HttpOnly: name != "csrf_token",
+			HttpOnly: name != cookieNameCSRF,
 			MaxAge:   -1,
 			Expires:  time.Unix(0, 0),
 		})
