@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewConsumer_AndOn(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "topic", "group", discardLogger())
+	c := NewConsumer([]string{kafkaTestBroker}, "topic", "group", discardLogger())
 	require.NotNil(t, c)
 	require.NotNil(t, c.reader)
 	require.NotNil(t, c.handlers)
@@ -32,13 +32,13 @@ func TestNewConsumer_AndOn(t *testing.T) {
 }
 
 func TestConsumer_Dispatch_BadJSON(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "topic", "group", discardLogger())
+	c := NewConsumer([]string{kafkaTestBroker}, "topic", "group", discardLogger())
 	// просто не должен паниковать
 	c.dispatch(context.Background(), kafkago.Message{Value: []byte("not json")})
 }
 
 func TestConsumer_Dispatch_NoHandler(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "topic", "group", discardLogger())
+	c := NewConsumer([]string{kafkaTestBroker}, "topic", "group", discardLogger())
 
 	event := Event{EventType: "unknown"}
 	value, _ := json.Marshal(event)
@@ -47,7 +47,7 @@ func TestConsumer_Dispatch_NoHandler(t *testing.T) {
 }
 
 func TestConsumer_Dispatch_HandlerError(t *testing.T) {
-	c := NewConsumer([]string{"localhost:9092"}, "topic", "group", discardLogger())
+	c := NewConsumer([]string{kafkaTestBroker}, "topic", "group", discardLogger())
 	c.On("evt", func(ctx context.Context, e Event) error {
 		return errors.New("boom")
 	})
@@ -60,7 +60,7 @@ func TestConsumer_Dispatch_HandlerError(t *testing.T) {
 
 func TestConsumer_Run_StopsOnContextCancel(t *testing.T) {
 	c := NewConsumer([]string{"127.0.0.1:1"}, "topic", "group", discardLogger())
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // сразу отменяем — Run должен выйти быстро.

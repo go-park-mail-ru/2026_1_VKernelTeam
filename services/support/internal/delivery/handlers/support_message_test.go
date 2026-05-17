@@ -33,7 +33,7 @@ func TestHandleSendMessage(t *testing.T) {
 		mockSupport.EXPECT().SendMessage(gomock.Any(), int64(10), int64(1), gomock.Any()).Return(expected, nil)
 
 		body, _ := json.Marshal(dto.SendMessageRequest{Text: "hi"})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBuffer(body))
 		req.SetPathValue("id", "10")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -55,7 +55,7 @@ func TestHandleSendMessage(t *testing.T) {
 
 		handlers := NewSupportTicketHandlers(newLogger(t), &Services{})
 
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBufferString(`{"text":"hi"}`))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBufferString(`{"text":"hi"}`))
 		req.SetPathValue("id", "10")
 		rr := httptest.NewRecorder()
 
@@ -77,7 +77,7 @@ func TestHandleSendMessage(t *testing.T) {
 		mockSupport.EXPECT().SendMessage(gomock.Any(), int64(10), int64(1), gomock.Any()).Return(nil, supportticketRepo.ErrTicketNotFound)
 
 		body, _ := json.Marshal(dto.SendMessageRequest{Text: "hi"})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBuffer(body))
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/support/tickets/10/messages", bytes.NewBuffer(body))
 		req.SetPathValue("id", "10")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -103,7 +103,7 @@ func TestHandleGetMessages(t *testing.T) {
 		expected := []dto.MessageResponse{{ID: 1, TicketID: 10, UserID: 1, Text: "hello", CreatedAt: time.Now()}}
 		mockSupport.EXPECT().GetMessages(gomock.Any(), int64(10), int64(1)).Return(expected, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/10/messages", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/10/messages", nil)
 		req.SetPathValue("id", "10")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)
@@ -132,7 +132,7 @@ func TestHandleGetMessages(t *testing.T) {
 
 		mockSupport.EXPECT().GetMessages(gomock.Any(), int64(10), int64(1)).Return(nil, supportmessageUC.ErrForbidden)
 
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/support/tickets/10/messages", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/support/tickets/10/messages", nil)
 		req.SetPathValue("id", "10")
 		ctx := context.WithValue(req.Context(), middleware.UserIDKey, int64(1))
 		req = req.WithContext(ctx)

@@ -10,16 +10,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/dto"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/models"
 	ad "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/ad"
-	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
 // createMultipartRequest создаёт multipart/form-data запрос с JSON-данными в поле "data"
-func createMultipartRequest(method, url string, data interface{}) (*http.Request, error) {
+func createMultipartRequest(ctx context.Context, method, url string, data interface{}) (*http.Request, error) {
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
 
@@ -31,9 +31,9 @@ func createMultipartRequest(method, url string, data interface{}) (*http.Request
 	if err := writer.WriteField("data", string(jsonData)); err != nil {
 		return nil, err
 	}
-	writer.Close()
+	_ = writer.Close()
 
-	req := httptest.NewRequest(method, url, &body)
+	req := httptest.NewRequestWithContext(ctx, method, url, &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	return req, nil
 }
@@ -53,7 +53,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	mockAds.EXPECT().GetAllAds(gomock.Any()).Return(testAds, nil)
 
 	// Создаем запрос (путь в данном случае не важен для прямого вызова метода)
-	request := httptest.NewRequest(http.MethodGet, "/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	// Вызываем метод хендлера напрямую
@@ -73,7 +73,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
 	// Создаём POST запрос
-	request := httptest.NewRequest(http.MethodPost, "/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	// Вызываем обработчик
@@ -90,7 +90,7 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	// Возвращаем пустой слайс
 	mockAds.EXPECT().GetAllAds(gomock.Any()).Return([]models.Ad{}, nil)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	adsH.HandleGetAds(rr, request)
@@ -113,7 +113,7 @@ func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
 	// Создаём DELETE запрос
-	request := httptest.NewRequest(http.MethodDelete, "/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	adsH.HandleGetAds(rr, request)
@@ -140,7 +140,7 @@ func TestHandleGetUserAds_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
 
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/42/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/42/ads", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -161,7 +161,7 @@ func TestHandleGetUserAds_InvalidID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
 
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/abc/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/abc/ads", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -181,7 +181,7 @@ func TestHandleGetUserAds_ServiceError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/users/{id}/ads", adsH.HandleGetUserAds)
 
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/users/42/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/42/ads", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -202,7 +202,7 @@ func TestHandleGetAdByID_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/1", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -227,7 +227,7 @@ func TestHandleGetAdByID_NotFound(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/1", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -241,7 +241,7 @@ func TestHandleGetAdByID_InvalidID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ads/{id}", adsH.HandleGetAdByID)
 
-	request := httptest.NewRequest(http.MethodGet, "/ads/abc", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/abc", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -268,7 +268,7 @@ func TestHandleCreateAd_Success(t *testing.T) {
 		CreateAd(gomock.Any(), gomock.Any()).
 		Return(int64(123), nil)
 
-	request, err := createMultipartRequest(http.MethodPost, "/ads", reqDto)
+	request, err := createMultipartRequest(t.Context(), http.MethodPost, "/ads", reqDto)
 	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -278,14 +278,14 @@ func TestHandleCreateAd_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var response map[string]int64
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	_ = json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.Equal(t, int64(123), response["ad_id"])
 }
 
 func TestHandleCreateAd_Unauthorized(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
-	request := httptest.NewRequest(http.MethodPost, "/ads", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	adsH.HandleCreateAd(rr, request)
@@ -312,7 +312,7 @@ func TestHandleUpdateAdByID_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
 
-	request, err := createMultipartRequest(http.MethodPut, fmt.Sprintf("/ads/%d", adID), reqDto)
+	request, err := createMultipartRequest(t.Context(), http.MethodPut, fmt.Sprintf("/ads/%d", adID), reqDto)
 	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -338,7 +338,7 @@ func TestHandleUpdateAdByID_Forbidden(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("PUT /ads/{id}", adsH.HandleUpdateAdByID)
 
-	request, err := createMultipartRequest(http.MethodPut, "/ads/10", reqDto)
+	request, err := createMultipartRequest(t.Context(), http.MethodPut, "/ads/10", reqDto)
 	assert.NoError(t, err)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
@@ -362,7 +362,7 @@ func TestHandleDeleteAd_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /ads/{id}", adsH.HandleDeleteAd)
 
-	request := httptest.NewRequest(http.MethodDelete, "/ads/10", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/ads/10", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -385,7 +385,7 @@ func TestHandleCloseAdByID_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /ads/{id}/close", adsH.HandleCloseAdByID)
 
-	request := httptest.NewRequest(http.MethodPost, "/ads/10/close", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads/10/close", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -408,7 +408,7 @@ func TestHandleAddToFavorites_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /ads/{id}/favorite", adsH.HandleAddToFavorites)
 
-	request := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/ads/%d/favorite", adID), nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, fmt.Sprintf("/ads/%d/favorite", adID), nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -417,7 +417,7 @@ func TestHandleAddToFavorites_Success(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var response map[string]string
-	json.Unmarshal(rr.Body.Bytes(), &response)
+	_ = json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.Equal(t, "ok", response["status"])
 }
 
@@ -435,7 +435,7 @@ func TestHandleDeleteFromFavorites_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /ads/{id}/favorite", adsH.HandleDeleteFromFavorites)
 
-	request := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/ads/%d/favorite", adID), nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, fmt.Sprintf("/ads/%d/favorite", adID), nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -459,7 +459,7 @@ func TestHandleGetFavorites_Success(t *testing.T) {
 		GetUserFavorites(gomock.Any(), userID).
 		Return(testAds, nil)
 
-	request := httptest.NewRequest(http.MethodGet, "/profile/favorites", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/profile/favorites", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -479,7 +479,7 @@ func TestHandleAddToFavorites_Unauthorized(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
 	// Контекст пустой, userID не положен
-	request := httptest.NewRequest(http.MethodPost, "/ads/100/favorite", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads/100/favorite", nil)
 	rr := httptest.NewRecorder()
 
 	adsH.HandleAddToFavorites(rr, request)
@@ -497,7 +497,7 @@ func TestHandleAddToFavorites_InvalidAdID(t *testing.T) {
 	mux.HandleFunc("POST /ads/{id}/favorite", adsH.HandleAddToFavorites)
 
 	// Передаем строку "abc" вместо ID
-	request := httptest.NewRequest(http.MethodPost, "/ads/abc/favorite", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads/abc/favorite", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -516,7 +516,7 @@ func TestHandleGetFavorites_ServiceError(t *testing.T) {
 		GetUserFavorites(gomock.Any(), userID).
 		Return(nil, assert.AnError)
 
-	request := httptest.NewRequest(http.MethodGet, "/profile/favorites", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/profile/favorites", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
@@ -541,7 +541,7 @@ func TestHandleGetCategoryCharacteristics_Success(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
 
-	request := httptest.NewRequest(http.MethodGet, "/categories/10/characteristics", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/categories/10/characteristics", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -560,7 +560,7 @@ func TestHandleGetCategoryCharacteristics_InvalidID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
 
-	request := httptest.NewRequest(http.MethodGet, "/categories/abc/characteristics", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/categories/abc/characteristics", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)
@@ -580,7 +580,7 @@ func TestHandleGetCategoryCharacteristics_ServiceError(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /categories/{id}/characteristics", adsH.HandleGetCategoryCharacteristics)
 
-	request := httptest.NewRequest(http.MethodGet, "/categories/10/characteristics", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/categories/10/characteristics", nil)
 	rr := httptest.NewRecorder()
 
 	mux.ServeHTTP(rr, request)

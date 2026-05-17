@@ -17,6 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const msgID1 = "1-0"
+
 func discardLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
 }
@@ -210,7 +212,7 @@ func TestRunConsumer_FlushOnBatchSize(t *testing.T) {
 
 	now := time.Now()
 	batch := []models.ViewEvent{
-		{MessageID: "1-0", ProductID: 1, ViewedAt: now},
+		{MessageID: msgID1, ProductID: 1, ViewedAt: now},
 		{MessageID: "2-0", ProductID: 2, ViewedAt: now},
 	}
 
@@ -230,7 +232,7 @@ func TestRunConsumer_FlushOnBatchSize(t *testing.T) {
 		{ProductID: 2, ViewedAt: now},
 	}).Return(nil)
 
-	consumer.EXPECT().Ack(gomock.Any(), []string{"1-0", "2-0"}).Return(nil)
+	consumer.EXPECT().Ack(gomock.Any(), []string{msgID1, "2-0"}).Return(nil)
 
 	uc.RunConsumer(ctx)
 }
@@ -257,7 +259,7 @@ func TestRunConsumer_FlushOnContextCancel(t *testing.T) {
 		DoAndReturn(func(_ context.Context, _ int64, _ time.Duration) ([]models.ViewEvent, error) {
 			callCount++
 			if callCount == 1 {
-				return []models.ViewEvent{{MessageID: "1-0", ProductID: 1, ViewedAt: now}}, nil
+				return []models.ViewEvent{{MessageID: msgID1, ProductID: 1, ViewedAt: now}}, nil
 			}
 			cancel()
 			return nil, ctx.Err()
@@ -268,7 +270,7 @@ func TestRunConsumer_FlushOnContextCancel(t *testing.T) {
 		{ProductID: 1, ViewedAt: now},
 	}).Return(nil)
 
-	consumer.EXPECT().Ack(gomock.Any(), []string{"1-0"}).Return(nil)
+	consumer.EXPECT().Ack(gomock.Any(), []string{msgID1}).Return(nil)
 
 	uc.RunConsumer(ctx)
 }
@@ -295,7 +297,7 @@ func TestRunConsumer_FlushDBError_NoAck(t *testing.T) {
 		DoAndReturn(func(_ context.Context, _ int64, _ time.Duration) ([]models.ViewEvent, error) {
 			callCount++
 			if callCount == 1 {
-				return []models.ViewEvent{{MessageID: "1-0", ProductID: 1, ViewedAt: now}}, nil
+				return []models.ViewEvent{{MessageID: msgID1, ProductID: 1, ViewedAt: now}}, nil
 			}
 			cancel()
 			return nil, ctx.Err()

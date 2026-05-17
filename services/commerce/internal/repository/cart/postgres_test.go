@@ -192,4 +192,3 @@ func TestCartStorage_Clear(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
-

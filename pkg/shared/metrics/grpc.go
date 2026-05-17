@@ -33,13 +33,13 @@ func NewGRPC(service string) *GRPCMetrics {
 		requests: promauto.NewCounterVec(prometheus.CounterOpts{
 			Name:        "grpc_server_handled_total",
 			Help:        "Количество обработанных gRPC-запросов.",
-			ConstLabels: prometheus.Labels{"service": service},
+			ConstLabels: prometheus.Labels{labelService: service},
 		}, []string{"grpc_method", "grpc_code"}),
 		duration: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Name:        "grpc_server_handling_seconds",
 			Help:        "Длительность обработки gRPC-запросов в секундах.",
 			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"service": service},
+			ConstLabels: prometheus.Labels{labelService: service},
 		}, []string{"grpc_method"}),
 	}
 	grpcRegistry[service] = m

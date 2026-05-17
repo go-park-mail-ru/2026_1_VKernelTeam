@@ -11,7 +11,7 @@ import (
 // последующий рефакторинг).
 
 func TestNewProducer_NotNil(t *testing.T) {
-	p := NewProducer([]string{"localhost:9092"}, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	p := NewProducer([]string{testBrokerAddr}, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if p == nil {
 		t.Fatal("expected producer instance")
 	}

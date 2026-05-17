@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# Отменяем устаревшие прогоны при новом пуше в ту же ветку/PR.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+      - name: golangci-lint
+        # v7 - версия action, совместимая с golangci-lint v2 (наш .golangci.yaml).
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: latest          # golangci-lint v2.x
+          args: --timeout=5m ./pkg/... ./services/...
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+          cache: true              # кэш go-модулей между прогонами
+      - name: Run tests
+        run: make test-ci
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.0'
+          cache: true
+      - name: Compile all services
+        run: |
+          make build-auth
+          make build-support
+          make build-catalog
+          make build-commerce

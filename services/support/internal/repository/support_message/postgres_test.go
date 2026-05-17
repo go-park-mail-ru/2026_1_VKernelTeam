@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const colCreatedAt = "created_at"
+
 func TestSupportMessageStorage_Create(t *testing.T) {
 	mock, err := pgxmock.NewPool()
 	require.NoError(t, err)
@@ -25,7 +27,7 @@ func TestSupportMessageStorage_Create(t *testing.T) {
 	now := time.Now()
 	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO support_message")).
 		WithArgs(msg.TicketID, msg.UserID, msg.Text).
-		WillReturnRows(pgxmock.NewRows([]string{"id", "created_at"}).AddRow(int64(10), now))
+		WillReturnRows(pgxmock.NewRows([]string{"id", colCreatedAt}).AddRow(int64(10), now))
 
 	id, err := storage.Create(ctx, msg)
 	assert.NoError(t, err)
@@ -55,7 +57,7 @@ func TestSupportMessageStorage_GetByTicketID(t *testing.T) {
 	ticketID := int64(5)
 
 	now := time.Now()
-	rows := pgxmock.NewRows([]string{"id", "ticket_id", "user_id", "text", "created_at"}).
+	rows := pgxmock.NewRows([]string{"id", "ticket_id", "user_id", "text", colCreatedAt}).
 		AddRow(int64(1), ticketID, int64(2), "first", now).
 		AddRow(int64(2), ticketID, int64(3), "second", now.Add(time.Minute))
 
@@ -72,7 +74,7 @@ func TestSupportMessageStorage_GetByTicketID(t *testing.T) {
 	t.Run("EmptyResult", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, ticket_id, user_id, text, created_at")).
 			WithArgs(ticketID).
-			WillReturnRows(pgxmock.NewRows([]string{"id", "ticket_id", "user_id", "text", "created_at"}))
+			WillReturnRows(pgxmock.NewRows([]string{"id", "ticket_id", "user_id", "text", colCreatedAt}))
 
 		messages, err := storage.GetByTicketID(ctx, ticketID)
 		assert.NoError(t, err)

@@ -31,6 +31,8 @@ const (
 
 	ErrSearchQueryRequired = "query parameter is required"
 	ErrSearchQueryTooShort = "search query is too short"
+
+	statusKey = "status"
 )
 
 // HandleGetAds обрабатывает запросы на получение списка объявлений
@@ -330,7 +332,7 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "updated"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusKey: "updated"})
 }
 
 // uploadPhotosFromForm извлекает фотографии из multipart формы и загружает их в S3.
@@ -344,7 +346,7 @@ func (h *AdsHandlers) uploadPhotosFromForm(r *http.Request) ([]string, error) {
 	var filenames []string
 	defer func() {
 		for _, f := range openFiles {
-			f.Close()
+			_ = f.Close()
 		}
 	}()
 
@@ -404,7 +406,7 @@ func (h *AdsHandlers) HandleDeleteAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusKey: "deleted"})
 }
 
 // HandleCloseAdByID обрабатывает запрос на закрытие объявления
@@ -451,7 +453,7 @@ func (h *AdsHandlers) HandleCloseAdByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "archived"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusKey: "archived"})
 }
 
 // HandleGetUserAds обрабатывает запросы на получение объявлений продавца по его ID
@@ -529,7 +531,7 @@ func (h *AdsHandlers) HandleAddToFavorites(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusKey: "ok"})
 }
 
 // HandleDeleteFromFavorites обрабатывает запросы на удаление объявления из избранного
@@ -570,7 +572,7 @@ func (h *AdsHandlers) HandleDeleteFromFavorites(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusKey: "ok"})
 }
 
 // HandleGetFavorites обрабатывает запросы на получение объявлений в избранном

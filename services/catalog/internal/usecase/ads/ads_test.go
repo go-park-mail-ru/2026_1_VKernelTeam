@@ -15,6 +15,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testTitle = "Title"
+	colorRed  = "Красный"
+	matWood   = "Дерево"
+	colorBlue = "Синий"
+
+	charMaterial = "Материал"
+	charColor    = "Цвет"
+)
+
 func TestAds_GetAllAds(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -52,7 +62,7 @@ func TestAds_CreateAd(t *testing.T) {
 	usecase := New(logger, mockStorage, mockFileStorage, config.SearchConfig{}, nil)
 
 	ctx := context.Background()
-	req := &dto.CreateAdRequest{Title: "Title"}
+	req := &dto.CreateAdRequest{Title: testTitle}
 
 	t.Run("Success", func(t *testing.T) {
 		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(1), nil)
@@ -324,18 +334,18 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Success with category and custom characteristics", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Красный"},
+				{CategoryCharacteristicID: 1, Value: colorRed},
 			},
 			CustomCharacteristics: []dto.CustomCharacteristicInput{
-				{Name: "Материал", Value: "Дерево"},
+				{Name: charMaterial, Value: matWood},
 			},
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(1), nil)
@@ -350,7 +360,7 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Fails on invalid category characteristic", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CategoryCharacteristics: []dto.CharacteristicInput{
 				{CategoryCharacteristicID: 1, Value: "Жёлтый"}, // not in enum
@@ -358,7 +368,7 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(2), nil)
@@ -371,10 +381,10 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Fails on GetCategoryCharacteristics error", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Красный"},
+				{CategoryCharacteristicID: 1, Value: colorRed},
 			},
 		}
 
@@ -388,15 +398,15 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Fails on SetProductCharacteristics error", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Красный"},
+				{CategoryCharacteristicID: 1, Value: colorRed},
 			},
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		mockStorage.EXPECT().CreateAd(ctx, req).Return(int64(4), nil)
@@ -410,10 +420,10 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Fails on SetProductCustomCharacteristics error", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CustomCharacteristics: []dto.CustomCharacteristicInput{
-				{Name: "Материал", Value: "Дерево"},
+				{Name: charMaterial, Value: matWood},
 			},
 		}
 
@@ -427,10 +437,10 @@ func TestAds_CreateAd_WithCharacteristics(t *testing.T) {
 
 	t.Run("Fails on invalid custom characteristics", func(t *testing.T) {
 		req := &dto.CreateAdRequest{
-			Title:      "Title",
+			Title:      testTitle,
 			CategoryID: 10,
 			CustomCharacteristics: []dto.CustomCharacteristicInput{
-				{Name: "", Value: "Дерево"}, // empty name
+				{Name: "", Value: matWood}, // empty name
 			},
 		}
 
@@ -458,12 +468,12 @@ func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
 			ID:     1,
 			UserID: 2,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Синий"},
+				{CategoryCharacteristicID: 1, Value: colorBlue},
 			},
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		// Нет основных полей — UpdateAd в репозитории не вызывается
@@ -480,7 +490,7 @@ func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
 			ID:     1,
 			UserID: 2,
 			CustomCharacteristics: []dto.CustomCharacteristicInput{
-				{Name: "Материал", Value: "Металл"},
+				{Name: charMaterial, Value: "Металл"},
 			},
 		}
 
@@ -496,7 +506,7 @@ func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
 			ID:     1,
 			UserID: 2,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Синий"},
+				{CategoryCharacteristicID: 1, Value: colorBlue},
 			},
 		}
 
@@ -511,12 +521,12 @@ func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
 			ID:     1,
 			UserID: 2,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 999, Value: "Синий"}, // unknown ID
+				{CategoryCharacteristicID: 999, Value: colorBlue}, // unknown ID
 			},
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{ID: 1, CategoryID: 10}, nil)
@@ -531,12 +541,12 @@ func TestAds_UpdateAd_WithCharacteristics(t *testing.T) {
 			ID:     1,
 			UserID: 2,
 			CategoryCharacteristics: []dto.CharacteristicInput{
-				{CategoryCharacteristicID: 1, Value: "Синий"},
+				{CategoryCharacteristicID: 1, Value: colorBlue},
 			},
 		}
 
 		defs := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: 10, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: 10, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 		}
 
 		mockStorage.EXPECT().GetAdByID(ctx, int64(1)).Return(models.Ad{ID: 1, CategoryID: 10}, nil)
@@ -576,7 +586,7 @@ func TestAds_GetCategoryCharacteristics(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		expected := []models.CategoryCharacteristic{
-			{ID: 1, CategoryID: categoryID, Name: "Цвет", AllowedValues: []string{"Красный", "Синий"}},
+			{ID: 1, CategoryID: categoryID, Name: charColor, AllowedValues: []string{colorRed, colorBlue}},
 			{ID: 2, CategoryID: categoryID, Name: "Размер", AllowedValues: nil},
 		}
 

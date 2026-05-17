@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	testEmail = "user@example.com"
+	caseEmpty = "empty"
+	testName  = "John"
+)
+
 func TestValidateEmail(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -14,9 +20,9 @@ func TestValidateEmail(t *testing.T) {
 		wantClean string
 		wantErr   error
 	}{
-		{"valid lowercase", "user@example.com", "user@example.com", nil},
-		{"valid uppercase normalized", "USER@Example.COM", "user@example.com", nil},
-		{"valid with whitespace trimmed", "  user@example.com  ", "user@example.com", nil},
+		{"valid lowercase", testEmail, testEmail, nil},
+		{"valid uppercase normalized", "USER@Example.COM", testEmail, nil},
+		{"valid with whitespace trimmed", "  user@example.com  ", testEmail, nil},
 		{"valid with subdomain", "u@mail.example.co.uk", "u@mail.example.co.uk", nil},
 		{"valid with plus tag", "user+tag@example.com", "user+tag@example.com", nil},
 		{"valid numeric TLD", "u@example.123", "u@example.123", nil},
@@ -25,7 +31,7 @@ func TestValidateEmail(t *testing.T) {
 		{"missing local part", "@example.com", "@example.com", ErrInvalidEmailFormat},
 		{"single-char TLD", "u@example.c", "u@example.c", ErrInvalidEmailFormat},
 		{"spaces inside", "us er@example.com", "us er@example.com", ErrInvalidEmailFormat},
-		{"empty", "", "", ErrInvalidEmailFormat},
+		{caseEmpty, "", "", ErrInvalidEmailFormat},
 	}
 
 	for _, tt := range tests {
@@ -54,7 +60,7 @@ func TestValidatePassword(t *testing.T) {
 		{"no letter", "12345678", ErrPasswordRequiresLetter},
 		{"no digit", "Password", ErrPasswordRequiresDigit},
 		{"only cyrillic letters", "парольпароль", ErrPasswordRequiresLetter},
-		{"empty", "", ErrPasswordTooShort},
+		{caseEmpty, "", ErrPasswordTooShort},
 	}
 
 	for _, tt := range tests {
@@ -76,13 +82,13 @@ func TestValidateName(t *testing.T) {
 		wantClean string
 		wantErr   error
 	}{
-		{"valid latin", "John", "John", nil},
+		{"valid latin", testName, testName, nil},
 		{"valid cyrillic", "Иван", "Иван", nil},
 		{"valid with apostrophe", "O'Neill", "O'Neill", nil},
 		{"valid with hyphen", "Anna-Maria", "Anna-Maria", nil},
 		{"valid with space", "Анна Мария", "Анна Мария", nil},
-		{"trimmed", "   John   ", "John", nil},
-		{"empty", "", "", ErrNameEmpty},
+		{"trimmed", "   John   ", testName, nil},
+		{caseEmpty, "", "", ErrNameEmpty},
 		{"whitespace only treated as empty", "   ", "", ErrNameEmpty},
 		{"too short", "Al", "", ErrNameTooShort},
 		{"too long", strings.Repeat("a", 51), "", ErrNameTooLong},
