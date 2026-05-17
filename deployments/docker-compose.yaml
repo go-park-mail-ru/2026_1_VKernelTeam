@@ -7,14 +7,21 @@
 
 services:
 
-  #  API GATEWAY
+  #  API GATEWAY + раздача фронтенда (HTTPS, HTTP/2)
   gateway:
     image: nginx:1.27-alpine
     container_name: gateway
     ports:
       - "${GATEWAY_PORT}:80"
+      - "${GATEWAY_HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # SPA-сборка фронтенда (webpack складывает в dist/, рядом лежат .gz/.br).
+      - ${FRONTEND_DIST_PATH:-../../2026_1_VKernel_Team/dist}:/usr/share/nginx/html:ro
+      # Сертификаты Let's Encrypt с хоста (выпускаются certbot'ом, ниже).
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Webroot для ACME-challenge.
+      - certbot_webroot:/var/www/certbot:ro
     depends_on:
       - auth
       - support
@@ -22,6 +29,21 @@ services:
       - commerce
       - swagger-ui
     restart: unless-stopped
+
+  #  CERTBOT — выпускает и автообновляет сертификат Let's Encrypt раз в 12 ч.
+  #  Первый выпуск (когда сертификата ещё нет):
+  #    docker compose run --rm --entrypoint "certbot certonly --webroot \
+  #      -w /var/www/certbot -d clover-go.ru \
+  #      --email you@example.com --agree-tos --no-eff-email" certbot
+  #  После получения сертификата перезагрузить nginx: docker compose exec gateway nginx -s reload
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    restart: unless-stopped
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - certbot_webroot:/var/www/certbot
+    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
 
   #  ОБЩАЯ БД
   db:
@@ -318,3 +340,4 @@ volumes:
   clickhouse_data:
   prometheus_data:
   grafana_data:
+  certbot_webroot:
