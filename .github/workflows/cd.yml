@@ -1,7 +1,6 @@
 name: CD
 
 # Запускается после успешного workflow CI на ветке dev.
-# К этому моменту свежие образы уже лежат в ghcr.io.
 on:
   workflow_run:
     workflows: ["CI"]
@@ -24,6 +23,8 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          # Сборка 4 Go-сервисов на 1-CPU VPS не укладывается в дефолтные 10m.
+          command_timeout: 40m
           script: |
             cd ~/2026_1_VKernelTeam
             make deploy
