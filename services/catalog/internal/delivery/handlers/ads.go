@@ -27,6 +27,7 @@ const (
 	opHandleDeleteFromFavorites = "handlers.HandleDeleteFromFavorites"
 	opHandleGetFavorites        = "handlers.HandleGetFavorites"
 	opHandleSearchAds           = "handlers.HandleSearchAds"
+	opHandleGetPriceHistory     = "handlers.HandleGetPriceHistory"
 
 	ErrSearchQueryRequired = "query parameter is required"
 	ErrSearchQueryTooShort = "search query is too short"
@@ -638,6 +639,43 @@ func (h *AdsHandlers) HandleGetCategoryCharacteristics(w http.ResponseWriter, r 
 	}
 
 	responser.RespondWithJSON(w, http.StatusOK, chars)
+}
+
+// HandleGetPriceHistory обрабатывает запрос на получение истории цен объявления.
+// @Summary История цен объявления
+// @Description Возвращает историю изменения цены объявления (даты и соответствующие цены)
+// @Tags ads
+// @Produce json
+// @Param id path int true "ID объявления"
+// @Success 200 {object} dto.PriceHistoryResponse "история цен успешно получена"
+// @Failure 400 {object} dto.ErrorResponse "invalid ad id: Некорректный ID объявления"
+// @Failure 400 {object} dto.ErrorResponse "ad not found: Объявление не найдено"
+// @Failure 500 {object} dto.ErrorResponse "internal error: Ошибка сервера при получении истории цен"
+// @Router /ads/{id}/price-history [get]
+func (h *AdsHandlers) HandleGetPriceHistory(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidAdID)
+		return
+	}
+
+	history, err := h.services.Ads.GetPriceHistory(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ad.ErrAdNotFound) {
+			responser.RespondWithError(w, http.StatusBadRequest, ErrAdNotFound)
+			return
+		}
+		h.log.ErrorContext(r.Context(), "failed to get price history",
+			slog.String("op", opHandleGetPriceHistory),
+			slog.Int64("ad_id", id),
+			slog.String("error", err.Error()),
+		)
+		responser.RespondWithError(w, http.StatusInternalServerError, ErrInternalError)
+		return
+	}
+
+	responser.RespondWithJSON(w, http.StatusOK, dto.PriceHistoryResponse{History: history})
 }
 
 // isCharacteristicValidationError проверяет, является ли ошибка валидацией характеристик.

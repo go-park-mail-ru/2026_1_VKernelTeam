@@ -495,6 +495,160 @@ const docTemplate = `{
                 }
             }
         },
+        "/ads/{id}/order": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Создаёт (или переиспользует существующий) чат между покупателем\nи продавцом по объявлению и отправляет туда сообщение-заказ.\nВ ответе возвращается ID чата для редиректа на фронте.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Создать запрос на покупку товара",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления (ad_id)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "запрос на покупку создан успешно",
+                        "schema": {
+                            "$ref": "#/definitions/dto.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid ad id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ads/{id}/price-history": {
+            "get": {
+                "description": "Возвращает историю изменения цены объявления (даты и соответствующие цены)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "История цен объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "история цен успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PriceHistoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ad not found: Объявление не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера при получении истории цен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ads/{id}/view": {
+            "post": {
+                "description": "Записывает просмотр с дедупликацией и возвращает актуальный счётчик",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "Зафиксировать просмотр объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID v4 идентификатор устройства",
+                        "name": "X-Device-ID",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "views_count",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int64"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid ad id / invalid X-Device-ID",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "ad not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email/пароль или, при наличии cookie, проверяет токен",
@@ -766,49 +920,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/cart/checkout": {
-            "post": {
-                "security": [
-                    {
-                        "CookieAuth": []
-                    }
-                ],
-                "description": "Совершает покупку всех товаров из корзины и возвращает контакты продавцов",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "cart"
-                ],
-                "summary": "Оформить заказ",
-                "responses": {
-                    "200": {
-                        "description": "успешное оформление заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.CheckoutResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "cart is empty / one or more products are no longer available: Ошибка оформления заказа",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "unauthorized: Пользователь не авторизован",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "internal error: Ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/cart/{id}": {
             "delete": {
                 "security": [
@@ -895,6 +1006,150 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "invalid category id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает чаты, в которых участвует текущий пользователь,\nотсортированные по времени последнего сообщения.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить список чатов",
+                "responses": {
+                    "200": {
+                        "description": "список чатов",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Возвращает объявление, собеседника и все сообщения чата.\nДоступ только у участников чата — для остальных 400.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получить чат",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "детали чата",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChatDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "chat not found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Продавец подтверждает сделку по чату. Создаётся заказ за покупателем,\nобъявление переводится в статус 'sold' и удаляется из корзин всех пользователей.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orders"
+                ],
+                "summary": "Подтвердить покупку товара",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "покупка подтверждена успешно",
+                        "schema": {
+                            "$ref": "#/definitions/dto.SuccessConfirmOrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid chat id / forbidden: not the seller / ad is not active",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -1759,6 +2014,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdPreview": {
+            "type": "object",
+            "properties": {
+                "ad_id": {
+                    "type": "integer"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.AddToCartRequest": {
             "type": "object",
             "properties": {
@@ -1804,21 +2079,73 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.CheckoutResponse": {
+        "dto.ChangeStatusRequest": {
             "type": "object",
             "properties": {
-                "order_ids": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.ChatDetailResponse": {
+            "type": "object",
+            "properties": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "messages": {
                     "type": "array",
                     "items": {
-                        "type": "integer"
+                        "$ref": "#/definitions/dto.MessageItem"
                     }
                 },
-                "sellers": {
-                    "description": "Ключ — ID продавца",
-                    "type": "object",
-                    "additionalProperties": {
-                        "$ref": "#/definitions/dto.SellerContact"
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
+                }
+            }
+        },
+        "dto.ChatListResponse": {
+            "type": "object",
+            "properties": {
+                "chats": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ChatPreview"
                     }
+                }
+            }
+        },
+        "dto.ChatPreview": {
+            "type": "object",
+            "properties": {
+                "ad": {
+                    "$ref": "#/definitions/dto.AdPreview"
+                },
+                "chat_id": {
+                    "type": "integer"
+                },
+                "last_message": {
+                    "$ref": "#/definitions/dto.LastMessagePreview"
+                },
+                "partner": {
+                    "$ref": "#/definitions/dto.UserPreview"
+                }
+            }
+        },
+        "dto.CreateTicketRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -1826,6 +2153,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.LastMessagePreview": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
                     "type": "string"
                 }
             }
@@ -1850,8 +2191,73 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "role": {
+                    "type": "string"
+                },
                 "user_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.MessageItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "sender_id": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "ticket_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.OrderResponse": {
+            "type": "object",
+            "properties": {
+                "chat_id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PriceHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PricePoint"
+                    }
                 }
             }
         },
@@ -1881,6 +2287,14 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.RateTicketRequest": {
+            "type": "object",
+            "properties": {
+                "rating": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.RegisterRequest": {
             "type": "object",
             "properties": {
@@ -1895,16 +2309,84 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.SellerContact": {
+        "dto.SendMessageRequest": {
             "type": "object",
             "properties": {
-                "email": {
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.StatsResponse": {
+            "type": "object",
+            "properties": {
+                "by_category": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "by_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.SuccessConfirmOrderResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TicketResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "id": {
                     "type": "integer"
                 },
-                "name": {
+                "rating": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.TicketStatusResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
                     "type": "string"
                 }
             }
@@ -1919,6 +2401,34 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 3
+                }
+            }
+        },
+        "dto.UpdateTicketRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.UserPreview": {
+            "type": "object",
+            "properties": {
+                "avatar_path": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -2045,6 +2555,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.PricePoint": {
+            "type": "object",
+            "properties": {
+                "changed_at": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                }
+            }
+        },
         "models.ProductCharacteristic": {
             "type": "object",
             "properties": {
@@ -2099,6 +2620,9 @@ const docTemplate = `{
                 },
                 "reviews_count": {
                     "type": "integer"
+                },
+                "role": {
+                    "type": "string"
                 },
                 "unread_messages_count": {
                     "type": "integer"

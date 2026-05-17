@@ -587,3 +587,79 @@ func TestHandleGetCategoryCharacteristics_ServiceError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
+
+func TestHandleGetPriceHistory_Success(t *testing.T) {
+	adsH, mockAds := setupAdsHandlers(t)
+
+	adID := int64(1)
+	want := []models.PricePoint{{Price: 15000}, {Price: 12000}}
+
+	mockAds.EXPECT().
+		GetPriceHistory(gomock.Any(), adID).
+		Return(want, nil)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	var resp dto.PriceHistoryResponse
+	err := json.Unmarshal(rr.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, want, resp.History)
+}
+
+func TestHandleGetPriceHistory_NotFound(t *testing.T) {
+	adsH, mockAds := setupAdsHandlers(t)
+
+	mockAds.EXPECT().
+		GetPriceHistory(gomock.Any(), int64(1)).
+		Return(nil, ad.ErrAdNotFound)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetPriceHistory_InvalidID(t *testing.T) {
+	adsH, _ := setupAdsHandlers(t)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/abc/price-history", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestHandleGetPriceHistory_InternalError(t *testing.T) {
+	adsH, mockAds := setupAdsHandlers(t)
+
+	mockAds.EXPECT().
+		GetPriceHistory(gomock.Any(), int64(1)).
+		Return(nil, fmt.Errorf("db error"))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ads/{id}/price-history", adsH.HandleGetPriceHistory)
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads/1/price-history", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, request)
+
+	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}
