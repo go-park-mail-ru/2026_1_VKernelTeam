@@ -14,21 +14,22 @@ import (
 )
 
 const (
-	colID          = "id"
-	colSellerID    = "seller_id"
-	colCategoryID  = "category_id"
-	colTitle       = "title"
-	colDescription = "description"
-	colPrice       = "price"
-	colStatus      = "status"
-	colLocation    = "location"
-	colCreatedAt   = "created_at"
-	colUpdatedAt   = "updated_at"
-	colPhotos      = "photos"
-	colViewsCount  = "views_count"
-	colFavorites   = "favorites_count"
-	colIsBoosted   = "is_boosted"
-	photoP1        = "p1.jpg"
+	colID            = "id"
+	colSellerID      = "seller_id"
+	colCategoryID    = "category_id"
+	colTitle         = "title"
+	colDescription   = "description"
+	colPrice         = "price"
+	colStatus        = "status"
+	colLocation      = "location"
+	colCreatedAt     = "created_at"
+	colUpdatedAt     = "updated_at"
+	colPhotos        = "photos"
+	colViewsCount    = "views_count"
+	colFavorites     = "favorites_count"
+	colIsBoosted     = "is_boosted"
+	colIsHighlighted = "is_highlighted"
+	photoP1          = "p1.jpg"
 )
 
 // expectEmptyCharacteristics добавляет mock-ожидания для двух запросов характеристик (пустые результаты).
@@ -55,7 +56,7 @@ func TestAdStorage_GetAdByID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, "is_highlighted",
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
 		}).AddRow(adID, int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
@@ -101,7 +102,7 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, "is_highlighted",
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
 		}).AddRow(int64(1), int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
@@ -326,7 +327,7 @@ func TestAdStorage_GetAdsByUserID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, "is_highlighted",
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
 		}).AddRow(int64(10), userID, int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
@@ -446,7 +447,7 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 		columns := []string{
 			"id", "seller_id", "category_id", "title", "description", "price", "status",
 			"location", "created_at", "updated_at", "photos", "views_count", "favorites_count",
-			colIsBoosted, "is_highlighted",
+			colIsBoosted, colIsHighlighted,
 		}
 
 		rows := pgxmock.NewRows(columns).

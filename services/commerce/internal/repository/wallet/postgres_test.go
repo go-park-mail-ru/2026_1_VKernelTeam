@@ -22,6 +22,8 @@ const (
 	colCreatedAt      = "created_at"
 	colUpdatedAt      = "updated_at"
 	colIdempotencyKey = "idempotency_key"
+	colUserID         = "user_id"
+	colReferenceID    = "reference_id"
 )
 
 func newStorage(t *testing.T) (*WalletStorage, pgxmock.PgxPoolIface) {
@@ -39,7 +41,7 @@ func TestWalletStorage_Get_Success(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT user_id, balance, updated_at FROM wallet")).
 		WithArgs(int64(1)).
 		WillReturnRows(
-			pgxmock.NewRows([]string{"user_id", colBalance, colUpdatedAt}).
+			pgxmock.NewRows([]string{colUserID, colBalance, colUpdatedAt}).
 				AddRow(int64(1), int64(500), now),
 		)
 
@@ -69,7 +71,7 @@ func TestWalletStorage_GetOrCreate(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO wallet")).
 		WithArgs(int64(3)).
 		WillReturnRows(
-			pgxmock.NewRows([]string{"user_id", colBalance, colUpdatedAt}).
+			pgxmock.NewRows([]string{colUserID, colBalance, colUpdatedAt}).
 				AddRow(int64(3), int64(0), now),
 		)
 
@@ -91,7 +93,7 @@ func TestWalletStorage_GetForUpdateTx_Success(t *testing.T) {
 	mock.ExpectQuery(regexp.QuoteMeta("FOR UPDATE")).
 		WithArgs(int64(4)).
 		WillReturnRows(
-			pgxmock.NewRows([]string{"user_id", colBalance, colUpdatedAt}).
+			pgxmock.NewRows([]string{colUserID, colBalance, colUpdatedAt}).
 				AddRow(int64(4), int64(700), now),
 		)
 	mock.ExpectCommit()
@@ -161,7 +163,7 @@ func TestWalletStorage_InsertTransactionTx_Success(t *testing.T) {
 		WithArgs(int64(1), int64(500), models.WalletTxTypeTopup, &refID, &key).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", "user_id", colAmount, "type", "reference_id", colIdempotencyKey, colCreatedAt,
+				"id", colUserID, colAmount, "type", colReferenceID, colIdempotencyKey, colCreatedAt,
 			}).AddRow(int64(10), int64(1), int64(500), models.WalletTxTypeTopup, &refID, &key, now),
 		)
 	mock.ExpectCommit()
@@ -192,7 +194,7 @@ func TestWalletStorage_GetTransactionByIdempotencyKey(t *testing.T) {
 			WithArgs("idem-2").
 			WillReturnRows(
 				pgxmock.NewRows([]string{
-					"id", "user_id", colAmount, "type", "reference_id", colIdempotencyKey, colCreatedAt,
+					"id", colUserID, colAmount, "type", colReferenceID, colIdempotencyKey, colCreatedAt,
 				}).AddRow(int64(10), int64(1), int64(500), models.WalletTxTypeTopup, &refID, &key, now),
 			)
 
@@ -223,7 +225,7 @@ func TestWalletStorage_ListTransactionsByUser(t *testing.T) {
 		WithArgs(int64(1), int64(0), 20).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", "user_id", colAmount, "type", "reference_id", colIdempotencyKey, colCreatedAt,
+				"id", colUserID, colAmount, "type", colReferenceID, colIdempotencyKey, colCreatedAt,
 			}).
 				AddRow(int64(2), int64(1), int64(-49), models.WalletTxTypePromotionCharge, (*int64)(nil), (*string)(nil), now).
 				AddRow(int64(1), int64(1), int64(500), models.WalletTxTypeTopup, (*int64)(nil), (*string)(nil), now),
