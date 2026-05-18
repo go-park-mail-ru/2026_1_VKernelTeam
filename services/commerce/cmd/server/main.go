@@ -28,9 +28,16 @@ import (
 	commercemw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/middleware"
 	cartrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/cart"
 	chatrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/chat"
+	paymentrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/payment"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/postgres"
+	promorepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/promotion"
+	commerceredis "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/redis"
+	walletrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/wallet"
 	cartusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/cart"
 	chatusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/chat"
+	paymentusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/payment"
+	promotionusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/promotion"
+	walletusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/wallet"
 )
 
 func main() {
@@ -62,18 +69,30 @@ func main() {
 	cartStorage := cartrepo.NewCartStorage(pg.Pool, log)
 	chatStorage := chatrepo.NewChatStorage(pg.Pool, log)
 
+	planStorage := promorepo.NewPlanStorage(pg.Pool, log)
+	promotionStorage := promorepo.NewPromotionStorage(pg.Pool, log)
+	walletStorage := walletrepo.NewWalletStorage(pg.Pool, log)
+	paymentStorage := paymentrepo.NewPaymentStorage(pg.Pool, log)
+	planCache := commerceredis.NewPlanCache(cfg.RedisAddr, log)
+	defer func() { _ = planCache.Close() }()
+	mockProvider := paymentusecase.NewMockProvider()
+
 	// catalogClient реализует AdsProvider/AdProvider (метод GetAdByID).
 	cartUC := cartusecase.New(log, cartStorage, catalogClient)
 	chatUC := chatusecase.New(log, chatStorage, catalogClient)
+	walletUC := walletusecase.New(log, pg.Pool, walletStorage, paymentStorage, mockProvider)
+	promotionUC := promotionusecase.New(log, pg.Pool, planStorage, promotionStorage, walletStorage, planCache, catalogClient)
 
 	cartHandlers := handlers.NewCartHandlers(log, cartUC)
 	chatHandlers := handlers.NewChatHandlers(log, chatUC)
+	walletHandlers := handlers.NewWalletHandlers(log, walletUC)
+	promotionHandlers := handlers.NewPromotionHandlers(log, promotionUC)
 
 	brokers := splitBrokers(cfg.Kafka.Brokers)
 	kafkaConsumer := commercekafka.NewConsumer(brokers, cfg.Kafka.GroupID, cartStorage, log)
 	defer func() { _ = kafkaConsumer.Close() }()
 
-	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, authClient)
+	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, authClient)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -112,6 +131,8 @@ func buildHTTPServer(
 	port int,
 	cart *handlers.CartHandlers,
 	chat *handlers.ChatHandlers,
+	wallet *handlers.WalletHandlers,
+	promotion *handlers.PromotionHandlers,
 	authClient *commercegrpc.AuthClient,
 ) *http.Server {
 	mux := http.NewServeMux()
@@ -129,6 +150,17 @@ func buildHTTPServer(
 	mux.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(chat.HandleConfirmOrder)))
 	mux.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(chat.HandleGetAllChats)))
 	mux.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(chat.HandleGetChat)))
+
+	// Wallet
+	mux.Handle("GET "+prefix+"/wallet", authMW(http.HandlerFunc(wallet.HandleGetWallet)))
+	mux.Handle("GET "+prefix+"/wallet/transactions", authMW(http.HandlerFunc(wallet.HandleListWalletTransactions)))
+	mux.Handle("POST "+prefix+"/wallet/topup", authMW(http.HandlerFunc(wallet.HandleTopupWallet)))
+
+	// Promotion
+	mux.Handle("GET "+prefix+"/promotion/plans", http.HandlerFunc(promotion.HandleGetPromotionPlans))
+	mux.Handle("GET "+prefix+"/ads/{id}/promotions", http.HandlerFunc(promotion.HandleListAdPromotions))
+	mux.Handle("POST "+prefix+"/ads/{id}/promotions", authMW(http.HandlerFunc(promotion.HandlePurchasePromotion)))
+	mux.Handle("GET "+prefix+"/profile/promotions", authMW(http.HandlerFunc(promotion.HandleListUserPromotions)))
 
 	// /metrics - Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
 	mux.Handle("GET /metrics", metrics.Handler())

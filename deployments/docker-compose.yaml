@@ -166,6 +166,7 @@ services:
       - ../.env
     environment:
       - DATABASE_DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+      - REDIS_ADDR=${REDIS_ADDR}
       - AUTH_GRPC_ADDR=auth:9001
       - CATALOG_GRPC_ADDR=catalog:9004
       - KAFKA_BROKERS=kafka:29092
@@ -177,6 +178,8 @@ services:
     depends_on:
       db_migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_started
       auth:
         condition: service_started
       catalog:

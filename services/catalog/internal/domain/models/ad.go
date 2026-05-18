@@ -27,6 +27,8 @@ type Ad struct {
 	DeletedAt               time.Time                     `json:"deleted_at"`
 	Photos                  []string                      `json:"photos"`
 	Location                string                        `json:"location"`
+	IsBoosted               bool                          `json:"is_boosted"`
+	IsHighlighted           bool                          `json:"is_highlighted"`
 	CategoryCharacteristics []ProductCharacteristic       `json:"category_characteristics"`
 	CustomCharacteristics   []ProductCustomCharacteristic `json:"custom_characteristics"`
 }

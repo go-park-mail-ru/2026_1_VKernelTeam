@@ -591,6 +591,122 @@ const docTemplate = `{
                 }
             }
         },
+        "/ads/{id}/promotions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "promotion"
+                ],
+                "summary": "Активные промо объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PromotionResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "invalid ad id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "promotion"
+                ],
+                "summary": "Купить продвижение объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "plan_code и idempotency_key",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PurchasePromotionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PurchasePromotionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "INSUFFICIENT_FUNDS / PLAN_NOT_FOUND / PLAN_INACTIVE / INVALID_AD_STATUS / INVALID_REQUEST",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "NOT_AD_OWNER",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "AD_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ads/{id}/view": {
             "post": {
                 "description": "Записывает просмотр с дедупликацией и возвращает актуальный счётчик",
@@ -1351,6 +1467,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/profile/promotions": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "promotion"
+                ],
+                "summary": "История покупок продвижения",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "лимит (по умолчанию 20, максимум 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID последнего элемента предыдущей страницы",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PromotionListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/promotion/plans": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "promotion"
+                ],
+                "summary": "Список тарифов продвижения",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.PromotionPlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/support/tickets": {
             "get": {
                 "security": [
@@ -2011,6 +2205,148 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/wallet": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Получить баланс кошелька",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.WalletResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/topup": {
+            "post": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Пополнить кошелёк",
+                "parameters": [
+                    {
+                        "description": "Сумма в рублях и idempotency_key",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TopupWalletRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.TopupWalletResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "INVALID_AMOUNT / INVALID_REQUEST",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallet/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "История операций по кошельку",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "лимит (по умолчанию 20, максимум 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID последнего элемента предыдущей страницы",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.WalletTransactionListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2261,6 +2597,66 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PromotionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PromotionResponse"
+                    }
+                },
+                "next_cursor": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PromotionPlanResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "duration_days": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PromotionResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "plan_code": {
+                    "type": "string"
+                },
+                "price_paid": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "starts_at": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.PublicUserResponse": {
             "type": "object",
             "properties": {
@@ -2283,6 +2679,28 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "reviews_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.PurchasePromotionRequest": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "plan_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.PurchasePromotionResponse": {
+            "type": "object",
+            "properties": {
+                "promotion": {
+                    "$ref": "#/definitions/dto.PromotionResponse"
+                },
+                "wallet_balance": {
                     "type": "integer"
                 }
             }
@@ -2391,6 +2809,28 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.TopupWalletRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TopupWalletResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
+                },
+                "payment_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "dto.UpdateProfileRequest": {
             "type": "object",
             "required": [
@@ -2435,37 +2875,58 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
+                "email": {
                     "type": "string"
                 },
-                "category_id": {
+                "name": {
                     "type": "string"
                 },
-                "custom_characteristics": {
+                "password": {
                     "type": "string"
+                }
+            }
+        },
+        "dto.WalletResponse": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "integer"
                 },
-                "description": {
+                "currency": {
                     "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
+                }
+            }
+        },
+        "dto.WalletTransactionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/dto.WalletTransactionResponse"
                     }
                 },
-                "price": {
+                "next_cursor": {
+                    "type": "integer"
+                }
+            }
+        },
+        "dto.WalletTransactionResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "created_at": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
+                "id": {
+                    "type": "integer"
                 },
-                "title": {
-                    "type": "string"
+                "reference_id": {
+                    "type": "integer"
                 },
-                "user_id": {
+                "type": {
                     "type": "string"
                 }
             }
@@ -2473,62 +2934,23 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCharacteristic"
-                    }
-                },
-                "category_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
-                    }
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "favorites_count": {
-                    "type": "integer"
-                },
                 "id": {
-                    "type": "integer"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "price": {
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "int64"
                 },
-                "seller_id": {
-                    "type": "integer"
+                "sellerID": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "status": {
                     "type": "string"
                 },
                 "title": {
                     "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "views_count": {
-                    "type": "integer"
                 }
             }
         },
@@ -2563,28 +2985,6 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "integer"
-                }
-            }
-        },
-        "models.ProductCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ProductCustomCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
                 }
             }
         },

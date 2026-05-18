@@ -80,13 +80,16 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.id = $1
 		  AND p.deleted_at IS NULL
-		GROUP BY p.id
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -110,6 +113,8 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		&photos,
 		&ad.ViewsCount,
 		&ad.FavoritesCount,
+		&ad.IsBoosted,
+		&ad.IsHighlighted,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -154,7 +159,7 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 	return ad, nil
 }
 
-// GetAllAds возвращает список активных объявлений.
+// GetAllAds возвращает список активных объявлений. Сортировка: забустенные сверху, затем по дате.
 func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	const query = `
 		SELECT
@@ -173,14 +178,19 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.deleted_at IS NULL
 		  AND p.status = 'active'
-		GROUP BY p.id
-		ORDER BY p.created_at DESC
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
+		ORDER BY
+			COALESCE(vpp.is_boosted, false) DESC,
+			p.created_at DESC
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -215,6 +225,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&photos,
 			&ad.ViewsCount,
 			&ad.FavoritesCount,
+			&ad.IsBoosted,
+			&ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan ad row",
 				slog.String("op", opGetAllAds),
@@ -528,6 +540,7 @@ func (s *AdStorage) CloseAd(ctx context.Context, id int64, userID int64) error {
 }
 
 // GetAdsByUserID возвращает список всех объявлений пользователя по его ID.
+// Бустинг здесь не применяется (профиль продавца), но флаги передаём — клиент рисует бейджи.
 func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
 	const query = `
 		SELECT
@@ -535,12 +548,15 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 			p.price, p.status, COALESCE(p.location, '') AS location, p.created_at, p.updated_at,
 			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite f ON f.product_id = p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.seller_id = $1 AND p.deleted_at IS NULL
-		GROUP BY p.id
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY p.created_at DESC
 	`
 
@@ -568,6 +584,7 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
 			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan ad row",
 				slog.String("op", opGetAdsByUserID),
@@ -676,14 +693,17 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f_all.user_id) AS favorites_count
+			COUNT(DISTINCT f_all.user_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM favorite f
 		JOIN product p ON f.product_id = p.id
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite   f_all ON f_all.product_id = p.id
+		LEFT JOIN product_image       pi    ON pi.product_id    = p.id
+		LEFT JOIN favorite            f_all ON f_all.product_id = p.id
+		LEFT JOIN v_product_promotion vpp   ON vpp.product_id   = p.id
 		WHERE f.user_id = $1
 		  AND p.deleted_at IS NULL
-		GROUP BY p.id, f.created_at
+		GROUP BY p.id, f.created_at, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY f.created_at DESC
 	`
 
@@ -720,6 +740,8 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			&photos,
 			&ad.ViewsCount,
 			&ad.FavoritesCount,
+			&ad.IsBoosted,
+			&ad.IsHighlighted,
 		)
 		if err != nil {
 			s.log.ErrorContext(ctx, "failed to scan favorite row",
@@ -1005,14 +1027,19 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 				'{}'
 			) AS photos,
 			COUNT(DISTINCT pv.id)        AS views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM matched m
 		JOIN product p ON p.id = m.id
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view  pv ON pv.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
-		GROUP BY p.id, m.rank
-		ORDER BY m.rank DESC
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN product_view        pv  ON pv.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
+		GROUP BY p.id, m.rank, vpp.is_boosted, vpp.is_highlighted
+		ORDER BY
+			COALESCE(vpp.is_boosted, false) DESC,
+			m.rank DESC
 	`
 
 	rows, err := tx.Query(ctx, query, variants, cfg.MaxResults, categoryID)
@@ -1033,6 +1060,7 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
 			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan search result",
 				slog.String("op", opSearchAds),
