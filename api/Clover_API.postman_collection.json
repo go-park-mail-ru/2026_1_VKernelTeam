@@ -409,6 +409,19 @@
 					}
 				},
 				{
+					"name": "Get Ad Price History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/price-history",
+							"host": ["{{baseUrl}}"],
+							"path": ["ads", "{{adId}}", "price-history"]
+						},
+						"description": "История изменения цены объявления: список пар дата-цена."
+					}
+				},
+				{
 					"name": "Create Ad",
 					"request": {
 						"method": "POST",

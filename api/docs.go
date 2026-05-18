@@ -550,6 +550,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/ads/{id}/price-history": {
+            "get": {
+                "description": "Возвращает историю изменения цены объявления (даты и соответствующие цены)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ads"
+                ],
+                "summary": "История цен объявления",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID объявления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "история цен успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PriceHistoryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ad not found: Объявление не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error: Ошибка сервера при получении истории цен",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ads/{id}/promotions": {
             "get": {
                 "produces": [
@@ -2545,6 +2586,17 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PriceHistoryResponse": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.PricePoint"
+                    }
+                }
+            }
+        },
         "dto.PromotionListResponse": {
             "type": "object",
             "properties": {
@@ -2823,37 +2875,13 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
+                "email": {
                     "type": "string"
                 },
-                "category_id": {
+                "name": {
                     "type": "string"
                 },
-                "custom_characteristics": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
+                "password": {
                     "type": "string"
                 }
             }
@@ -2945,6 +2973,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sort_order": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.PricePoint": {
+            "type": "object",
+            "properties": {
+                "changed_at": {
+                    "type": "string"
+                },
+                "price": {
                     "type": "integer"
                 }
             }

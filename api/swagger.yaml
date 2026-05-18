@@ -152,6 +152,13 @@ definitions:
       message:
         type: string
     type: object
+  dto.PriceHistoryResponse:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/models.PricePoint'
+        type: array
+    type: object
   dto.PromotionListResponse:
     properties:
       items:
@@ -332,27 +339,11 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      category_characteristics:
+      email:
         type: string
-      category_id:
+      name:
         type: string
-      custom_characteristics:
-        type: string
-      description:
-        type: string
-      location:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
-      price:
-        type: string
-      status:
-        type: string
-      title:
-        type: string
-      user_id:
+      password:
         type: string
     type: object
   dto.WalletResponse:
@@ -413,6 +404,13 @@ definitions:
       name:
         type: string
       sort_order:
+        type: integer
+    type: object
+  models.PricePoint:
+    properties:
+      changed_at:
+        type: string
+      price:
         type: integer
     type: object
   models.User:
@@ -778,6 +776,34 @@ paths:
       summary: Создать запрос на покупку товара
       tags:
       - orders
+  /ads/{id}/price-history:
+    get:
+      description: Возвращает историю изменения цены объявления (даты и соответствующие
+        цены)
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: история цен успешно получена
+          schema:
+            $ref: '#/definitions/dto.PriceHistoryResponse'
+        "400":
+          description: 'ad not found: Объявление не найдено'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: 'internal error: Ошибка сервера при получении истории цен'
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: История цен объявления
+      tags:
+      - ads
   /ads/{id}/promotions:
     get:
       parameters:

@@ -29,6 +29,7 @@ const (
 	colFavorites     = "favorites_count"
 	colIsBoosted     = "is_boosted"
 	colIsHighlighted = "is_highlighted"
+	colChangedAt     = "changed_at"
 	photoP1          = "p1.jpg"
 )
 
@@ -519,6 +520,68 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 			WillReturnRows(rows)
 
 		_, err := storage.GetUserFavorites(ctx, userID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "scan")
+	})
+}
+
+func TestAdStorage_GetPriceHistory(t *testing.T) {
+	mock, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mock.Close()
+
+	storage := NewAdStorage(mock, slog.Default())
+	ctx := context.Background()
+	adID := int64(1)
+
+	t.Run("Success", func(t *testing.T) {
+		now := time.Now()
+		rows := pgxmock.NewRows([]string{colPrice, colChangedAt}).
+			AddRow(int64(15000), now.Add(-48*time.Hour)).
+			AddRow(int64(12000), now)
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).
+			WithArgs(adID).
+			WillReturnRows(rows)
+
+		history, err := storage.GetPriceHistory(ctx, adID)
+		assert.NoError(t, err)
+		assert.Len(t, history, 2)
+		assert.Equal(t, int64(15000), history[0].Price)
+		assert.Equal(t, int64(12000), history[1].Price)
+	})
+
+	t.Run("Empty", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).
+			WithArgs(adID).
+			WillReturnRows(pgxmock.NewRows([]string{colPrice, colChangedAt}))
+
+		history, err := storage.GetPriceHistory(ctx, adID)
+		assert.NoError(t, err)
+		assert.Empty(t, history)
+	})
+
+	t.Run("QueryError", func(t *testing.T) {
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).
+			WithArgs(adID).
+			WillReturnError(assert.AnError)
+
+		_, err := storage.GetPriceHistory(ctx, adID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "query")
+	})
+
+	t.Run("ScanError", func(t *testing.T) {
+		rows := pgxmock.NewRows([]string{colPrice, colChangedAt}).
+			AddRow("not-a-number", time.Now())
+
+		mock.ExpectQuery(regexp.QuoteMeta("SELECT price, changed_at")).
+			WithArgs(adID).
+			WillReturnRows(rows)
+
+		_, err := storage.GetPriceHistory(ctx, adID)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "scan")
 	})

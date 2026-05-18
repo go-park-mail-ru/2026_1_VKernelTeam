@@ -79,9 +79,6 @@ services:
   #  AUTH SERVICE (http 8001, grpc 9001 — services/auth/config/local.json)
   auth:
     container_name: auth
-    # Образ собирается в CI и пушится в ghcr.io (тег :dev).
-    # build: оставлен для локального `make rebuild`, Compose использует image как имя.
-    image: ghcr.io/go-park-mail-ru/2026_1_vkernelteam/auth:dev
     build:
       context: ..
       dockerfile: ./deployments/Dockerfile.auth
@@ -108,7 +105,6 @@ services:
   #  SUPPORT SERVICE (http 8002 — services/support/config/local.json)
   support:
     container_name: support
-    image: ghcr.io/go-park-mail-ru/2026_1_vkernelteam/support:dev
     build:
       context: ..
       dockerfile: ./deployments/Dockerfile.support
@@ -133,7 +129,6 @@ services:
   #  CATALOG SERVICE (http 8004, grpc 9004 — services/catalog/config/local.json)
   catalog:
     container_name: catalog
-    image: ghcr.io/go-park-mail-ru/2026_1_vkernelteam/catalog:dev
     build:
       context: ..
       dockerfile: ./deployments/Dockerfile.catalog
@@ -164,7 +159,6 @@ services:
   #  COMMERCE SERVICE (http 8006 — services/commerce/config/local.json)
   commerce:
     container_name: commerce
-    image: ghcr.io/go-park-mail-ru/2026_1_vkernelteam/commerce:dev
     build:
       context: ..
       dockerfile: ./deployments/Dockerfile.commerce

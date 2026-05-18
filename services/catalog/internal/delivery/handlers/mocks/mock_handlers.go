@@ -154,6 +154,21 @@ func (mr *MockAdsMockRecorder) GetCategoryCharacteristics(ctx, categoryID interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAds)(nil).GetCategoryCharacteristics), ctx, categoryID)
 }
 
+// GetPriceHistory mocks base method.
+func (m *MockAds) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPriceHistory", ctx, adID)
+	ret0, _ := ret[0].([]models.PricePoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPriceHistory indicates an expected call of GetPriceHistory.
+func (mr *MockAdsMockRecorder) GetPriceHistory(ctx, adID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceHistory", reflect.TypeOf((*MockAds)(nil).GetPriceHistory), ctx, adID)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAds) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
