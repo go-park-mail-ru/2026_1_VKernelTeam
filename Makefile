@@ -249,6 +249,8 @@ test:
 deploy:
 	sudo git pull
 	$(COMPOSE) up -d --build --remove-orphans
+	# Пересоздаём gateway, чтобы nginx подхватил новые IP пересозданных upstream-контейнеров
+	$(COMPOSE) up -d --force-recreate --no-deps gateway
 	docker image prune -f
 
 # ─── Утилиты ──────────────────────────────────────────────────────────────────
