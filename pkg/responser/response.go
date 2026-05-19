@@ -3,6 +3,8 @@ package responser
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/mailru/easyjson"
 )
 
 // ошибки responser
@@ -10,22 +12,27 @@ var (
 	ErrJSONMarshalFailed = "couldn't convert the received data to JSON"
 )
 
-// RespondWithJSON отправляет готовый объект
+// RespondWithJSON отправляет готовый объект.
+// Если payload реализует easyjson.Marshaler — используется быстрая сериализация
+// без reflection; иначе fallback на encoding/json (для map и анонимных структур).
 func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
-	// преобразуем полученные данные в json
-	response, err := json.Marshal(payload)
+	var (
+		response []byte
+		err      error
+	)
+
+	if m, ok := payload.(easyjson.Marshaler); ok {
+		response, err = easyjson.Marshal(m)
+	} else {
+		response, err = json.Marshal(payload)
+	}
 	if err != nil {
 		RespondWithError(w, http.StatusBadRequest, ErrJSONMarshalFailed)
 		return
 	}
 
-	// устанавливаем заголовок, что возвращаем JSON
 	w.Header().Set("Content-Type", "application/json")
-
-	// устанавливаем код ответа
 	w.WriteHeader(code)
-
-	// записываем данные
 	_, _ = w.Write(response)
 }
 
