@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // SendMessageRequest — запрос на отправку сообщения в чате обращения
