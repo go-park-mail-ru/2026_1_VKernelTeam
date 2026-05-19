@@ -8,12 +8,11 @@ datasources:
     isDefault: true
     jsonData:
       host: clickhouse
-      port: 9000
-      protocol: native
+      port: 8123
+      protocol: http
       secure: false
       username: ${CLICKHOUSE_USER}
       defaultDatabase: logs
-      tlsSkipVerify: true
     secureJsonData:
       password: ${CLICKHOUSE_PASSWORD}
     editable: true
