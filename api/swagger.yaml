@@ -339,11 +339,27 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      email:
+      category_characteristics:
         type: string
-      name:
+      category_id:
         type: string
-      password:
+      custom_characteristics:
+        type: string
+      description:
+        type: string
+      location:
+        type: string
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      user_id:
         type: string
     type: object
   dto.WalletResponse:
