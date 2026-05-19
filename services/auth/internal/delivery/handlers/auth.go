@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/mailru/easyjson"
 
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
@@ -30,7 +31,7 @@ import (
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -110,7 +111,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req dto.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
