@@ -1,4 +1,4 @@
-.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install \
+.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install easyjson easyjson-install \
        logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
 # -include (со знаком «минус») - не падать, если .env нет.
@@ -28,6 +28,8 @@ help:
 	@echo "  proto-install     - Установить protoc + Go-плагины (один раз)"
 	@echo "  swag              - Перегенерировать api/swagger.{json,yaml} из аннотаций хендлеров"
 	@echo "  swag-install      - Установить swag CLI (один раз)"
+	@echo "  easyjson          - Перегенерировать *_easyjson.go для DTO/моделей auth и support"
+	@echo "  easyjson-install  - Установить easyjson CLI (один раз)"
 	@echo ""
 	@echo "  Тесты:"
 	@echo "  test              - Запустить тесты с покрытием"
@@ -150,6 +152,33 @@ swag:
 swag-install:
 	go install github.com/swaggo/swag/cmd/swag@latest
 
+# ─── easyjson ─────────────────────────────────────────────────────────────────
+
+# Перегенерация *_easyjson.go из директив //go:generate в DTO/моделях.
+# Сейчас покрывает только auth и support — добавляй сюда новые файлы по мере
+# внедрения easyjson в другие сервисы.
+EASYJSON_FILES = \
+	pkg/shared/kafka/events.go \
+	services/auth/internal/domain/dto/auth.go \
+	services/auth/internal/domain/models/user.go \
+	services/support/internal/domain/dto/support_ticket.go \
+	services/support/internal/domain/dto/support_message.go \
+	services/support/internal/domain/models/support_ticket.go \
+	services/support/internal/domain/models/support_message.go
+
+easyjson:
+	@if ! command -v easyjson >/dev/null 2>&1; then \
+		echo "[easyjson] CLI не установлен — пропускаю (один раз: make easyjson-install)"; \
+		exit 0; \
+	fi
+	@for f in $(EASYJSON_FILES); do \
+		echo "[easyjson] $$f"; \
+		easyjson -all $$f; \
+	done
+
+easyjson-install:
+	go install github.com/mailru/easyjson/...@latest
+
 # ─── Proto ────────────────────────────────────────────────────────────────────
 
 # Один раз: ставит компилятор protoc и Go-плагины.
@@ -183,7 +212,8 @@ test:
 	@#   cmd/server     — wiring main.go
 	@#   internal/config — загрузка конфига
 	@#   proto/gen      — autogen protoc
-	@grep -vE "/mocks/|/domain/(dto|models)/|/cmd/server/|/internal/config/|/proto/gen/" coverage.tmp > coverage.out
+	@#   *_easyjson.go  — autogen от easyjson
+	@grep -vE "/mocks/|/domain/(dto|models)/|/cmd/server/|/internal/config/|/proto/gen/|_easyjson\\.go" coverage.tmp > coverage.out
 	@echo ""
 	@echo "═══════════════════════════════ Coverage by service ═════════════════════════════════"
 	@awk '\
