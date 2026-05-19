@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // RegisterRequest представляет собой структуру для запроса на регистрацию пользователя

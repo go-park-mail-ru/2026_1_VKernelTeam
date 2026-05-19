@@ -2,11 +2,11 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
+	"github.com/mailru/easyjson"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -42,7 +42,7 @@ func (p *Producer) Publish(ctx context.Context, key, eventType string, payload a
 		return err
 	}
 
-	value, err := json.Marshal(event)
+	value, err := easyjson.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("kafka.Producer.Publish: marshal event: %w", err)
 	}
