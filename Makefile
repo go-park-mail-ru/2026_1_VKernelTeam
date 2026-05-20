@@ -7,7 +7,12 @@
 -include .env
 export
 
-COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml
+# Локальный override (deployments/docker-compose.override.yaml) подключается
+# автоматически, если файл существует. Используется для dev-настроек, которые
+# не должны попадать в прод (например, gateway по HTTP без SSL — см. README).
+# Файл в .gitignore, поэтому у каждого разработчика он свой или отсутствует.
+COMPOSE_OVERRIDE = $(if $(wildcard deployments/docker-compose.override.yaml),-f deployments/docker-compose.override.yaml,)
+COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml $(COMPOSE_OVERRIDE)
 
 help:
 	@echo "Available targets:"

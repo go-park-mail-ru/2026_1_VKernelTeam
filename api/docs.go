@@ -1091,6 +1091,28 @@ const docTemplate = `{
                 }
             }
         },
+        "/categories": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Получить список категорий",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Category"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/categories/{id}/characteristics": {
             "get": {
                 "description": "Возвращает список предопределённых характеристик категории с допустимыми значениями",
@@ -2875,37 +2897,13 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
+                "email": {
                     "type": "string"
                 },
-                "category_id": {
+                "name": {
                     "type": "string"
                 },
-                "custom_characteristics": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
+                "password": {
                     "type": "string"
                 }
             }
@@ -2974,6 +2972,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Category": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }

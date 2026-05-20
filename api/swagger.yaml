@@ -339,27 +339,11 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      category_characteristics:
+      email:
         type: string
-      category_id:
+      name:
         type: string
-      custom_characteristics:
-        type: string
-      description:
-        type: string
-      location:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
-      price:
-        type: string
-      status:
-        type: string
-      title:
-        type: string
-      user_id:
+      password:
         type: string
     type: object
   dto.WalletResponse:
@@ -405,6 +389,13 @@ definitions:
       status:
         type: string
       title:
+        type: string
+    type: object
+  models.Category:
+    properties:
+      id:
+        type: integer
+      name:
         type: string
     type: object
   models.CategoryCharacteristic:
@@ -1186,6 +1177,20 @@ paths:
       summary: Удалить из корзины
       tags:
       - cart
+  /categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Category'
+            type: array
+      summary: Получить список категорий
+      tags:
+      - categories
   /categories/{id}/characteristics:
     get:
       description: Возвращает список предопределённых характеристик категории с допустимыми
