@@ -69,7 +69,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "JSON с данными объявления (title, description, price, category_id, status, location)",
+                        "description": "JSON с данными объявления (title, description, price, category_id, status, location, lat, lon)",
                         "name": "data",
                         "in": "formData",
                         "required": true
@@ -230,7 +230,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "JSON с данными для обновления (title, description, price, category_id, status, location)",
+                        "description": "JSON с данными для обновления (title, description, price, category_id, status, location, lat, lon)",
                         "name": "data",
                         "in": "formData",
                         "required": true
@@ -2897,13 +2897,40 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "email": {
+                "category_characteristics": {
                     "type": "string"
                 },
-                "name": {
+                "category_id": {
                     "type": "string"
                 },
-                "password": {
+                "coords": {
+                    "type": "string"
+                },
+                "custom_characteristics": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "price": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "string"
                 }
             }

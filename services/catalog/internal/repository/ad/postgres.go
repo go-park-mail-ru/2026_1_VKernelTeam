@@ -73,6 +73,8 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 			p.price,
 			p.status,
 			p.location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -108,6 +110,8 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		&ad.Price,
 		&ad.Status,
 		&ad.Location,
+		&ad.Lat,
+		&ad.Lon,
 		&ad.CreatedAt,
 		&ad.UpdatedAt,
 		&photos,
@@ -171,6 +175,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			p.price,
 			p.status,
 			COALESCE(p.location, '') AS location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -220,6 +226,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&ad.Price,
 			&ad.Status,
 			&ad.Location,
+			&ad.Lat,
+			&ad.Lon,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
@@ -264,8 +272,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 // CreateAd создает новое объявление и возвращает его ID.
 func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
 	const query = `
-		INSERT INTO product (seller_id, category_id, title, description, price, status, location)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO product (seller_id, category_id, title, description, price, status, location, lat, lon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 
@@ -284,6 +292,8 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 		req.Price,
 		req.Status,
 		req.Location,
+		req.Lat,
+		req.Lon,
 	).Scan(&adID)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to create ad",
@@ -404,6 +414,16 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 	if req.Location != nil {
 		updates = append(updates, fmt.Sprintf("location = $%d", argNum))
 		args = append(args, *req.Location)
+		argNum++
+	}
+	if req.Lat != nil {
+		updates = append(updates, fmt.Sprintf("lat = $%d", argNum))
+		args = append(args, *req.Lat)
+		argNum++
+	}
+	if req.Lon != nil {
+		updates = append(updates, fmt.Sprintf("lon = $%d", argNum))
+		args = append(args, *req.Lon)
 		argNum++
 	}
 
@@ -545,7 +565,9 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 	const query = `
 		SELECT
 			p.id, p.seller_id, p.category_id, p.title, p.description,
-			p.price, p.status, COALESCE(p.location, '') AS location, p.created_at, p.updated_at,
+			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
+			p.created_at, p.updated_at,
 			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
 			p.views_count,
 			COUNT(DISTINCT f.product_id) AS favorites_count,
@@ -582,7 +604,7 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		var photos []string
 		if err := rows.Scan(
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
-			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
 			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {
@@ -686,6 +708,8 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			p.price,
 			p.status,
 			COALESCE(p.location, '') AS location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -735,6 +759,8 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			&ad.Price,
 			&ad.Status,
 			&ad.Location,
+			&ad.Lat,
+			&ad.Lon,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
@@ -1021,6 +1047,7 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 		)
 		SELECT p.id, p.seller_id, p.category_id, p.title, p.description,
 			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
 			p.created_at, p.updated_at,
 			COALESCE(
 				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
@@ -1058,7 +1085,7 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 		var photos []string
 		if err := rows.Scan(
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
-			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
 			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {

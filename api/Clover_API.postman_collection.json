@@ -436,7 +436,7 @@
 							"formdata": [
 								{
 									"key": "data",
-									"value": "{\n  \"category_id\": 1,\n  \"title\": \"iPhone 15 Pro Max 256GB\",\n  \"description\": \"Новый, запечатанный. Полный комплект, гарантия 1 год.\",\n  \"price\": 120000,\n  \"status\": \"active\",\n  \"location\": \"Москва\",\n  \"category_characteristics\": [],\n  \"custom_characteristics\": []\n}",
+									"value": "{\n  \"category_id\": 1,\n  \"title\": \"iPhone 15 Pro Max 256GB\",\n  \"description\": \"Новый, запечатанный. Полный комплект, гарантия 1 год.\",\n  \"price\": 120000,\n  \"status\": \"active\",\n  \"location\": \"Москва, Тверская улица\",\n  \"lat\": 55.7615,\n  \"lon\": 37.6062,\n  \"category_characteristics\": [],\n  \"custom_characteristics\": []\n}",
 									"type": "text"
 								},
 								{

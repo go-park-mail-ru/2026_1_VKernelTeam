@@ -339,11 +339,29 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      email:
+      category_characteristics:
         type: string
-      name:
+      category_id:
         type: string
-      password:
+      coords:
+        type: string
+      custom_characteristics:
+        type: string
+      description:
+        type: string
+      location:
+        type: string
+      photos:
+        items:
+          type: string
+        type: array
+      price:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      user_id:
         type: string
     type: object
   dto.WalletResponse:
@@ -492,7 +510,7 @@ paths:
         Доступно только авторизованным пользователям.
       parameters:
       - description: JSON с данными объявления (title, description, price, category_id,
-          status, location)
+          status, location, lat, lon)
         in: formData
         name: data
         required: true
@@ -601,7 +619,7 @@ paths:
         required: true
         type: integer
       - description: JSON с данными для обновления (title, description, price, category_id,
-          status, location)
+          status, location, lat, lon)
         in: formData
         name: data
         required: true
