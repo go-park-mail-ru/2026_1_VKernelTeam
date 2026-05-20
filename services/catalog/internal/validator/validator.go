@@ -40,6 +40,9 @@ var (
 	ErrAdLocationEmpty       = errors.New("location cannot be empty")
 	ErrAdLocationTooShort    = errors.New("location must be at least 2 characters long")
 	ErrAdLocationTooLong     = errors.New("location must be at most 100 characters long")
+	ErrAdCoordsHalfMissing   = errors.New("lat and lon must be provided together")
+	ErrAdLatOutOfRange       = errors.New("lat must be between -90 and 90")
+	ErrAdLonOutOfRange       = errors.New("lon must be between -180 and 180")
 
 	ErrCharacteristicIDInvalid      = errors.New("category_characteristic_id not found in category definitions")
 	ErrCharacteristicValueTooLong   = errors.New("characteristic value must be at most 500 characters")
@@ -195,6 +198,24 @@ func ValidateAdLocation(location string) error {
 	}
 	if locLen > 100 {
 		return ErrAdLocationTooLong
+	}
+	return nil
+}
+
+// ValidateAdCoords проверяет координаты адреса.
+// Оба значения опциональны, но передаваться должны парой: либо оба nil, либо оба заданы.
+func ValidateAdCoords(lat, lon *float64) error {
+	if lat == nil && lon == nil {
+		return nil
+	}
+	if lat == nil || lon == nil {
+		return ErrAdCoordsHalfMissing
+	}
+	if *lat < -90 || *lat > 90 {
+		return ErrAdLatOutOfRange
+	}
+	if *lon < -180 || *lon > 180 {
+		return ErrAdLonOutOfRange
 	}
 	return nil
 }

@@ -36,6 +36,8 @@ message AdResponse {
   string status = 7;        // см. AdStatus константы: draft|active|reserved|sold|archived
   string location = 8;
   repeated string photo_urls = 9;
+  optional double lat = 10; // координаты адреса; отсутствуют у объявлений без геопривязки
+  optional double lon = 11;
 }
 
 // --- GetAdsByIDs ---
