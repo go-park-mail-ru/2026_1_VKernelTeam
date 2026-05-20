@@ -2983,74 +2983,23 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCharacteristic"
-                    }
-                },
-                "category_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
-                    }
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "favorites_count": {
-                    "type": "integer"
-                },
                 "id": {
-                    "type": "integer"
-                },
-                "is_boosted": {
-                    "type": "boolean"
-                },
-                "is_highlighted": {
-                    "type": "boolean"
-                },
-                "lat": {
-                    "type": "number"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "lon": {
-                    "type": "number"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "price": {
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "int64"
                 },
-                "seller_id": {
-                    "type": "integer"
+                "sellerID": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "status": {
                     "type": "string"
                 },
                 "title": {
                     "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "views_count": {
-                    "type": "integer"
                 }
             }
         },
@@ -3096,28 +3045,6 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "integer"
-                }
-            }
-        },
-        "models.ProductCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ProductCustomCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
                 }
             }
         },

@@ -395,52 +395,19 @@ definitions:
     type: object
   models.Ad:
     properties:
-      category_characteristics:
-        items:
-          $ref: '#/definitions/models.ProductCharacteristic'
-        type: array
-      category_id:
-        type: integer
-      created_at:
-        type: string
-      custom_characteristics:
-        items:
-          $ref: '#/definitions/models.ProductCustomCharacteristic'
-        type: array
-      deleted_at:
-        type: string
-      description:
-        type: string
-      favorites_count:
-        type: integer
       id:
+        format: int64
         type: integer
-      is_boosted:
-        type: boolean
-      is_highlighted:
-        type: boolean
-      lat:
-        type: number
-      location:
-        type: string
-      lon:
-        type: number
-      photos:
-        items:
-          type: string
-        type: array
       price:
+        format: int64
         type: integer
-      seller_id:
+      sellerID:
+        format: int64
         type: integer
       status:
         type: string
       title:
         type: string
-      updated_at:
-        type: string
-      views_count:
-        type: integer
     type: object
   models.Category:
     properties:
@@ -470,20 +437,6 @@ definitions:
         type: string
       price:
         type: integer
-    type: object
-  models.ProductCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
-    type: object
-  models.ProductCustomCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
     type: object
   models.User:
     properties:
