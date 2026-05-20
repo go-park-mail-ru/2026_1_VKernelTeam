@@ -69,7 +69,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "JSON с данными объявления (title, description, price, category_id, status, location)",
+                        "description": "JSON с данными объявления (title, description, price, category_id, status, location, lat, lon)",
                         "name": "data",
                         "in": "formData",
                         "required": true
@@ -230,7 +230,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "JSON с данными для обновления (title, description, price, category_id, status, location)",
+                        "description": "JSON с данными для обновления (title, description, price, category_id, status, location, lat, lon)",
                         "name": "data",
                         "in": "formData",
                         "required": true
@@ -1086,6 +1086,28 @@ const docTemplate = `{
                         "description": "internal error: Ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/categories": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "categories"
+                ],
+                "summary": "Получить список категорий",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.Category"
+                            }
                         }
                     }
                 }
@@ -2881,6 +2903,9 @@ const docTemplate = `{
                 "category_id": {
                     "type": "string"
                 },
+                "coords": {
+                    "type": "string"
+                },
                 "custom_characteristics": {
                     "type": "string"
                 },
@@ -2958,22 +2983,84 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
+                "category_characteristics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProductCharacteristic"
+                    }
+                },
+                "category_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "custom_characteristics": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
+                    }
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "favorites_count": {
+                    "type": "integer"
+                },
                 "id": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
+                },
+                "is_boosted": {
+                    "type": "boolean"
+                },
+                "is_highlighted": {
+                    "type": "boolean"
+                },
+                "lat": {
+                    "type": "number"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "lon": {
+                    "type": "number"
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "price": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
-                "sellerID": {
-                    "type": "integer",
-                    "format": "int64"
+                "seller_id": {
+                    "type": "integer"
                 },
                 "status": {
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "views_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Category": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -3009,6 +3096,28 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "integer"
+                }
+            }
+        },
+        "models.ProductCharacteristic": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ProductCustomCharacteristic": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
                 }
             }
         },

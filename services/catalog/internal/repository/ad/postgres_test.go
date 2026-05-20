@@ -22,6 +22,8 @@ const (
 	colPrice         = "price"
 	colStatus        = "status"
 	colLocation      = "location"
+	colLat           = "lat"
+	colLon           = "lon"
 	colCreatedAt     = "created_at"
 	colUpdatedAt     = "updated_at"
 	colPhotos        = "photos"
@@ -57,8 +59,8 @@ func TestAdStorage_GetAdByID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
-		}).AddRow(adID, int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colLat, colLon, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
+		}).AddRow(adID, int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", nil, nil, now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
 			WithArgs(adID).
@@ -103,8 +105,8 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
-		}).AddRow(int64(1), int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colLat, colLon, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
+		}).AddRow(int64(1), int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", nil, nil, now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
 			WillReturnRows(rows)
@@ -157,7 +159,7 @@ func TestAdStorage_CreateAd(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO product")).
-			WithArgs(req.UserID, req.CategoryID, req.Title, req.Description, req.Price, req.Status, req.Location).
+			WithArgs(req.UserID, req.CategoryID, req.Title, req.Description, req.Price, req.Status, req.Location, req.Lat, req.Lon).
 			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(123)))
 
 		id, err := storage.CreateAd(ctx, req)
@@ -328,8 +330,8 @@ func TestAdStorage_GetAdsByUserID(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		now := time.Now()
 		rows := pgxmock.NewRows([]string{
-			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
-		}).AddRow(int64(10), userID, int64(3), "Title", "Desc", int64(100), "active", "Loc", now, now, []string{photoP1}, int64(10), int64(5), false, false)
+			colID, colSellerID, colCategoryID, colTitle, colDescription, colPrice, colStatus, colLocation, colLat, colLon, colCreatedAt, colUpdatedAt, colPhotos, colViewsCount, colFavorites, colIsBoosted, colIsHighlighted,
+		}).AddRow(int64(10), userID, int64(3), "Title", "Desc", int64(100), "active", "Loc", nil, nil, now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
 			WithArgs(userID).
@@ -447,7 +449,7 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 		now := time.Now()
 		columns := []string{
 			"id", "seller_id", "category_id", "title", "description", "price", "status",
-			"location", "created_at", "updated_at", "photos", "views_count", "favorites_count",
+			"location", "lat", "lon", "created_at", "updated_at", "photos", "views_count", "favorites_count",
 			colIsBoosted, colIsHighlighted,
 		}
 
@@ -461,6 +463,8 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 				int64(100),
 				"active",
 				"Moscow",
+				nil,
+				nil,
 				now,
 				now,
 				[]string{"img1.png"},
@@ -478,6 +482,8 @@ func TestAdStorage_GetUserFavorites(t *testing.T) {
 				int64(200),
 				"active",
 				"Piter",
+				nil,
+				nil,
 				now,
 				now,
 				[]string{"img2.png"},

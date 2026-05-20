@@ -149,7 +149,7 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 // @Tags ads
 // @Accept multipart/form-data
 // @Produce json
-// @Param data formData string true "JSON с данными объявления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными объявления (title, description, price, category_id, status, location, lat, lon)"
 // @Param photos formData file false "Фотографии объявления (можно несколько)"
 // @Success 200 {object} map[string]int64 "ID созданного объявления"
 // @Failure 400 {object} dto.ErrorResponse "invalid request body / ошибки валидации"
@@ -237,7 +237,7 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID объявления"
-// @Param data formData string true "JSON с данными для обновления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными для обновления (title, description, price, category_id, status, location, lat, lon)"
 // @Param photos formData file false "Новые фотографии объявления (заменяют старые)"
 // @Success 200 {object} map[string]string "объявление успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id / invalid request body / ошибки валидации"
@@ -714,6 +714,9 @@ func validateCreateAdRequest(req *dto.CreateAdRequest) *dto.ValidationErrors {
 	if err := validator.ValidateAdLocation(req.Location); err != nil {
 		errs.Location = err.Error()
 	}
+	if err := validator.ValidateAdCoords(req.Lat, req.Lon); err != nil {
+		errs.Coords = err.Error()
+	}
 	return &errs
 }
 
@@ -747,6 +750,11 @@ func validateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
 	if req.Location != nil {
 		if err := validator.ValidateAdLocation(*req.Location); err != nil {
 			errs.Location = err.Error()
+		}
+	}
+	if req.Lat != nil || req.Lon != nil {
+		if err := validator.ValidateAdCoords(req.Lat, req.Lon); err != nil {
+			errs.Coords = err.Error()
 		}
 	}
 	return &errs
