@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // PromotionPlanResponse — тариф продвижения для публичной выдачи.

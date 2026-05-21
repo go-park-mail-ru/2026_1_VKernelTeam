@@ -33,7 +33,7 @@ help:
 	@echo "  proto-install     - Установить protoc + Go-плагины (один раз)"
 	@echo "  swag              - Перегенерировать api/swagger.{json,yaml} из аннотаций хендлеров"
 	@echo "  swag-install      - Установить swag CLI (один раз)"
-	@echo "  easyjson          - Перегенерировать *_easyjson.go для DTO/моделей auth и support"
+	@echo "  easyjson          - Перегенерировать *_easyjson.go для DTO/моделей всех сервисов"
 	@echo "  easyjson-install  - Установить easyjson CLI (один раз)"
 	@echo ""
 	@echo "  Тесты:"
@@ -160,8 +160,7 @@ swag-install:
 # ─── easyjson ─────────────────────────────────────────────────────────────────
 
 # Перегенерация *_easyjson.go из директив //go:generate в DTO/моделях.
-# Сейчас покрывает только auth и support — добавляй сюда новые файлы по мере
-# внедрения easyjson в другие сервисы.
+# Покрывает все 4 сервиса (auth, support, catalog, commerce) и общий pkg/shared/kafka.
 EASYJSON_FILES = \
 	pkg/shared/kafka/events.go \
 	services/auth/internal/domain/dto/auth.go \
@@ -169,7 +168,25 @@ EASYJSON_FILES = \
 	services/support/internal/domain/dto/support_ticket.go \
 	services/support/internal/domain/dto/support_message.go \
 	services/support/internal/domain/models/support_ticket.go \
-	services/support/internal/domain/models/support_message.go
+	services/support/internal/domain/models/support_message.go \
+	services/catalog/internal/domain/dto/ad.go \
+	services/catalog/internal/domain/dto/common.go \
+	services/catalog/internal/domain/models/ad.go \
+	services/catalog/internal/domain/models/category.go \
+	services/catalog/internal/domain/models/characteristic.go \
+	services/catalog/internal/domain/models/price_history.go \
+	services/catalog/internal/domain/models/view.go \
+	services/commerce/internal/domain/dto/cart.go \
+	services/commerce/internal/domain/dto/chat.go \
+	services/commerce/internal/domain/dto/common.go \
+	services/commerce/internal/domain/dto/promotion.go \
+	services/commerce/internal/domain/dto/wallet.go \
+	services/commerce/internal/domain/models/ad.go \
+	services/commerce/internal/domain/models/cart.go \
+	services/commerce/internal/domain/models/chat.go \
+	services/commerce/internal/domain/models/payment.go \
+	services/commerce/internal/domain/models/promotion.go \
+	services/commerce/internal/domain/models/wallet.go
 
 easyjson:
 	@if ! command -v easyjson >/dev/null 2>&1; then \
