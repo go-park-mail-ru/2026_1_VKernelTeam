@@ -33,6 +33,9 @@ const (
 	ErrUnauthorized         = "unauthorized"
 	ErrFileTooBig           = "file too big"
 	ErrFailedToGetFile      = "failed to get file"
+
+	statusField = "status"
+	statusOK    = "ok"
 )
 
 // Auth описывает методы сервиса аутентификации
