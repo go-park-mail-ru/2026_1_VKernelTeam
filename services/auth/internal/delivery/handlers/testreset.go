@@ -61,5 +61,5 @@ func (h *TestResetHandlers) HandleReset(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusField: statusOK})
 }

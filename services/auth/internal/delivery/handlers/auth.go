@@ -219,7 +219,7 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusField: statusOK})
 }
 
 // HandleRefresh обновляет access токен по refresh токену
@@ -247,5 +247,5 @@ func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	csrfToken := middleware.GenerateCSRFToken()
 	h.setAuthCookie(w, newAccess, csrfToken)
 	h.setRefreshCookie(w, newRefresh)
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusField: statusOK})
 }
