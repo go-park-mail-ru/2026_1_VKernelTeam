@@ -7,7 +7,6 @@ import (
 )
 
 func TestCORSMiddleware(t *testing.T) {
-	// Dummy handler that simply returns 200 OK
 	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))
@@ -67,7 +66,6 @@ func TestCORSMiddleware(t *testing.T) {
 				t.Errorf("did not expect Access-Control-Allow-Origin, got %q", originHeader)
 			}
 
-			// Check other mandatory headers
 			if rr.Header().Get("Access-Control-Allow-Credentials") != "true" {
 				t.Errorf("missing or incorrect Access-Control-Allow-Credentials header")
 			}

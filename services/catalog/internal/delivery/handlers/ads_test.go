@@ -38,28 +38,20 @@ func createMultipartRequest(ctx context.Context, method, url string, data interf
 	return req, nil
 }
 
-// Тесты для обработчика получения объявлений
-
-// Тест успешного выполнения
 func TestGetAdsHandler_Success(t *testing.T) {
-	// Получаем хендлер и мок напрямую из setupHandlers
 	adsH, mockAds := setupAdsHandlers(t)
 
 	testAds := []models.Ad{
 		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	// Настраиваем ожидание мока
 	mockAds.EXPECT().GetAllAds(gomock.Any()).Return(testAds, nil)
 
-	// Создаем запрос (путь в данном случае не важен для прямого вызова метода)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
 	rr := httptest.NewRecorder()
 
-	// Вызываем метод хендлера напрямую
 	adsH.HandleGetAds(rr, request)
 
-	// Проверяем результат
 	assert.Equal(t, http.StatusOK, rr.Code)
 
 	var actualData []models.Ad
@@ -68,26 +60,21 @@ func TestGetAdsHandler_Success(t *testing.T) {
 	assert.Equal(t, testAds, actualData)
 }
 
-// Проверка ограничения методов (обрабатываем только GET)
 func TestGetAdsHandler_OnlyGet(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
-	// Создаём POST запрос
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads", nil)
 	rr := httptest.NewRecorder()
 
-	// Вызываем обработчик
 	adsH.HandleGetAds(rr, request)
 
 	// Ожидаем код 400 (или 405, если логика внутри хендлера поменяется на MethodNotAllowed)
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "expected status 400 for POST request")
 }
 
-// Проверка, что сервер не падает при отсутствии объявлений
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	adsH, mockAds := setupAdsHandlers(t)
 
-	// Возвращаем пустой слайс
 	mockAds.EXPECT().GetAllAds(gomock.Any()).Return([]models.Ad{}, nil)
 
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
@@ -95,10 +82,8 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 
 	adsH.HandleGetAds(rr, request)
 
-	// Проверяем статус-код
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	// Получаем тело ответа
 	var actualData []models.Ad
 	err := json.Unmarshal(rr.Body.Bytes(), &actualData)
 	assert.NoError(t, err, "failed to decode JSON")
@@ -108,17 +93,15 @@ func TestGetAdsHandler_EmptyData(t *testing.T) {
 	assert.Len(t, actualData, 0)
 }
 
-// Тестируем ошибку метода (дублирует логику OnlyGet, но для консистентности)
+// TestGetAdsHandler_WrongMethod дублирует логику OnlyGet, оставлен для консистентности.
 func TestGetAdsHandler_WrongMethod(t *testing.T) {
 	adsH, _ := setupAdsHandlers(t)
 
-	// Создаём DELETE запрос
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/ads", nil)
 	rr := httptest.NewRecorder()
 
 	adsH.HandleGetAds(rr, request)
 
-	// Проверяем статус
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
@@ -496,7 +479,6 @@ func TestHandleAddToFavorites_InvalidAdID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /ads/{id}/favorite", adsH.HandleAddToFavorites)
 
-	// Передаем строку "abc" вместо ID
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/ads/abc/favorite", nil)
 	request = request.WithContext(ctx)
 	rr := httptest.NewRecorder()

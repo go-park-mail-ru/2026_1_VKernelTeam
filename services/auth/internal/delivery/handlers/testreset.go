@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/testreset"
 )
 
+// ErrOnlyTestUsers возвращается, когда обычный пользователь пытается вызвать тестовую очистку.
 const ErrOnlyTestUsers = "only test users can reset data"
 
 // TestResetUseCase описывает поведение, нужное HTTP-слою.

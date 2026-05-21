@@ -22,8 +22,6 @@ func newTestStorage(t *testing.T) (*ViewStorage, pgxmock.PgxPoolIface) {
 	return NewViewStorage(mock, slog.Default()), mock
 }
 
-// ─── BatchInsertViews ────────────────────────────────────────────────────────
-
 func TestBatchInsertViews_EmptySlice(t *testing.T) {
 	storage, mock := newTestStorage(t)
 
@@ -204,8 +202,6 @@ func TestBatchInsertViews_CommitError(t *testing.T) {
 	assert.Contains(t, err.Error(), "commit")
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
-
-// ─── GetViewsCount ───────────────────────────────────────────────────────────
 
 func TestGetViewsCount_Success(t *testing.T) {
 	storage, mock := newTestStorage(t)

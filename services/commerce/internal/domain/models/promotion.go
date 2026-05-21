@@ -4,6 +4,7 @@ package models
 
 import "time"
 
+// PromotionKind* — возможные виды продвижения объявления.
 const (
 	PromotionKindBoost     = "boost"
 	PromotionKindHighlight = "highlight"

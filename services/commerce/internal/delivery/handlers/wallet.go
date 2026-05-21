@@ -36,6 +36,7 @@ type WalletHandlers struct {
 	wallet WalletService
 }
 
+// NewWalletHandlers создаёт обработчики кошелька.
 func NewWalletHandlers(log *slog.Logger, wallet WalletService) *WalletHandlers {
 	return &WalletHandlers{log: log, wallet: wallet}
 }

@@ -28,6 +28,7 @@ type SupportMessageStorage struct {
 	log  *slog.Logger
 }
 
+// NewSupportMessageStorage создаёт хранилище сообщений обращений на базе pgx.
 func NewSupportMessageStorage(pool PgxPool, log *slog.Logger) *SupportMessageStorage {
 	return &SupportMessageStorage{pool: pool, log: log}
 }

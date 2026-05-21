@@ -20,10 +20,12 @@ type Config struct {
 	Kafka           KafkaConfig
 }
 
+// HTTPConfig — параметры HTTP-сервера commerce.
 type HTTPConfig struct {
 	Port int `json:"port"`
 }
 
+// KafkaConfig — параметры подключения к Kafka.
 type KafkaConfig struct {
 	Brokers      string
 	AdEventTopic string

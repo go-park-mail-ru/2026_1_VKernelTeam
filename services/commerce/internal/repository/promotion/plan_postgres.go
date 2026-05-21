@@ -19,6 +19,8 @@ const (
 	opPlanGetByID   = "db.promotion.plan.GetByID"
 )
 
+// ErrPlanNotFound возвращается, когда тариф продвижения не найден.
+// ErrPlanInactive возвращается, когда тариф найден, но отключён администратором.
 var (
 	ErrPlanNotFound = errors.New("promotion plan not found")
 	ErrPlanInactive = errors.New("promotion plan is inactive")
@@ -38,6 +40,7 @@ type PlanStorage struct {
 	log  *slog.Logger
 }
 
+// NewPlanStorage создаёт хранилище тарифов продвижения.
 func NewPlanStorage(pool PgxPoolTx, log *slog.Logger) *PlanStorage {
 	return &PlanStorage{pool: pool, log: log}
 }

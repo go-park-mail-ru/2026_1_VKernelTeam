@@ -76,6 +76,7 @@ type Usecase struct {
 	provider PaymentProvider
 }
 
+// New создаёт usecase кошелька с зависимостями репозиториев и провайдера платежей.
 func New(
 	log *slog.Logger,
 	tx TxRunner,

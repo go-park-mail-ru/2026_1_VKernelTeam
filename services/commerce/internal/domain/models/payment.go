@@ -4,6 +4,7 @@ package models
 
 import "time"
 
+// PaymentStatus* — возможные статусы платежа; PaymentProvider* — идентификаторы провайдеров.
 const (
 	PaymentStatusPending   = "pending"
 	PaymentStatusSucceeded = "succeeded"

@@ -15,6 +15,7 @@ import (
 	supportmessageUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/usecase/support_message"
 )
 
+// Сообщения ошибок для обработчиков сообщений обращений техподдержки.
 const (
 	ErrFailedSendMessage = "failed to send message"
 	ErrFailedGetMessages = "failed to get messages"

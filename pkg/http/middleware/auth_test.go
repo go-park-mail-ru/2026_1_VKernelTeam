@@ -46,14 +46,12 @@ func (m *mockTokenChecker) Add(jti string, _ time.Time) {
 }
 
 func TestAuthMiddleware(t *testing.T) {
-	// инициализируем логгер, который ничего не выводит (Discard), чтобы не спамить в консоль тестов
 	log := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	secret := "test-secret"
 	bl := &mockTokenChecker{revoked: make(map[string]bool)}
 
 	mw := AuthMiddleware(log, bl, secret)
 
-	// заглушка следующего обработчика
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		userID, okUID := r.Context().Value(UserIDKey).(int64)
 		jti, okJTI := r.Context().Value(JtiKey).(string)

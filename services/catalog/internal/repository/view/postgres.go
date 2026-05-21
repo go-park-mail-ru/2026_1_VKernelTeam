@@ -37,6 +37,7 @@ type ViewStorage struct {
 	log  *slog.Logger
 }
 
+// NewViewStorage создаёт хранилище просмотров на базе PostgreSQL.
 func NewViewStorage(pool PgxPool, log *slog.Logger) *ViewStorage {
 	return &ViewStorage{pool: pool, log: log}
 }
@@ -53,7 +54,6 @@ func (s *ViewStorage) BatchInsertViews(ctx context.Context, events []InsertEvent
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	// Batch INSERT в product_view
 	var sb strings.Builder
 	sb.WriteString("INSERT INTO product_view (product_id, user_id, viewed_at) VALUES ")
 	args := make([]any, 0, len(events)*3)
@@ -74,7 +74,6 @@ func (s *ViewStorage) BatchInsertViews(ctx context.Context, events []InsertEvent
 		return fmt.Errorf("%s: insert: %w", opBatchInsertViews, err)
 	}
 
-	// Группируем по product_id и обновляем views_count
 	counts := make(map[int64]int64)
 	for _, e := range events {
 		counts[e.ProductID]++

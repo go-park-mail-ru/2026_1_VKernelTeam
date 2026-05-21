@@ -99,6 +99,7 @@ type Usecase struct {
 	ads        AdsProvider
 }
 
+// New создаёт usecase продвижения с зависимостями репозиториев, кэша и каталога.
 func New(
 	log *slog.Logger,
 	tx TxRunner,

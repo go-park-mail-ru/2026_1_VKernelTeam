@@ -25,7 +25,7 @@ func isViewRecordPath(path string) bool {
 	return true
 }
 
-// CSRF защищает от атак, проверяя наличие токена в заголовке и куках
+// CSRFMiddleware защищает от CSRF-атак, сверяя токен в заголовке и cookie.
 func CSRFMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -43,17 +43,14 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// достаём куки из куки
 		cookie, err := r.Cookie("csrf_token")
 		if err != nil {
 			http.Error(w, "Missing CSRF cookie", http.StatusBadRequest)
 			return
 		}
 
-		// достаём токен из заголовка
 		headerToken := r.Header.Get("X-CSRF-Token")
 
-		// сравниваем
 		if headerToken == "" || headerToken != cookie.Value {
 			http.Error(w, "CSRF token mismatch", http.StatusBadRequest)
 			return

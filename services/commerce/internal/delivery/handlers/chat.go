@@ -19,7 +19,7 @@ const (
 	opHandleGetChat      = "handlers.HandleGetChat"
 )
 
-// ошибки для handlers чата
+// ErrFailedTo* — тексты ошибок, возвращаемые клиенту в JSON-ответах chat-хендлеров.
 const (
 	ErrFailedToCreateOrder  = "failed to create order"
 	ErrFailedToConfirmOrder = "failed to confirm order"
@@ -49,14 +49,12 @@ func (h *ChatHandlers) HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Получаем userID из контекста (авторизация)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok || userID == 0 {
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	// Получаем adID из URL параметра
 	adIDStr := r.PathValue("id")
 	adID, err := strconv.ParseInt(adIDStr, 10, 64)
 	if err != nil {
@@ -68,7 +66,6 @@ func (h *ChatHandlers) HandleCreateOrder(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Получаем ID чата, создавая запрос на покупку (или переиспользуя существующий)
 	chatID, err := h.services.Chat.CreateOrderRequest(r.Context(), adID, userID)
 	if err != nil {
 		h.log.ErrorContext(r.Context(), "failed to create order request",
@@ -105,14 +102,12 @@ func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Получиаем userID из контекста (авторизация)
 	userID, ok := r.Context().Value(middleware.UserIDKey).(int64)
 	if !ok || userID == 0 {
 		responser.RespondWithError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	// Получаем chatID из URL параметра
 	chatIDStr := r.PathValue("id")
 	chatID, err := strconv.ParseInt(chatIDStr, 10, 64)
 	if err != nil {
@@ -124,7 +119,6 @@ func (h *ChatHandlers) HandleConfirmOrder(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Подтверждаем покупку в чате
 	err = h.services.Chat.ConfirmPurchase(r.Context(), chatID, userID)
 	if err != nil {
 		if err.Error() == "forbidden: not the seller" {

@@ -21,6 +21,7 @@ type ViewStream struct {
 	consumerName  string
 }
 
+// New создаёт ViewStream для публикации и чтения событий просмотров через Redis Streams.
 func New(pool *redis.Pool, log *slog.Logger, streamKey, consumerGroup, consumerName string) *ViewStream {
 	return &ViewStream{
 		pool:          pool,

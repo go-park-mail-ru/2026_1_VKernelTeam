@@ -15,17 +15,20 @@ import (
 	"github.com/google/uuid"
 )
 
+// Storage описывает операции загрузки и удаления файлов в объектном хранилище.
 type Storage interface {
 	UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error)
 	DeleteFile(ctx context.Context, fileURL string) error
 }
 
+// Client реализует Storage поверх AWS S3-совместимого API.
 type Client struct {
 	s3Client   *s3.Client
 	bucketName string
 	domain     string
 }
 
+// NewS3Client создаёт клиента S3-хранилища по конфигурации сервиса.
 func NewS3Client(ctx context.Context, s3Config cfg.S3Config) (Storage, error) {
 	sdkCfg, err := awsconfig.LoadDefaultConfig(ctx,
 		awsconfig.WithRegion(s3Config.RegionName),
@@ -46,6 +49,7 @@ func NewS3Client(ctx context.Context, s3Config cfg.S3Config) (Storage, error) {
 	}, nil
 }
 
+// UploadFile загружает файл в указанную папку бакета и возвращает публичный URL объекта.
 func (c *Client) UploadFile(ctx context.Context, file multipart.File, folder string, extension string) (string, error) {
 	fileName := fmt.Sprintf("%s/%s%s", folder, uuid.New().String(), extension)
 
@@ -62,6 +66,7 @@ func (c *Client) UploadFile(ctx context.Context, file multipart.File, folder str
 	return fmt.Sprintf("%s/%s", c.domain, fileName), nil
 }
 
+// DeleteFile удаляет объект из бакета по его публичному URL.
 func (c *Client) DeleteFile(ctx context.Context, fileURL string) error {
 	prefix := c.domain + "/"
 	if !strings.HasPrefix(fileURL, prefix) {

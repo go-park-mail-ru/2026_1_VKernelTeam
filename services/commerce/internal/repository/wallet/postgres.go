@@ -25,7 +25,9 @@ const (
 )
 
 var (
-	ErrWalletNotFound      = errors.New("wallet not found")
+	// ErrWalletNotFound возвращается, когда кошелёк пользователя не найден.
+	ErrWalletNotFound = errors.New("wallet not found")
+	// ErrTransactionNotFound возвращается, когда транзакция кошелька не найдена.
 	ErrTransactionNotFound = errors.New("wallet transaction not found")
 )
 
@@ -43,6 +45,7 @@ type WalletStorage struct {
 	log  *slog.Logger
 }
 
+// NewWalletStorage создаёт PostgreSQL-репозиторий кошельков.
 func NewWalletStorage(pool PgxPoolTx, log *slog.Logger) *WalletStorage {
 	return &WalletStorage{pool: pool, log: log}
 }

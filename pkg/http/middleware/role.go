@@ -8,7 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 )
 
-// ошибки role middleware
+// Сообщения об ошибках проверки роли, возвращаемые клиенту.
 const (
 	ErrRoleForbidden = "forbidden"
 )

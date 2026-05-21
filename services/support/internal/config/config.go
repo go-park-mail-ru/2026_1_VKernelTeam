@@ -17,16 +17,19 @@ type Config struct {
 	HTTP         HTTPConfig
 }
 
+// KafkaConfig содержит настройки подключения к Kafka.
 type KafkaConfig struct {
 	Brokers        string
 	UserEventTopic string
 	GroupID        string
 }
 
+// HTTPConfig содержит настройки HTTP-сервера.
 type HTTPConfig struct {
 	Port int `json:"port"`
 }
 
+// MustLoadConfig загружает конфигурацию из файла и переменных окружения, паникует при ошибке.
 func MustLoadConfig() *Config {
 	_ = godotenv.Load()
 
