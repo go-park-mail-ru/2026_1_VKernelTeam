@@ -33,8 +33,10 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/refresh"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/s3"
+	testresetrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/testreset"
 	userrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/repository/user"
 	authusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/auth"
+	testresetuc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/usecase/testreset"
 
 	grpclib "google.golang.org/grpc"
 )
@@ -88,7 +90,11 @@ func main() {
 
 	authHandlers := handlers.NewAuthHandlers(log, authUC, cfg.TokenTTL, cfg.RefreshTTL, cfg.TokenSecret)
 
-	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, authHandlers, blacklistRepo, cfg.TokenSecret)
+	testResetRepo := testresetrepo.New(pg.Pool, log)
+	testResetUC := testresetuc.New(log, userStorage, testResetRepo)
+	testResetHandlers := handlers.NewTestResetHandlers(log, testResetUC)
+
+	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, authHandlers, testResetHandlers, blacklistRepo, cfg.TokenSecret)
 	grpcSrv := buildGRPCServer(log, userStorage, authUC)
 
 	httpErr := make(chan error, 1)
@@ -141,6 +147,7 @@ func buildHTTPServer(
 	log *slog.Logger,
 	port int,
 	h *handlers.AuthHandlers,
+	tr *handlers.TestResetHandlers,
 	bl middleware.TokenChecker,
 	secret string,
 ) *http.Server {
@@ -157,6 +164,7 @@ func buildHTTPServer(
 	mux.Handle("GET "+prefix+"/profile", authMW(http.HandlerFunc(h.HandleGetProfile)))
 	mux.Handle("PATCH "+prefix+"/profile", authMW(http.HandlerFunc(h.HandleUpdateProfile)))
 	mux.Handle("POST "+prefix+"/profile/avatar", authMW(http.HandlerFunc(h.HandleUploadAvatar)))
+	mux.Handle("POST "+prefix+"/test/reset", authMW(http.HandlerFunc(tr.HandleReset)))
 
 	// /metrics — Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
 	mux.Handle("GET /metrics", metrics.Handler())
