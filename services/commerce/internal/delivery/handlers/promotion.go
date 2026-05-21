@@ -39,6 +39,7 @@ type PromotionHandlers struct {
 	promotion PromotionService
 }
 
+// NewPromotionHandlers создаёт обработчики промо.
 func NewPromotionHandlers(log *slog.Logger, promotion PromotionService) *PromotionHandlers {
 	return &PromotionHandlers{log: log, promotion: promotion}
 }

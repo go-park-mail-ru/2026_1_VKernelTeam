@@ -4,6 +4,7 @@ package models
 
 import "time"
 
+// SupportTicket описывает обращение пользователя в поддержку.
 type SupportTicket struct {
 	ID          int64     `json:"id"`
 	UserID      int64     `json:"user_id"`

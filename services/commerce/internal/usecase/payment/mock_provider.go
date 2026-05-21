@@ -20,6 +20,7 @@ type Provider interface {
 // MockProvider — мгновенное успешное пополнение.
 type MockProvider struct{}
 
+// NewMockProvider создаёт мок-провайдера платежей, возвращающего мгновенный успех.
 func NewMockProvider() *MockProvider {
 	return &MockProvider{}
 }

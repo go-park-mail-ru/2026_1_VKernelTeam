@@ -21,21 +21,25 @@ const (
 	opGetUserRole      = "db.user.GetUserRole"
 )
 
+// Sentinel-ошибки слоя хранения пользователей.
 var (
 	ErrUserExists   = errors.New("user already exists")
 	ErrUserNotFound = errors.New("user not found")
 )
 
+// PgxIface описывает минимально необходимое подмножество API pgx, используемое хранилищем.
 type PgxIface interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
 }
 
+// UserStorage реализует доступ к таблице "user" через pgx.
 type UserStorage struct {
 	pool PgxIface
 	log  *slog.Logger
 }
 
+// NewUserStorage создаёт хранилище пользователей поверх pgx-пула.
 func NewUserStorage(pool PgxIface, log *slog.Logger) *UserStorage {
 	return &UserStorage{pool: pool, log: log}
 }

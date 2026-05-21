@@ -54,8 +54,6 @@ func setup(t *testing.T) *env {
 
 func int64Ptr(v int64) *int64 { return &v }
 
-// ─── RecordView ──────────────────────────────────────────────────────────────
-
 func TestRecordView_NewView_CacheHit(t *testing.T) {
 	e := setup(t)
 	ctx := context.Background()
@@ -191,8 +189,6 @@ func TestRecordView_DBError_OnCacheMiss(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, int64(0), count)
 }
-
-// ─── RunConsumer / flushBatch ────────────────────────────────────────────────
 
 func TestRunConsumer_FlushOnBatchSize(t *testing.T) {
 	ctrl := gomock.NewController(t)

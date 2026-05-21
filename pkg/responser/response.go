@@ -7,8 +7,8 @@ import (
 	"github.com/mailru/easyjson"
 )
 
-// ошибки responser
 var (
+	// ErrJSONMarshalFailed возвращается клиенту, когда сериализация ответа в JSON завершилась ошибкой.
 	ErrJSONMarshalFailed = "couldn't convert the received data to JSON"
 )
 

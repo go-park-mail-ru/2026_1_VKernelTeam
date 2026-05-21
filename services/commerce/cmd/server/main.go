@@ -140,23 +140,19 @@ func buildHTTPServer(
 
 	authMW := commercemw.GRPCAuthMiddleware(log, authClient)
 
-	// Cart
 	mux.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(cart.HandleGetCart)))
 	mux.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(cart.HandleAddToCart)))
 	mux.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(cart.HandleRemoveFromCart)))
 
-	// Chat & orders
 	mux.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(chat.HandleCreateOrder)))
 	mux.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(chat.HandleConfirmOrder)))
 	mux.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(chat.HandleGetAllChats)))
 	mux.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(chat.HandleGetChat)))
 
-	// Wallet
 	mux.Handle("GET "+prefix+"/wallet", authMW(http.HandlerFunc(wallet.HandleGetWallet)))
 	mux.Handle("GET "+prefix+"/wallet/transactions", authMW(http.HandlerFunc(wallet.HandleListWalletTransactions)))
 	mux.Handle("POST "+prefix+"/wallet/topup", authMW(http.HandlerFunc(wallet.HandleTopupWallet)))
 
-	// Promotion
 	mux.Handle("GET "+prefix+"/promotion/plans", http.HandlerFunc(promotion.HandleGetPromotionPlans))
 	mux.Handle("GET "+prefix+"/ads/{id}/promotions", http.HandlerFunc(promotion.HandleListAdPromotions))
 	mux.Handle("POST "+prefix+"/ads/{id}/promotions", authMW(http.HandlerFunc(promotion.HandlePurchasePromotion)))

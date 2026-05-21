@@ -50,8 +50,6 @@ func reqWithPath(method, target, idValue string, body []byte, userID int64) *htt
 	return r
 }
 
-// --- HandleGetPromotionPlans ---
-
 func TestHandleGetPromotionPlans_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
 	m.EXPECT().GetPlans(gomock.Any()).
@@ -78,8 +76,6 @@ func TestHandleGetPromotionPlans_InternalError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
-
-// --- HandlePurchasePromotion ---
 
 func TestHandlePurchasePromotion_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
@@ -173,8 +169,6 @@ func TestHandlePurchasePromotion_ErrorMapping(t *testing.T) {
 	}
 }
 
-// --- HandleListAdPromotions ---
-
 func TestHandleListAdPromotions_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)
 	m.EXPECT().ListActiveByAd(gomock.Any(), int64(10)).
@@ -207,8 +201,6 @@ func TestHandleListAdPromotions_InternalError(t *testing.T) {
 	h.HandleListAdPromotions(rr, reqWithPath(http.MethodGet, "/api/v1/ads/10/promotions", "10", nil, 0))
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
-
-// --- HandleListUserPromotions ---
 
 func TestHandleListUserPromotions_Success(t *testing.T) {
 	h, m := setupPromotionHandlers(t)

@@ -44,8 +44,6 @@ func authedRequest(method, target string, body []byte, userID int64) *http.Reque
 	return r
 }
 
-// --- HandleGetWallet ---
-
 func TestHandleGetWallet_Success(t *testing.T) {
 	h, m := setupWalletHandlers(t)
 	m.EXPECT().GetBalance(gomock.Any(), int64(1)).
@@ -80,8 +78,6 @@ func TestHandleGetWallet_InternalError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
-
-// --- HandleListWalletTransactions ---
 
 func TestHandleListWalletTransactions_Success(t *testing.T) {
 	h, m := setupWalletHandlers(t)
@@ -120,8 +116,6 @@ func TestHandleListWalletTransactions_Unauthorized(t *testing.T) {
 	h.HandleListWalletTransactions(rr, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/v1/wallet/transactions", nil))
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
-
-// --- HandleTopupWallet ---
 
 func TestHandleTopupWallet_Success(t *testing.T) {
 	h, m := setupWalletHandlers(t)

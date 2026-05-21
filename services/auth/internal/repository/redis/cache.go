@@ -12,10 +12,12 @@ import (
 // ErrNotFound возвращается, когда запрашиваемый ключ не найден в кэше.
 var ErrNotFound = errors.New("key not found in cache")
 
+// RedisCache — клиент Redis с пулом соединений.
 type RedisCache struct {
 	pool *redis.Pool
 }
 
+// New создаёт RedisCache с пулом соединений до указанного адреса.
 func New(addr string) *RedisCache {
 	pool := &redis.Pool{
 		MaxIdle:     10,
@@ -55,6 +57,7 @@ func (c *RedisCache) Set(ctx context.Context, key string, value string, ttl time
 	return nil
 }
 
+// Get возвращает значение по ключу или ErrNotFound, если ключа нет.
 func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
 	conn := c.pool.Get()
 	defer func() { _ = conn.Close() }()

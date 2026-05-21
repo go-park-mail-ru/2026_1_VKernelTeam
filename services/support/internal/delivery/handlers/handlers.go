@@ -7,6 +7,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/domain/dto"
 )
 
+// Сообщения ошибок, общие для всех HTTP-обработчиков техподдержки.
 const (
 	ErrInvalidRequestBody = "invalid request body"
 	ErrUnauthorized       = "unauthorized"

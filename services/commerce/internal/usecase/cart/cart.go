@@ -16,9 +16,10 @@ const (
 	opGetCart        = "usecase.cart.GetCart"
 )
 
-// Sentinel-ошибки
 var (
-	ErrProductNotActive    = errors.New("product is not active")
+	// ErrProductNotActive возвращается, когда товар недоступен для добавления в корзину.
+	ErrProductNotActive = errors.New("product is not active")
+	// ErrCannotAddOwnProduct возвращается при попытке добавить собственный товар в корзину.
 	ErrCannotAddOwnProduct = errors.New("cannot add own product to cart")
 )
 
@@ -37,6 +38,7 @@ type AdsProvider interface {
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 }
 
+// Usecase реализует бизнес-логику корзины пользователя.
 type Usecase struct {
 	log         *slog.Logger
 	cartStorage CartProvider

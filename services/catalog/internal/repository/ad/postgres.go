@@ -57,6 +57,7 @@ type AdStorage struct {
 	log  *slog.Logger
 }
 
+// NewAdStorage создаёт хранилище объявлений на базе PostgreSQL.
 func NewAdStorage(pool PgxPool, log *slog.Logger) *AdStorage {
 	return &AdStorage{pool: pool, log: log}
 }
@@ -137,7 +138,6 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 	}
 	ad.Photos = photos
 
-	// Подгрузка характеристик
 	catChars, err := s.getProductCharacteristics(ctx, []int64{id})
 	if err != nil {
 		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
@@ -1201,6 +1201,7 @@ func (s *AdStorage) UpdateAdStatus(ctx context.Context, id int64, newStatus stri
 	return prevStatus, nil
 }
 
+// GetPriceHistory возвращает историю изменения цены объявления, отсортированную по времени.
 func (s *AdStorage) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	const query = `
 		SELECT price, changed_at

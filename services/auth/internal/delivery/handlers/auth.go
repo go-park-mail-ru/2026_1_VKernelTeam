@@ -207,7 +207,6 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Очищаем все cookie
 	for _, name := range []string{cookieNameToken, cookieNameCSRF, "refresh_token"} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,

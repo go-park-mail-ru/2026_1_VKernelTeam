@@ -5,7 +5,7 @@ package models
 
 import "time"
 
-// Ad содержит поля объявления.
+// Возможные значения статуса объявления.
 const (
 	AdStatusActive   = "active"
 	AdStatusDraft    = "draft"
@@ -14,6 +14,7 @@ const (
 	AdStatusArchived = "archived"
 )
 
+// Ad содержит поля объявления.
 type Ad struct {
 	ID                      int64                         `json:"id"`
 	SellerID                int64                         `json:"seller_id"`

@@ -18,6 +18,7 @@ const (
 	opPaymentGetByID = "db.payment.GetByID"
 )
 
+// ErrPaymentNotFound возвращается, когда платёж с указанным ID не найден.
 var ErrPaymentNotFound = errors.New("payment not found")
 
 // PgxPoolTx — пул с поддержкой транзакций.
@@ -34,6 +35,7 @@ type PaymentStorage struct {
 	log  *slog.Logger
 }
 
+// NewPaymentStorage создаёт PostgreSQL-репозиторий платежей.
 func NewPaymentStorage(pool PgxPoolTx, log *slog.Logger) *PaymentStorage {
 	return &PaymentStorage{pool: pool, log: log}
 }

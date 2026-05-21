@@ -15,6 +15,7 @@ import (
 	supportticketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/usecase/support_ticket"
 )
 
+// Сообщения ошибок для обработчиков обращений техподдержки.
 const (
 	ErrInvalidTicketID    = "invalid ticket id"
 	ErrTicketNotFound     = "ticket not found"

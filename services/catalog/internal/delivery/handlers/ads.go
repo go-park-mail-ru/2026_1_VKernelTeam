@@ -30,7 +30,9 @@ const (
 	opHandleSearchAds           = "handlers.HandleSearchAds"
 	opHandleGetPriceHistory     = "handlers.HandleGetPriceHistory"
 
+	// ErrSearchQueryRequired — отсутствует обязательный параметр поискового запроса.
 	ErrSearchQueryRequired = "query parameter is required"
+	// ErrSearchQueryTooShort — поисковый запрос короче минимально допустимой длины.
 	ErrSearchQueryTooShort = "search query is too short"
 
 	statusKey = "status"

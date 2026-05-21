@@ -16,6 +16,7 @@ type RedisCache struct {
 	pool *redis.Pool
 }
 
+// New создаёт RedisCache с пулом соединений к указанному адресу.
 func New(addr string) *RedisCache {
 	pool := &redis.Pool{
 		MaxIdle:     10,

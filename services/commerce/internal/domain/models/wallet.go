@@ -4,6 +4,7 @@ package models
 
 import "time"
 
+// WalletTxType* — возможные типы операций по кошельку.
 const (
 	WalletTxTypeTopup           = "topup"
 	WalletTxTypePromotionCharge = "promotion_charge"

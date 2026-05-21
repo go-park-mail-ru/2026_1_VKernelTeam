@@ -14,6 +14,7 @@ import (
 	supportticketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/usecase/support_ticket"
 )
 
+// Сообщения ошибок для административных обработчиков техподдержки.
 const (
 	ErrFailedChangeStatus  = "failed to change ticket status"
 	ErrFailedGetAllTickets = "failed to get all tickets"

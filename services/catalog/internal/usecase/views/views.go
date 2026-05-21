@@ -55,6 +55,7 @@ type Views struct {
 	sf       singleflight.Group
 }
 
+// New создаёт use case Views с переданными зависимостями.
 func New(
 	log *slog.Logger,
 	cache ViewCache,
@@ -75,13 +76,11 @@ func New(
 
 // RecordView фиксирует просмотр объявления и возвращает актуальный счётчик.
 func (v *Views) RecordView(ctx context.Context, productID int64, userID *int64, deviceID string) (int64, error) {
-	// Формируем идентификатор для дедупликации
 	identifier := fmt.Sprintf("device:%s", deviceID)
 	if userID != nil {
 		identifier = fmt.Sprintf("user:%d", *userID)
 	}
 
-	// Дедупликация
 	isNew, err := v.cache.CheckAndSetDedup(ctx, productID, identifier)
 	if err != nil {
 		v.log.ErrorContext(ctx, "dedup check failed",
@@ -97,7 +96,6 @@ func (v *Views) RecordView(ctx context.Context, productID int64, userID *int64, 
 		// при холодном кэше (после рестарта Redis)
 		_, _ = v.getViewsCount(ctx, productID)
 
-		// Инкрементируем кэш
 		if _, err := v.cache.IncrementCount(ctx, productID); err != nil {
 			v.log.ErrorContext(ctx, "increment count failed",
 				slog.Int64("product_id", productID),
@@ -167,7 +165,6 @@ func (v *Views) RunConsumer(ctx context.Context) {
 	lastFlush := time.Now()
 
 	for {
-		// Проверяем отмену контекста
 		if ctx.Err() != nil {
 			if len(batch) > 0 {
 				v.flushBatch(context.Background(), batch)

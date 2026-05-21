@@ -16,6 +16,7 @@ type ViewCache struct {
 	countCacheTTL time.Duration
 }
 
+// New создаёт ViewCache с указанным пулом Redis и TTL дедупликации и счётчика.
 func New(pool *redis.Pool, dedupTTL, countCacheTTL time.Duration) *ViewCache {
 	return &ViewCache{
 		pool:          pool,

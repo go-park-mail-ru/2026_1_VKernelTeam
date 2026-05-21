@@ -40,6 +40,7 @@ const (
 	opGetPriceHistory            = "usecase.ads.GetPriceHistory"
 )
 
+// AdsProvider описывает контракт хранилища объявлений для use case.
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error)
@@ -80,6 +81,7 @@ var allowedImageTypes = map[string]struct{}{
 	"image/gif":  {},
 }
 
+// Ads — use case управления объявлениями.
 type Ads struct {
 	log            *slog.Logger
 	adsStorage     AdsProvider
@@ -231,6 +233,7 @@ func (a *Ads) UploadAdPhotos(ctx context.Context, files []multipart.File, filena
 	return urls, nil
 }
 
+// CreateAd создаёт новое объявление и при наличии прикрепляет фотографии.
 func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
 	a.log.InfoContext(ctx, "creating new ad",
 		slog.String("op", opCreateAd),
@@ -642,6 +645,7 @@ func toValidatorDefs(in []models.CategoryCharacteristic) []validator.CategoryCha
 	return out
 }
 
+// GetPriceHistory возвращает историю изменения цены объявления.
 func (a *Ads) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	a.log.DebugContext(ctx, "getting price history",
 		slog.String("op", opGetPriceHistory),

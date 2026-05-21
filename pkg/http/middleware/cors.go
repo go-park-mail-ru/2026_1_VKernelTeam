@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// CORSMiddleware добавляет CORS-заголовки и обрабатывает preflight-запросы.
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")

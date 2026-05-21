@@ -25,10 +25,12 @@ type ContextHandler struct {
 	inner slog.Handler
 }
 
+// Enabled сообщает, активен ли уровень логирования для данного контекста.
 func (h *ContextHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return h.inner.Enabled(ctx, level)
 }
 
+// Handle добавляет request_id из контекста в запись и передаёт её во внутренний handler.
 func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	if requestID, ok := ctx.Value(middleware.RequestIDKey).(string); ok {
 		r.AddAttrs(slog.String("request_id", requestID))
@@ -36,10 +38,12 @@ func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.inner.Handle(ctx, r)
 }
 
+// WithAttrs возвращает новый ContextHandler с добавленными атрибутами.
 func (h *ContextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &ContextHandler{inner: h.inner.WithAttrs(attrs)}
 }
 
+// WithGroup возвращает новый ContextHandler с указанной группой атрибутов.
 func (h *ContextHandler) WithGroup(name string) slog.Handler {
 	return &ContextHandler{inner: h.inner.WithGroup(name)}
 }

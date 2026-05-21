@@ -20,6 +20,7 @@ const (
 	opPromotionGetByID          = "db.promotion.GetByID"
 )
 
+// ErrPromotionNotFound возвращается, когда купленное промо не найдено.
 var ErrPromotionNotFound = errors.New("promotion not found")
 
 // PromotionStorage отвечает за купленные промо.
@@ -28,6 +29,7 @@ type PromotionStorage struct {
 	log  *slog.Logger
 }
 
+// NewPromotionStorage создаёт хранилище купленных промо.
 func NewPromotionStorage(pool PgxPoolTx, log *slog.Logger) *PromotionStorage {
 	return &PromotionStorage{pool: pool, log: log}
 }

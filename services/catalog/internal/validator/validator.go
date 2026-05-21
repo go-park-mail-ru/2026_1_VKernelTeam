@@ -26,6 +26,7 @@ type CategoryCharacteristicDef struct {
 	AllowedValues []string
 }
 
+// Sentinel-ошибки валидации полей объявления и характеристик.
 var (
 	ErrAdTitleEmpty          = errors.New("title cannot be empty")
 	ErrAdTitleTooShort       = errors.New("title must be at least 5 characters long")
@@ -63,6 +64,7 @@ var (
 	}
 )
 
+// ValidateAdTitle проверяет заголовок объявления на непустоту и длину 5-150 символов.
 func ValidateAdTitle(title string) error {
 	if title == "" {
 		return ErrAdTitleEmpty
@@ -77,6 +79,7 @@ func ValidateAdTitle(title string) error {
 	return nil
 }
 
+// ValidateAdDescription проверяет описание объявления на непустоту и длину 10-5000 символов.
 func ValidateAdDescription(description string) error {
 	if description == "" {
 		return ErrAdDescriptionEmpty
@@ -91,6 +94,7 @@ func ValidateAdDescription(description string) error {
 	return nil
 }
 
+// ValidateAdPrice проверяет, что цена объявления не отрицательная.
 func ValidateAdPrice(price int64) error {
 	if price < 0 {
 		return ErrAdPriceNegative
@@ -98,6 +102,7 @@ func ValidateAdPrice(price int64) error {
 	return nil
 }
 
+// ValidateCategoryID проверяет, что идентификатор категории положителен.
 func ValidateCategoryID(categoryID int64) error {
 	if categoryID <= 0 {
 		return ErrCategoryIDInvalid
@@ -105,6 +110,7 @@ func ValidateCategoryID(categoryID int64) error {
 	return nil
 }
 
+// ValidateProductID проверяет, что идентификатор товара положителен.
 func ValidateProductID(productID int64) error {
 	if productID <= 0 {
 		return ErrProductIDInvalid
@@ -112,6 +118,7 @@ func ValidateProductID(productID int64) error {
 	return nil
 }
 
+// ValidateAdStatus проверяет, что статус входит в список допустимых.
 func ValidateAdStatus(status string) error {
 	if !allowedAdStatuses[status] {
 		return ErrAdStatusInvalid
@@ -188,6 +195,7 @@ func ValidateCustomCharacteristics(inputs []CustomCharacteristicInput) error {
 	return nil
 }
 
+// ValidateAdLocation проверяет, что строка адреса задана и её длина в пределах 2-100 символов.
 func ValidateAdLocation(location string) error {
 	if location == "" {
 		return ErrAdLocationEmpty

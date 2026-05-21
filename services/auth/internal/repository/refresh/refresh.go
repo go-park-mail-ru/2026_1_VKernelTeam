@@ -16,10 +16,12 @@ type Cache interface {
 	Delete(ctx context.Context, key string) error
 }
 
+// Repository обеспечивает хранение refresh-токенов в кэше.
 type Repository struct {
 	cache Cache
 }
 
+// New создаёт Repository поверх переданного кэша.
 func New(c Cache) *Repository {
 	return &Repository{cache: c}
 }
