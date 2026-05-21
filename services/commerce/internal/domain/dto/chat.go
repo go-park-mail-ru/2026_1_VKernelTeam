@@ -1,6 +1,8 @@
 // Package dto содержит объекты передачи данных (Data Transfer Objects)
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // OrderResponse - ответ на POST /ads/{id}/order:

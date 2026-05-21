@@ -1,5 +1,7 @@
 package models
 
+//go:generate easyjson -all $GOFILE
+
 // Ad — облегчённая модель объявления, нужная commerce-сервису.
 // Полная модель живёт в catalog/internal/domain/models/ad.go;
 // commerce получает её через gRPC catalog.GetAd и использует только

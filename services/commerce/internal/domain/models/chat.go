@@ -2,6 +2,8 @@
 // приложения.
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // MessageType определяет тип сообщения в чате

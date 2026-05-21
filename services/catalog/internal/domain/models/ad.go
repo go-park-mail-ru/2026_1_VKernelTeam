@@ -1,6 +1,8 @@
 // Package models содержит структуры данных, используемые в домене catalog.
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // Ad содержит поля объявления.
