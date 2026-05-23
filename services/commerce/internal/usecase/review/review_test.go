@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	testContentGood    = "great seller"
-	testContentEdit    = "edit"
-	testContentEdited  = "edited"
+	testContentGood   = "great seller"
+	testContentEdit   = "edit"
+	testContentEdited = "edited"
 )
 
 func setupService(t *testing.T) (*ReviewService, *mocks.MockReviewStorage) {

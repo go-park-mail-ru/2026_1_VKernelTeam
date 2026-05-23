@@ -19,6 +19,7 @@ import (
 
 const (
 	colCreatedAt    = "created_at"
+	colUpdatedAt    = "updated_at"
 	colRating       = "rating"
 	colCount        = "count"
 	testContentGood = "great seller"
@@ -41,7 +42,7 @@ func TestReviewStorage_Create(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO review")).
 			WithArgs(int64(1), int64(2), int64(38), 5, testContentGood).
-			WillReturnRows(pgxmock.NewRows([]string{"id", colCreatedAt, "updated_at"}).
+			WillReturnRows(pgxmock.NewRows([]string{"id", colCreatedAt, colUpdatedAt}).
 				AddRow(int64(101), now, now))
 
 		got, err := s.Create(ctx, &models.Review{
@@ -93,7 +94,7 @@ func TestReviewStorage_Update(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("UPDATE review")).
 			WithArgs(int64(101), int64(1), 4, "ok").
 			WillReturnRows(pgxmock.NewRows([]string{
-				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, "updated_at",
+				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, colUpdatedAt,
 			}).AddRow(int64(101), int64(1), int64(2), int64(38), 4, "ok", now, now))
 
 		r, err := s.Update(ctx, 101, 1, 4, "ok")
@@ -175,7 +176,7 @@ func TestReviewStorage_GetByID(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, sender_id, receiver_id, product_id, rating, content")).
 			WithArgs(int64(101)).
 			WillReturnRows(pgxmock.NewRows([]string{
-				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, "updated_at",
+				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, colUpdatedAt,
 			}).AddRow(int64(101), int64(1), int64(2), int64(38), 5, "ok", now, now))
 
 		r, err := s.GetByID(ctx, 101)
