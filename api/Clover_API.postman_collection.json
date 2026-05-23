@@ -68,6 +68,16 @@
 			"key": "topupAmount",
 			"value": "500",
 			"description": "Сумма пополнения кошелька в рублях"
+		},
+		{
+			"key": "reviewId",
+			"value": "1",
+			"description": "ID отзыва (см. POST /reviews)"
+		},
+		{
+			"key": "receiverId",
+			"value": "1",
+			"description": "ID продавца, на которого оставляется отзыв"
 		}
 	],
 	"event": [
@@ -415,8 +425,14 @@
 						"header": [],
 						"url": {
 							"raw": "{{baseUrl}}/ads/{{adId}}/price-history",
-							"host": ["{{baseUrl}}"],
-							"path": ["ads", "{{adId}}", "price-history"]
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"price-history"
+							]
 						},
 						"description": "История изменения цены объявления: список пар дата-цена."
 					}
@@ -1090,6 +1106,185 @@
 							]
 						},
 						"description": "История всех купленных промо текущего пользователя (включая истёкшие)."
+					}
+				}
+			]
+		},
+		{
+			"name": "Reviews (Commerce)",
+			"description": "Отзывы покупателей о продавцах после создания запроса на покупку (POST /ads/{id}/order). Один отзыв на пару (sender, product, receiver). Агрегаты `user.rating` и `user.reviews_count` обновляются БД-триггером на INSERT/UPDATE/DELETE.\n\nHTTP-маппинг: все клиентские ошибки возвращаются как 400 с текстом в `error`. 201 — Create, 204 — Delete, 200 — остальные. 401 — нет auth.",
+			"item": [
+				{
+					"name": "Create Review",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/reviews",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"reviews"
+							]
+						},
+						"description": "Создать отзыв на продавца по конкретному товару.\n\nТребует: предварительного `POST /ads/{id}/order` (chat + msg msg_type=order). Валидация: rating 1..5, content 5..2000 символов, sender != receiver, receiver — реальный продавец товара.\n\nОтвет 201 — `{review: {id, sender:{id,name,avatar_path}, receiver_id, product:{ad_id,title,price,status,photo}, rating, content, created_at, updated_at}}`.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"receiver_id\": \"{{receiverId}}\",\n  \"product_id\": \"{{productId}}\",\n  \"rating\": 5,\n  \"content\": \"Отличный продавец, рекомендую. Товар как в описании.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
+					"name": "Update Review",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/reviews/{{reviewId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"reviews",
+								"{{reviewId}}"
+							]
+						},
+						"description": "Обновить свой отзыв. Только автор. Триггер пересчитывает `user.rating` после UPDATE.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 3,\n  \"content\": \"Пересмотрел оценку — нормально, но не отлично.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					}
+				},
+				{
+					"name": "Delete Review",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/reviews/{{reviewId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"reviews",
+								"{{reviewId}}"
+							]
+						},
+						"description": "Удалить свой отзыв. Только автор. 204 No Content при успехе. Триггер пересчитывает агрегаты после DELETE."
+					}
+				},
+				{
+					"name": "List User Reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userId}}/reviews?limit=20&cursor=",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userId}}",
+								"reviews"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Список отзывов о пользователе (продавце). Курсорная пагинация: cursor = `next_cursor` из предыдущей выдачи (id отзыва). limit: 1..100, default 20. Публично — без авторизации."
+					}
+				},
+				{
+					"name": "User Reviews Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userId}}/reviews/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userId}}",
+								"reviews",
+								"summary"
+							]
+						},
+						"description": "Средняя оценка + общее количество + распределение по звёздам. Ответ: `{average: 4.32, total: 152, distribution: {\"5\":120,\"4\":20,\"3\":7,\"2\":3,\"1\":2}}`. Публично."
+					}
+				},
+				{
+					"name": "My Reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/profile/reviews?limit=20&cursor=",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile",
+								"reviews"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Отзывы, оставленные текущим пользователем. Та же структура ответа, что и у `GET /users/{id}/reviews`. Требует auth."
 					}
 				}
 			]

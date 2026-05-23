@@ -78,6 +78,22 @@ definitions:
       partner:
         $ref: '#/definitions/dto.UserPreview'
     type: object
+  dto.CreateReviewRequest:
+    properties:
+      content:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      receiver_id:
+        type: integer
+    type: object
+  dto.CreateReviewResponse:
+    properties:
+      review:
+        $ref: '#/definitions/dto.ReviewResponse'
+    type: object
   dto.CreateTicketRequest:
     properties:
       category:
@@ -243,6 +259,45 @@ definitions:
       password:
         type: string
     type: object
+  dto.ReviewListResponse:
+    properties:
+      next_cursor:
+        type: integer
+      reviews:
+        items:
+          $ref: '#/definitions/dto.ReviewResponse'
+        type: array
+    type: object
+  dto.ReviewResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      product:
+        $ref: '#/definitions/dto.AdPreview'
+      rating:
+        type: integer
+      receiver_id:
+        type: integer
+      sender:
+        $ref: '#/definitions/dto.UserPreview'
+      updated_at:
+        type: string
+    type: object
+  dto.ReviewSummaryResponse:
+    properties:
+      average:
+        type: number
+      distribution:
+        additionalProperties:
+          type: integer
+        type: object
+      total:
+        type: integer
+    type: object
   dto.SendMessageRequest:
     properties:
       text:
@@ -318,6 +373,13 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UpdateReviewRequest:
+    properties:
+      content:
+        type: string
+      rating:
+        type: integer
     type: object
   dto.UpdateTicketRequest:
     properties:
@@ -1517,6 +1579,37 @@ paths:
       summary: История покупок продвижения
       tags:
       - promotion
+  /profile/reviews:
+    get:
+      parameters:
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Мои отзывы
+      tags:
+      - reviews
   /promotion/plans:
     get:
       produces:
@@ -1535,6 +1628,108 @@ paths:
       summary: Список тарифов продвижения
       tags:
       - promotion
+  /reviews:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: receiver_id, product_id, rating, content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateReviewResponse'
+        "400":
+          description: validation / business error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать отзыв о продавце
+      tags:
+      - reviews
+  /reviews/{id}:
+    delete:
+      parameters:
+      - description: ID отзыва
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: invalid id / not author / not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить свой отзыв
+      tags:
+      - reviews
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID отзыва
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: rating, content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewResponse'
+        "400":
+          description: validation / not author / not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Обновить свой отзыв
+      tags:
+      - reviews
   /support/tickets:
     get:
       description: Возвращает список обращений текущего пользователя
@@ -2004,6 +2199,64 @@ paths:
       summary: Получить объявления пользователя
       tags:
       - ads
+  /users/{id}/reviews:
+    get:
+      parameters:
+      - description: ID продавца
+        in: path
+        name: id
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewListResponse'
+        "400":
+          description: invalid user id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Отзывы о пользователе
+      tags:
+      - reviews
+  /users/{id}/reviews/summary:
+    get:
+      parameters:
+      - description: ID продавца
+        in: path
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewSummaryResponse'
+        "400":
+          description: invalid user id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Сводка отзывов о пользователе
+      tags:
+      - reviews
   /wallet:
     get:
       produces:

@@ -21,4 +21,3 @@ docs/
 
 # Локальные dev-конфиги gateway (см. nginx.conf / docker-compose.yaml в проде)
 deployments/docker-compose.override.yaml
-deployments/nginx/nginx.local.conf
