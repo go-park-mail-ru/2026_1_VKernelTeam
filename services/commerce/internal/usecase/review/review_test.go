@@ -18,6 +18,12 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/review/mocks"
 )
 
+const (
+	testContentGood    = "great seller"
+	testContentEdit    = "edit"
+	testContentEdited  = "edited"
+)
+
 func setupService(t *testing.T) (*ReviewService, *mocks.MockReviewStorage) {
 	t.Helper()
 	ctrl := gomock.NewController(t)
@@ -31,7 +37,7 @@ func validCreateReq() dto.CreateReviewRequest {
 		ReceiverID: 2,
 		ProductID:  38,
 		Rating:     5,
-		Content:    "great seller",
+		Content:    testContentGood,
 	}
 }
 
@@ -153,7 +159,7 @@ func TestCreateReview_GetResponseByIDError(t *testing.T) {
 	m.EXPECT().Create(gomock.Any(), gomock.Any()).
 		Return(models.Review{
 			ID: 101, SenderID: 1, ReceiverID: 2, ProductID: 38,
-			Rating: 5, Content: "great seller", CreatedAt: now, UpdatedAt: now,
+			Rating: 5, Content: testContentGood, CreatedAt: now, UpdatedAt: now,
 		}, nil)
 	m.EXPECT().GetResponseByID(gomock.Any(), int64(101)).
 		Return(dto.ReviewResponse{}, errors.New("db down"))
@@ -171,7 +177,7 @@ func TestCreateReview_Happy(t *testing.T) {
 	m.EXPECT().Create(gomock.Any(), gomock.Any()).
 		Return(models.Review{
 			ID: 101, SenderID: 1, ReceiverID: 2, ProductID: 38,
-			Rating: 5, Content: "great seller", CreatedAt: now, UpdatedAt: now,
+			Rating: 5, Content: testContentGood, CreatedAt: now, UpdatedAt: now,
 		}, nil)
 	m.EXPECT().GetResponseByID(gomock.Any(), int64(101)).
 		Return(dto.ReviewResponse{
@@ -180,7 +186,7 @@ func TestCreateReview_Happy(t *testing.T) {
 			ReceiverID: 2,
 			Product:    dto.AdPreview{ID: 38, Title: "iPhone", Price: 1000, Status: "active", Photo: "img.jpg"},
 			Rating:     5,
-			Content:    "great seller",
+			Content:    testContentGood,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		}, nil)
@@ -204,7 +210,7 @@ func TestUpdateReview_NotFound(t *testing.T) {
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{}, reviewrepo.ErrReviewNotFound)
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edit"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit})
 	assert.ErrorIs(t, err, reviewrepo.ErrReviewNotFound)
 }
 
@@ -213,7 +219,7 @@ func TestUpdateReview_NotAuthor(t *testing.T) {
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{ID: 101, SenderID: 9}, nil)
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edit"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit})
 	assert.ErrorIs(t, err, ErrForbiddenReviewEdit)
 }
 
@@ -222,7 +228,7 @@ func TestUpdateReview_GetByIDInternalError(t *testing.T) {
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{}, errors.New("db down"))
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edit"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit})
 	assert.Error(t, err)
 	assert.NotErrorIs(t, err, reviewrepo.ErrReviewNotFound)
 	assert.NotErrorIs(t, err, ErrForbiddenReviewEdit)
@@ -252,10 +258,10 @@ func TestUpdateReview_StorageRaceNotFound(t *testing.T) {
 	s, m := setupService(t)
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{ID: 101, SenderID: 1}, nil)
-	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, "edited").
+	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, testContentEdited).
 		Return(models.Review{}, reviewrepo.ErrReviewNotFound)
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edited"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdited})
 	assert.ErrorIs(t, err, reviewrepo.ErrReviewNotFound)
 }
 
@@ -263,10 +269,10 @@ func TestUpdateReview_StorageInternal(t *testing.T) {
 	s, m := setupService(t)
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{ID: 101, SenderID: 1}, nil)
-	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, "edited").
+	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, testContentEdited).
 		Return(models.Review{}, errors.New("db down"))
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edited"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdited})
 	assert.Error(t, err)
 	assert.NotErrorIs(t, err, reviewrepo.ErrReviewNotFound)
 }
@@ -276,10 +282,10 @@ func TestUpdateReview_Happy(t *testing.T) {
 	now := time.Now()
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{ID: 101, SenderID: 1}, nil)
-	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, "edited").
+	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, testContentEdited).
 		Return(models.Review{
 			ID: 101, SenderID: 1, ReceiverID: 2, ProductID: 38,
-			Rating: 4, Content: "edited", CreatedAt: now, UpdatedAt: now,
+			Rating: 4, Content: testContentEdited, CreatedAt: now, UpdatedAt: now,
 		}, nil)
 	m.EXPECT().GetResponseByID(gomock.Any(), int64(101)).
 		Return(dto.ReviewResponse{
@@ -288,15 +294,15 @@ func TestUpdateReview_Happy(t *testing.T) {
 			ReceiverID: 2,
 			Product:    dto.AdPreview{ID: 38, Title: "iPhone", Price: 1000, Status: "active", Photo: "img.jpg"},
 			Rating:     4,
-			Content:    "edited",
+			Content:    testContentEdited,
 			CreatedAt:  now,
 			UpdatedAt:  now,
 		}, nil)
 
-	resp, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edited"})
+	resp, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdited})
 	require.NoError(t, err)
 	assert.Equal(t, 4, resp.Rating)
-	assert.Equal(t, "edited", resp.Content)
+	assert.Equal(t, testContentEdited, resp.Content)
 	// Главный регресс-ассерт: превью заполнены и в PUT.
 	assert.Equal(t, int64(1), resp.Sender.ID)
 	assert.Equal(t, "Ivan", resp.Sender.Name)
@@ -310,15 +316,15 @@ func TestUpdateReview_GetResponseByIDError(t *testing.T) {
 	now := time.Now()
 	m.EXPECT().GetByID(gomock.Any(), int64(101)).
 		Return(models.Review{ID: 101, SenderID: 1}, nil)
-	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, "edited").
+	m.EXPECT().Update(gomock.Any(), int64(101), int64(1), 4, testContentEdited).
 		Return(models.Review{
 			ID: 101, SenderID: 1, ReceiverID: 2, ProductID: 38,
-			Rating: 4, Content: "edited", CreatedAt: now, UpdatedAt: now,
+			Rating: 4, Content: testContentEdited, CreatedAt: now, UpdatedAt: now,
 		}, nil)
 	m.EXPECT().GetResponseByID(gomock.Any(), int64(101)).
 		Return(dto.ReviewResponse{}, errors.New("db down"))
 
-	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: "edited"})
+	_, err := s.UpdateReview(context.Background(), 1, 101, dto.UpdateReviewRequest{Rating: 4, Content: testContentEdited})
 	assert.Error(t, err)
 }
 

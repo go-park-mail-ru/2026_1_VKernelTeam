@@ -17,6 +17,13 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 )
 
+const (
+	colCreatedAt    = "created_at"
+	colRating       = "rating"
+	colCount        = "count"
+	testContentGood = "great seller"
+)
+
 func newStorage(t *testing.T) (*ReviewStorage, pgxmock.PgxPoolIface) {
 	t.Helper()
 	mock, err := pgxmock.NewPool()
@@ -33,12 +40,12 @@ func TestReviewStorage_Create(t *testing.T) {
 		s, mock := newStorage(t)
 
 		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO review")).
-			WithArgs(int64(1), int64(2), int64(38), 5, "great seller").
-			WillReturnRows(pgxmock.NewRows([]string{"id", "created_at", "updated_at"}).
+			WithArgs(int64(1), int64(2), int64(38), 5, testContentGood).
+			WillReturnRows(pgxmock.NewRows([]string{"id", colCreatedAt, "updated_at"}).
 				AddRow(int64(101), now, now))
 
 		got, err := s.Create(ctx, &models.Review{
-			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: "great seller",
+			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: testContentGood,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, int64(101), got.ID)
@@ -50,11 +57,11 @@ func TestReviewStorage_Create(t *testing.T) {
 		s, mock := newStorage(t)
 
 		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO review")).
-			WithArgs(int64(1), int64(2), int64(38), 5, "great seller").
+			WithArgs(int64(1), int64(2), int64(38), 5, testContentGood).
 			WillReturnError(&pgconn.PgError{Code: "23505"})
 
 		_, err := s.Create(ctx, &models.Review{
-			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: "great seller",
+			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: testContentGood,
 		})
 		assert.ErrorIs(t, err, ErrReviewAlreadyExists)
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -64,11 +71,11 @@ func TestReviewStorage_Create(t *testing.T) {
 		s, mock := newStorage(t)
 
 		mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO review")).
-			WithArgs(int64(1), int64(2), int64(38), 5, "great seller").
+			WithArgs(int64(1), int64(2), int64(38), 5, testContentGood).
 			WillReturnError(&pgconn.PgError{Code: "23514"})
 
 		_, err := s.Create(ctx, &models.Review{
-			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: "great seller",
+			SenderID: 1, ReceiverID: 2, ProductID: 38, Rating: 5, Content: testContentGood,
 		})
 		assert.Error(t, err)
 		assert.NotErrorIs(t, err, ErrReviewAlreadyExists)
@@ -86,7 +93,7 @@ func TestReviewStorage_Update(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("UPDATE review")).
 			WithArgs(int64(101), int64(1), 4, "ok").
 			WillReturnRows(pgxmock.NewRows([]string{
-				"id", "sender_id", "receiver_id", "product_id", "rating", "content", "created_at", "updated_at",
+				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, "updated_at",
 			}).AddRow(int64(101), int64(1), int64(2), int64(38), 4, "ok", now, now))
 
 		r, err := s.Update(ctx, 101, 1, 4, "ok")
@@ -168,7 +175,7 @@ func TestReviewStorage_GetByID(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT id, sender_id, receiver_id, product_id, rating, content")).
 			WithArgs(int64(101)).
 			WillReturnRows(pgxmock.NewRows([]string{
-				"id", "sender_id", "receiver_id", "product_id", "rating", "content", "created_at", "updated_at",
+				"id", "sender_id", "receiver_id", "product_id", colRating, "content", colCreatedAt, "updated_at",
 			}).AddRow(int64(101), int64(1), int64(2), int64(38), 5, "ok", now, now))
 
 		r, err := s.GetByID(ctx, 101)
@@ -215,7 +222,7 @@ func TestReviewStorage_GetResponseByID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		s, mock := newStorage(t)
 		rows := pgxmock.NewRows(cols).
-			AddRow(int64(101), int64(2), 5, "great seller", now, now,
+			AddRow(int64(101), int64(2), 5, testContentGood, now, now,
 				int64(1), "Ivan", "ava.png",
 				int64(38), "iPhone", int64(1000), "active", "img.jpg")
 
@@ -228,7 +235,7 @@ func TestReviewStorage_GetResponseByID(t *testing.T) {
 		assert.Equal(t, int64(101), got.ID)
 		assert.Equal(t, int64(2), got.ReceiverID)
 		assert.Equal(t, 5, got.Rating)
-		assert.Equal(t, "great seller", got.Content)
+		assert.Equal(t, testContentGood, got.Content)
 		assert.Equal(t, int64(1), got.Sender.ID)
 		assert.Equal(t, "Ivan", got.Sender.Name)
 		assert.Equal(t, "ava.png", got.Sender.AvatarPath)
@@ -376,12 +383,12 @@ func TestReviewStorage_SummaryByReceiver(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, COUNT(*)`)).
 			WithArgs(int64(2)).
-			WillReturnRows(pgxmock.NewRows([]string{"rating", "count"}).
+			WillReturnRows(pgxmock.NewRows([]string{colRating, colCount}).
 				AddRow(5, 3).AddRow(4, 1))
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, reviews_count FROM "user"`)).
 			WithArgs(int64(2)).
-			WillReturnRows(pgxmock.NewRows([]string{"rating", "reviews_count"}).
+			WillReturnRows(pgxmock.NewRows([]string{colRating, "reviews_count"}).
 				AddRow(4.75, 4))
 
 		got, err := s.SummaryByReceiver(ctx, 2)
@@ -398,7 +405,7 @@ func TestReviewStorage_SummaryByReceiver(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, COUNT(*)`)).
 			WithArgs(int64(2)).
-			WillReturnRows(pgxmock.NewRows([]string{"rating", "count"}))
+			WillReturnRows(pgxmock.NewRows([]string{colRating, colCount}))
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, reviews_count FROM "user"`)).
 			WithArgs(int64(2)).
 			WillReturnError(pgx.ErrNoRows)
@@ -428,7 +435,7 @@ func TestReviewStorage_SummaryByReceiver(t *testing.T) {
 
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, COUNT(*)`)).
 			WithArgs(int64(2)).
-			WillReturnRows(pgxmock.NewRows([]string{"rating", "count"}).AddRow(5, 1))
+			WillReturnRows(pgxmock.NewRows([]string{colRating, colCount}).AddRow(5, 1))
 		mock.ExpectQuery(regexp.QuoteMeta(`SELECT rating, reviews_count FROM "user"`)).
 			WithArgs(int64(2)).
 			WillReturnError(errors.New("db down"))

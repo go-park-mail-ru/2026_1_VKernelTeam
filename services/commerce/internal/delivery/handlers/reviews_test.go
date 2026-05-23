@@ -22,6 +22,12 @@ import (
 	reviewuc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/review"
 )
 
+const (
+	testContentGreat    = "great"
+	testContentEdit     = "edit"
+	testCaseInternalErr = "internal"
+)
+
 func setupReviewHandlers(t *testing.T) (*ReviewHandlers, *mocks.MockReviewProvider) {
 	t.Helper()
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError}))
@@ -57,11 +63,11 @@ func decodeError(t *testing.T, body *bytes.Buffer) string {
 
 func TestHandleCreateReview_Happy(t *testing.T) {
 	h, m := setupReviewHandlers(t)
-	req := dto.CreateReviewRequest{ReceiverID: 2, ProductID: 38, Rating: 5, Content: "great"}
+	req := dto.CreateReviewRequest{ReceiverID: 2, ProductID: 38, Rating: 5, Content: testContentGreat}
 	body, _ := json.Marshal(req)
 
 	m.EXPECT().CreateReview(gomock.Any(), int64(1), req).
-		Return(dto.ReviewResponse{ID: 101, ReceiverID: 2, Rating: 5, Content: "great"}, nil)
+		Return(dto.ReviewResponse{ID: 101, ReceiverID: 2, Rating: 5, Content: testContentGreat}, nil)
 
 	rr := httptest.NewRecorder()
 	h.HandleCreateReview(rr, reqWithUserAndPath(http.MethodPost, "/api/v1/reviews", "", body, 1))
@@ -101,13 +107,13 @@ func TestHandleCreateReview_ErrorMapping(t *testing.T) {
 		{"seller_mismatch", reviewuc.ErrSellerMismatch, http.StatusBadRequest, ErrSellerMismatch},
 		{"already_exists", reviewrepo.ErrReviewAlreadyExists, http.StatusBadRequest, ErrReviewExists},
 		{"product_not_found", reviewrepo.ErrProductNotFound, http.StatusBadRequest, ErrProductNotFound},
-		{"internal", errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
+		{testCaseInternalErr, errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h, m := setupReviewHandlers(t)
-			req := dto.CreateReviewRequest{ReceiverID: 2, ProductID: 38, Rating: 5, Content: "great"}
+			req := dto.CreateReviewRequest{ReceiverID: 2, ProductID: 38, Rating: 5, Content: testContentGreat}
 			body, _ := json.Marshal(req)
 
 			m.EXPECT().CreateReview(gomock.Any(), int64(1), req).
@@ -124,10 +130,10 @@ func TestHandleCreateReview_ErrorMapping(t *testing.T) {
 
 func TestHandleUpdateReview_Happy(t *testing.T) {
 	h, m := setupReviewHandlers(t)
-	req := dto.UpdateReviewRequest{Rating: 4, Content: "edit"}
+	req := dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit}
 	body, _ := json.Marshal(req)
 	m.EXPECT().UpdateReview(gomock.Any(), int64(1), int64(101), req).
-		Return(dto.ReviewResponse{ID: 101, Rating: 4, Content: "edit"}, nil)
+		Return(dto.ReviewResponse{ID: 101, Rating: 4, Content: testContentEdit}, nil)
 
 	rr := httptest.NewRecorder()
 	h.HandleUpdateReview(rr, reqWithUserAndPath(http.MethodPut, "/api/v1/reviews/101", "101", body, 1))
@@ -140,7 +146,7 @@ func TestHandleUpdateReview_Happy(t *testing.T) {
 
 func TestHandleUpdateReview_NoAuth(t *testing.T) {
 	h, _ := setupReviewHandlers(t)
-	body, _ := json.Marshal(dto.UpdateReviewRequest{Rating: 4, Content: "edit"})
+	body, _ := json.Marshal(dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit})
 	rr := httptest.NewRecorder()
 	h.HandleUpdateReview(rr, reqWithUserAndPath(http.MethodPut, "/api/v1/reviews/101", "101", body, 0))
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
@@ -148,7 +154,7 @@ func TestHandleUpdateReview_NoAuth(t *testing.T) {
 
 func TestHandleUpdateReview_BadID(t *testing.T) {
 	h, _ := setupReviewHandlers(t)
-	body, _ := json.Marshal(dto.UpdateReviewRequest{Rating: 4, Content: "edit"})
+	body, _ := json.Marshal(dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit})
 	rr := httptest.NewRecorder()
 	h.HandleUpdateReview(rr, reqWithUserAndPath(http.MethodPut, "/api/v1/reviews/abc", "abc", body, 1))
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -171,13 +177,13 @@ func TestHandleUpdateReview_ErrorMapping(t *testing.T) {
 	}{
 		{"not_author", reviewuc.ErrForbiddenReviewEdit, http.StatusBadRequest, ErrNotReviewAuthor},
 		{"not_found", reviewrepo.ErrReviewNotFound, http.StatusBadRequest, ErrReviewNotFound},
-		{"internal", errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
+		{testCaseInternalErr, errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			h, m := setupReviewHandlers(t)
-			req := dto.UpdateReviewRequest{Rating: 4, Content: "edit"}
+			req := dto.UpdateReviewRequest{Rating: 4, Content: testContentEdit}
 			body, _ := json.Marshal(req)
 			m.EXPECT().UpdateReview(gomock.Any(), int64(1), int64(101), req).
 				Return(dto.ReviewResponse{}, tc.ucErr)
@@ -224,7 +230,7 @@ func TestHandleDeleteReview_ErrorMapping(t *testing.T) {
 	}{
 		{"not_author", reviewuc.ErrForbiddenReviewEdit, http.StatusBadRequest, ErrNotReviewAuthor},
 		{"not_found", reviewrepo.ErrReviewNotFound, http.StatusBadRequest, ErrReviewNotFound},
-		{"internal", errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
+		{testCaseInternalErr, errors.New("db down"), http.StatusInternalServerError, ErrInternalError},
 	}
 
 	for _, tc := range cases {
