@@ -205,7 +205,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "order"`)).
-			WithArgs(int64(1), int64(1000)).
+			WithArgs(int64(1), int64(1000), int64(5)).
 			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(101)))
 		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO order_item")).
 			WithArgs(int64(101), int64(38), int64(1000)).
@@ -218,7 +218,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 			WillReturnResult(pgxmock.NewResult("DELETE", 3))
 		mock.ExpectCommit()
 
-		err = storage.CompletePurchase(ctx, 1, 38, 1000)
+		err = storage.CompletePurchase(ctx, 5, 1, 38, 1000)
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -232,7 +232,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 
 		mock.ExpectBegin().WillReturnError(errors.New("no conn"))
 
-		err = storage.CompletePurchase(ctx, 1, 38, 1000)
+		err = storage.CompletePurchase(ctx, 5, 1, 38, 1000)
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -246,11 +246,11 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "order"`)).
-			WithArgs(int64(1), int64(1000)).
+			WithArgs(int64(1), int64(1000), int64(5)).
 			WillReturnError(errors.New("pk violation"))
 		mock.ExpectRollback()
 
-		err = storage.CompletePurchase(ctx, 1, 38, 1000)
+		err = storage.CompletePurchase(ctx, 5, 1, 38, 1000)
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -264,7 +264,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "order"`)).
-			WithArgs(int64(1), int64(1000)).
+			WithArgs(int64(1), int64(1000), int64(5)).
 			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(101)))
 		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO order_item")).
 			WithArgs(int64(101), int64(38), int64(1000)).
@@ -274,7 +274,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 			WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 		mock.ExpectRollback()
 
-		err = storage.CompletePurchase(ctx, 1, 38, 1000)
+		err = storage.CompletePurchase(ctx, 5, 1, 38, 1000)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "ad not found")
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -289,7 +289,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 
 		mock.ExpectBegin()
 		mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO "order"`)).
-			WithArgs(int64(1), int64(1000)).
+			WithArgs(int64(1), int64(1000), int64(5)).
 			WillReturnRows(pgxmock.NewRows([]string{"id"}).AddRow(int64(101)))
 		mock.ExpectExec(regexp.QuoteMeta("INSERT INTO order_item")).
 			WithArgs(int64(101), int64(38), int64(1000)).
@@ -302,7 +302,7 @@ func TestChatStorage_CompletePurchase(t *testing.T) {
 			WillReturnError(errors.New("lock"))
 		mock.ExpectRollback()
 
-		err = storage.CompletePurchase(ctx, 1, 38, 1000)
+		err = storage.CompletePurchase(ctx, 5, 1, 38, 1000)
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})

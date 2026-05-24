@@ -37,17 +37,17 @@ func (m *MockChatProvider) EXPECT() *MockChatProviderMockRecorder {
 }
 
 // CompletePurchase mocks base method.
-func (m *MockChatProvider) CompletePurchase(ctx context.Context, buyerID, productID, price int64) error {
+func (m *MockChatProvider) CompletePurchase(ctx context.Context, chatID, buyerID, productID, price int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CompletePurchase", ctx, buyerID, productID, price)
+	ret := m.ctrl.Call(m, "CompletePurchase", ctx, chatID, buyerID, productID, price)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CompletePurchase indicates an expected call of CompletePurchase.
-func (mr *MockChatProviderMockRecorder) CompletePurchase(ctx, buyerID, productID, price interface{}) *gomock.Call {
+func (mr *MockChatProviderMockRecorder) CompletePurchase(ctx, chatID, buyerID, productID, price interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompletePurchase", reflect.TypeOf((*MockChatProvider)(nil).CompletePurchase), ctx, buyerID, productID, price)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompletePurchase", reflect.TypeOf((*MockChatProvider)(nil).CompletePurchase), ctx, chatID, buyerID, productID, price)
 }
 
 // CreateMessage mocks base method.
