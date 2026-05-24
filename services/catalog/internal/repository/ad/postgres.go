@@ -584,8 +584,7 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.seller_id = $1
 		  AND p.deleted_at IS NULL
-		  AND p.status <> 'admin_deleted'
-		  AND p.status <> 'pending_moderation'
+		  AND p.status NOT IN ('admin_deleted', 'pending_moderation', 'rejected')
 		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY p.created_at DESC
 	`
