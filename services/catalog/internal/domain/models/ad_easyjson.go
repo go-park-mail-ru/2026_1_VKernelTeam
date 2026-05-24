@@ -199,7 +199,11 @@ func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				}
 				for !in.IsDelim(']') {
 					var v2 ProductCharacteristic
-					easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels1(in, &v2)
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						(v2).UnmarshalEasyJSON(in)
+					}
 					out.CategoryCharacteristics = append(out.CategoryCharacteristics, v2)
 					in.WantComma()
 				}
@@ -222,7 +226,11 @@ func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				}
 				for !in.IsDelim(']') {
 					var v3 ProductCustomCharacteristic
-					easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels2(in, &v3)
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						(v3).UnmarshalEasyJSON(in)
+					}
 					out.CustomCharacteristics = append(out.CustomCharacteristics, v3)
 					in.WantComma()
 				}
@@ -354,7 +362,7 @@ func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				if v6 > 0 {
 					out.RawByte(',')
 				}
-				easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels1(out, v7)
+				(v7).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -370,7 +378,7 @@ func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				if v8 > 0 {
 					out.RawByte(',')
 				}
-				easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels2(out, v9)
+				(v9).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -400,108 +408,4 @@ func (v *Ad) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *Ad) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels(l, v)
-}
-func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels2(in *jlexer.Lexer, out *ProductCustomCharacteristic) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		switch key {
-		case "name":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Name = string(in.String())
-			}
-		case "value":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Value = string(in.String())
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels2(out *jwriter.Writer, in ProductCustomCharacteristic) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"name\":"
-		out.RawString(prefix[1:])
-		out.String(string(in.Name))
-	}
-	{
-		const prefix string = ",\"value\":"
-		out.RawString(prefix)
-		out.String(string(in.Value))
-	}
-	out.RawByte('}')
-}
-func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels1(in *jlexer.Lexer, out *ProductCharacteristic) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		switch key {
-		case "name":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Name = string(in.String())
-			}
-		case "value":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Value = string(in.String())
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels1(out *jwriter.Writer, in ProductCharacteristic) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"name\":"
-		out.RawString(prefix[1:])
-		out.String(string(in.Name))
-	}
-	{
-		const prefix string = ",\"value\":"
-		out.RawString(prefix)
-		out.String(string(in.Value))
-	}
-	out.RawByte('}')
 }

@@ -375,6 +375,16 @@ definitions:
       type:
         type: string
     type: object
+  handlers.moderationFlagBody:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+  handlers.rejectBody:
+    properties:
+      reason:
+        type: string
+    type: object
   models.Ad:
     properties:
       category_characteristics:
@@ -509,6 +519,115 @@ info:
   title: Clover API
   version: "1.0"
 paths:
+  /admin/moderation/ads/{id}/approve:
+    post:
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Одобрить объявление
+      tags:
+      - admin
+  /admin/moderation/ads/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: причина отказа
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/handlers.rejectBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Отклонить объявление
+      tags:
+      - admin
+  /admin/moderation/queue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Ad'
+              type: array
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Список объявлений на модерации
+      tags:
+      - admin
+  /admin/moderation/settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Текущее состояние модерации
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: флаг
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.moderationFlagBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Включить/выключить модерацию
+      tags:
+      - admin
   /ads:
     get:
       description: Возвращает список всех объявлений
@@ -683,6 +802,46 @@ paths:
       summary: Обновить объявление
       tags:
       - ads
+  /ads/{id}/admin:
+    delete:
+      description: 'Жёсткое удаление от имени админа: товар становится недоступен
+        и'
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: status=deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized / forbidden role
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: ad not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить объявление (админ)
+      tags:
+      - admin
   /ads/{id}/close:
     post:
       description: Устанавливает статус объявления в 'archived'. Доступно только владельцу.

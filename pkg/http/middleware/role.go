@@ -18,6 +18,28 @@ type RoleProvider interface {
 	GetUserRole(ctx context.Context, userID int64) (string, error)
 }
 
+// RequireRole пропускает только запросы, в контексте которых RoleKey равен одному
+// из allowedRoles. Не делает дополнительных RPC: предполагает, что RoleKey уже
+// положен в контекст в auth-middleware.
+func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
+	allowed := make(map[string]struct{}, len(allowedRoles))
+	for _, r := range allowedRoles {
+		allowed[r] = struct{}{}
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			role, _ := r.Context().Value(RoleKey).(string)
+			if _, ok := allowed[role]; !ok {
+				// 401 (а не 403) — для соответствия минимальному набору кодов проекта.
+				responser.RespondWithError(w, http.StatusUnauthorized, ErrRoleForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // RoleMiddleware пропускает только пользователей с ролью из allowedRoles.
 // Используется после AuthMiddleware: ожидает userID в контексте под UserIDKey.
 func RoleMiddleware(log *slog.Logger, provider RoleProvider, allowedRoles ...string) func(http.Handler) http.Handler {

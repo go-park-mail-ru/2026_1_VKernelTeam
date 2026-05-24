@@ -553,6 +553,31 @@
 					}
 				},
 				{
+					"name": "Get User Ads — Pending tab",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/users/{{userId}}/ads?tab=pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"users",
+								"{{userId}}",
+								"ads"
+							],
+							"query": [
+								{
+									"key": "tab",
+									"value": "pending"
+								}
+							]
+						},
+						"description": "Объявления продавца, ожидающие модерации. Доступ — только владельцу или админу."
+					}
+				},
+				{
 					"name": "Record View",
 					"request": {
 						"method": "POST",
@@ -1394,6 +1419,176 @@
 								"characteristics"
 							]
 						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin (Catalog)",
+			"description": "Эндпоинты для роли admin: жёсткое удаление товаров и модерация объявлений.",
+			"item": [
+				{
+					"name": "[Admin] Delete Ad",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ads/{{adId}}/admin",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ads",
+								"{{adId}}",
+								"admin"
+							]
+						},
+						"description": "Жёсткое удаление от имени админа: объявление переводится в статус admin_deleted и исчезает из всех выборок (включая вкладку «Неактивные» у продавца). Продавцу автоматически приходит системное сообщение. Ответ: 200 {\"status\":\"deleted\"}; 404 если объявления нет; 401 если роль не admin."
+					}
+				},
+				{
+					"name": "[Admin] Get Moderation Settings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/moderation/settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"moderation",
+								"settings"
+							]
+						},
+						"description": "Возвращает {\"enabled\": bool} — текущее состояние глобального флага модерации."
+					}
+				},
+				{
+					"name": "[Admin] Set Moderation Settings",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"enabled\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/moderation/settings",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"moderation",
+								"settings"
+							]
+						},
+						"description": "Включает/выключает модерацию для всей платформы. При включении новые объявления уходят в pending_moderation; продавцам приходит системное сообщение."
+					}
+				},
+				{
+					"name": "[Admin] Moderation Queue",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/moderation/queue",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"moderation",
+								"queue"
+							]
+						},
+						"description": "Список объявлений со статусом pending_moderation, отсортированный по дате создания (старые сверху)."
+					}
+				},
+				{
+					"name": "[Admin] Approve Ad",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/moderation/ads/{{adId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"moderation",
+								"ads",
+								"{{adId}}",
+								"approve"
+							]
+						},
+						"description": "Переводит объявление из pending_moderation в active. Продавцу приходит системное сообщение."
+					}
+				},
+				{
+					"name": "[Admin] Reject Ad",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "X-CSRF-Token",
+								"value": "{{csrfToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"reason\": \"Не соответствует правилам площадки\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/admin/moderation/ads/{{adId}}/reject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"moderation",
+								"ads",
+								"{{adId}}",
+								"reject"
+							]
+						},
+						"description": "Переводит объявление в rejected, сохраняет причину. Продавцу приходит системное сообщение с указанием причины."
 					}
 				}
 			]

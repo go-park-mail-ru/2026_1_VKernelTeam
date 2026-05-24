@@ -30,7 +30,7 @@ func GRPCAuthMiddleware(log *slog.Logger, validator TokenValidator) func(http.Ha
 				return
 			}
 
-			userID, _, err := validator.ValidateToken(r.Context(), cookie.Value)
+			userID, role, err := validator.ValidateToken(r.Context(), cookie.Value)
 			if err != nil {
 				log.WarnContext(r.Context(), "gRPC token validation failed",
 					slog.String("error", err.Error()),
@@ -40,6 +40,7 @@ func GRPCAuthMiddleware(log *slog.Logger, validator TokenValidator) func(http.Ha
 			}
 
 			ctx := context.WithValue(r.Context(), sharedmw.UserIDKey, userID)
+			ctx = context.WithValue(ctx, sharedmw.RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -57,7 +58,7 @@ func GRPCOptionalAuthMiddleware(log *slog.Logger, validator TokenValidator) func
 				return
 			}
 
-			userID, _, err := validator.ValidateToken(r.Context(), cookie.Value)
+			userID, role, err := validator.ValidateToken(r.Context(), cookie.Value)
 			if err != nil {
 				log.DebugContext(r.Context(), "optional auth: invalid token, anonymous",
 					slog.String("error", err.Error()),
@@ -67,6 +68,7 @@ func GRPCOptionalAuthMiddleware(log *slog.Logger, validator TokenValidator) func
 			}
 
 			ctx := context.WithValue(r.Context(), sharedmw.UserIDKey, userID)
+			ctx = context.WithValue(ctx, sharedmw.RoleKey, role)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

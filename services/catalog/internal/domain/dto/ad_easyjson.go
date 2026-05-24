@@ -386,7 +386,11 @@ func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				}
 				for !in.IsDelim(']') {
 					var v7 models.PricePoint
-					easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels(in, &v7)
+					if in.IsNull() {
+						in.Skip()
+					} else {
+						(v7).UnmarshalEasyJSON(in)
+					}
 					out.History = append(out.History, v7)
 					in.WantComma()
 				}
@@ -417,7 +421,7 @@ func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCa
 				if v8 > 0 {
 					out.RawByte(',')
 				}
-				easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels(out, v9)
+				(v9).MarshalEasyJSON(out)
 			}
 			out.RawByte(']')
 		}
@@ -447,60 +451,6 @@ func (v *PriceHistoryResponse) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *PriceHistoryResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainDto1(l, v)
-}
-func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels(in *jlexer.Lexer, out *models.PricePoint) {
-	isTopLevel := in.IsStart()
-	if in.IsNull() {
-		if isTopLevel {
-			in.Consumed()
-		}
-		in.Skip()
-		return
-	}
-	in.Delim('{')
-	for !in.IsDelim('}') {
-		key := in.UnsafeFieldName(false)
-		in.WantColon()
-		switch key {
-		case "price":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				out.Price = int64(in.Int64())
-			}
-		case "changed_at":
-			if in.IsNull() {
-				in.Skip()
-			} else {
-				if data := in.Raw(); in.Ok() {
-					in.AddError((out.ChangedAt).UnmarshalJSON(data))
-				}
-			}
-		default:
-			in.SkipRecursive()
-		}
-		in.WantComma()
-	}
-	in.Delim('}')
-	if isTopLevel {
-		in.Consumed()
-	}
-}
-func easyjson63cbde9bEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainModels(out *jwriter.Writer, in models.PricePoint) {
-	out.RawByte('{')
-	first := true
-	_ = first
-	{
-		const prefix string = ",\"price\":"
-		out.RawString(prefix[1:])
-		out.Int64(int64(in.Price))
-	}
-	{
-		const prefix string = ",\"changed_at\":"
-		out.RawString(prefix)
-		out.Raw((in.ChangedAt).MarshalJSON())
-	}
-	out.RawByte('}')
 }
 func easyjson63cbde9bDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCatalogInternalDomainDto2(in *jlexer.Lexer, out *FavoriteRequest) {
 	isTopLevel := in.IsStart()

@@ -51,6 +51,34 @@ func (mr *MockAdsMockRecorder) AddFavorite(ctx, userID, adID interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFavorite", reflect.TypeOf((*MockAds)(nil).AddFavorite), ctx, userID, adID)
 }
 
+// AdminDeleteAd mocks base method.
+func (m *MockAds) AdminDeleteAd(ctx context.Context, adID, adminID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdminDeleteAd", ctx, adID, adminID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AdminDeleteAd indicates an expected call of AdminDeleteAd.
+func (mr *MockAdsMockRecorder) AdminDeleteAd(ctx, adID, adminID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminDeleteAd", reflect.TypeOf((*MockAds)(nil).AdminDeleteAd), ctx, adID, adminID)
+}
+
+// ApproveAd mocks base method.
+func (m *MockAds) ApproveAd(ctx context.Context, adID, adminID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveAd", ctx, adID, adminID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveAd indicates an expected call of ApproveAd.
+func (mr *MockAdsMockRecorder) ApproveAd(ctx, adID, adminID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveAd", reflect.TypeOf((*MockAds)(nil).ApproveAd), ctx, adID, adminID)
+}
+
 // CloseAd mocks base method.
 func (m *MockAds) CloseAd(ctx context.Context, id, userID int64) error {
 	m.ctrl.T.Helper()
@@ -154,6 +182,21 @@ func (mr *MockAdsMockRecorder) GetCategoryCharacteristics(ctx, categoryID interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAds)(nil).GetCategoryCharacteristics), ctx, categoryID)
 }
 
+// GetModerationQueue mocks base method.
+func (m *MockAds) GetModerationQueue(ctx context.Context) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetModerationQueue", ctx)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetModerationQueue indicates an expected call of GetModerationQueue.
+func (mr *MockAdsMockRecorder) GetModerationQueue(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModerationQueue", reflect.TypeOf((*MockAds)(nil).GetModerationQueue), ctx)
+}
+
 // GetPriceHistory mocks base method.
 func (m *MockAds) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	m.ctrl.T.Helper()
@@ -169,6 +212,21 @@ func (mr *MockAdsMockRecorder) GetPriceHistory(ctx, adID interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceHistory", reflect.TypeOf((*MockAds)(nil).GetPriceHistory), ctx, adID)
 }
 
+// GetUserAdsByStatus mocks base method.
+func (m *MockAds) GetUserAdsByStatus(ctx context.Context, userID int64, status string) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserAdsByStatus", ctx, userID, status)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserAdsByStatus indicates an expected call of GetUserAdsByStatus.
+func (mr *MockAdsMockRecorder) GetUserAdsByStatus(ctx, userID, status interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAdsByStatus", reflect.TypeOf((*MockAds)(nil).GetUserAdsByStatus), ctx, userID, status)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAds) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -182,6 +240,34 @@ func (m *MockAds) GetUserFavorites(ctx context.Context, userID int64) ([]models.
 func (mr *MockAdsMockRecorder) GetUserFavorites(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserFavorites", reflect.TypeOf((*MockAds)(nil).GetUserFavorites), ctx, userID)
+}
+
+// IsModerationEnabled mocks base method.
+func (m *MockAds) IsModerationEnabled(ctx context.Context) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsModerationEnabled", ctx)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsModerationEnabled indicates an expected call of IsModerationEnabled.
+func (mr *MockAdsMockRecorder) IsModerationEnabled(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsModerationEnabled", reflect.TypeOf((*MockAds)(nil).IsModerationEnabled), ctx)
+}
+
+// RejectAd mocks base method.
+func (m *MockAds) RejectAd(ctx context.Context, adID, adminID int64, reason string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RejectAd", ctx, adID, adminID, reason)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RejectAd indicates an expected call of RejectAd.
+func (mr *MockAdsMockRecorder) RejectAd(ctx, adID, adminID, reason interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RejectAd", reflect.TypeOf((*MockAds)(nil).RejectAd), ctx, adID, adminID, reason)
 }
 
 // RemoveFavorite mocks base method.
@@ -211,6 +297,20 @@ func (m *MockAds) SearchAds(ctx context.Context, query string, categoryID int64)
 func (mr *MockAdsMockRecorder) SearchAds(ctx, query, categoryID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchAds", reflect.TypeOf((*MockAds)(nil).SearchAds), ctx, query, categoryID)
+}
+
+// SetModerationEnabled mocks base method.
+func (m *MockAds) SetModerationEnabled(ctx context.Context, enabled bool, adminID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetModerationEnabled", ctx, enabled, adminID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetModerationEnabled indicates an expected call of SetModerationEnabled.
+func (mr *MockAdsMockRecorder) SetModerationEnabled(ctx, enabled, adminID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetModerationEnabled", reflect.TypeOf((*MockAds)(nil).SetModerationEnabled), ctx, enabled, adminID)
 }
 
 // UpdateAd mocks base method.

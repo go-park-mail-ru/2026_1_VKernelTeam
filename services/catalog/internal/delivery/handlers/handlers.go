@@ -29,6 +29,9 @@ const (
 	ErrUnauthorized         = "unauthorized"
 	ErrFileTooBig           = "file too big"
 	ErrFailedToUploadPhotos = "failed to upload photos"
+
+	// adsKey — ключ верхнего уровня в JSON-ответах со списком объявлений.
+	adsKey = "ads"
 )
 
 // Ads — методы usecase объявлений, нужные хендлерам.
@@ -47,6 +50,14 @@ type Ads interface {
 	UploadAdPhotos(ctx context.Context, files []multipart.File, filenames []string) ([]string, error)
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 	GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error)
+
+	AdminDeleteAd(ctx context.Context, adID, adminID int64) error
+	ApproveAd(ctx context.Context, adID, adminID int64) error
+	RejectAd(ctx context.Context, adID, adminID int64, reason string) error
+	GetModerationQueue(ctx context.Context) ([]models.Ad, error)
+	GetUserAdsByStatus(ctx context.Context, userID int64, status string) ([]models.Ad, error)
+	IsModerationEnabled(ctx context.Context) bool
+	SetModerationEnabled(ctx context.Context, enabled bool, adminID int64) error
 }
 
 // Views — методы usecase просмотров.
