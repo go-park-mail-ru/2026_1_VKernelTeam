@@ -343,22 +343,24 @@ func (s *ReviewStorage) SummaryByReceiver(
 	return resp, nil
 }
 
-// ExistsPurchaseRequest проверяет, что между покупателем и продавцом по товару
-// есть чат с сообщением типа 'order' от покупателя. Это бизнес-аналог
-// «факта оформления заказа», на котором завязано право оставить отзыв.
+// ExistsPurchaseRequest проверяет факт подтверждённой покупки: в таблице "order"
+// есть заказ покупателя с позицией по этому товару, продавец товара совпадает с
+// receiverID отзыва, статус заказа не 'cancelled'. Это закрывает право оставить
+// отзыв только за фактическими покупателями, а не за тем, кто просто отправил
+// сообщение типа 'order' в чат.
 func (s *ReviewStorage) ExistsPurchaseRequest(
 	ctx context.Context, buyerID, sellerID, productID int64,
 ) (bool, error) {
 	const query = `
 		SELECT EXISTS (
 			SELECT 1
-			FROM chat c
-			JOIN message m ON m.chat_id = c.id
-			WHERE c.product_id = $3
-			  AND c.buyer_id   = $1
-			  AND c.seller_id  = $2
-			  AND m.sender_id  = $1
-			  AND m.msg_type   = 'order'
+			FROM "order" o
+			JOIN order_item oi ON oi.order_id = o.id
+			JOIN product p     ON p.id        = oi.product_id
+			WHERE o.buyer_id    = $1
+			  AND p.seller_id   = $2
+			  AND oi.product_id = $3
+			  AND o.status     <> 'cancelled'
 		)
 	`
 
