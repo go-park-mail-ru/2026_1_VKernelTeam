@@ -31,6 +31,7 @@ import (
 	paymentrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/payment"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/postgres"
 	promorepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/promotion"
+	purchaserepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/purchase"
 	commerceredis "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/redis"
 	reviewrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/review"
 	walletrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/wallet"
@@ -38,6 +39,7 @@ import (
 	chatusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/chat"
 	paymentusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/payment"
 	promotionusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/promotion"
+	purchaseusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/purchase"
 	reviewusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/review"
 	walletusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/wallet"
 )
@@ -88,17 +90,21 @@ func main() {
 	reviewStorage := reviewrepo.NewStorage(pg.Pool, log)
 	reviewUC := reviewusecase.NewService(reviewStorage, log)
 
+	purchaseStorage := purchaserepo.NewStorage(pg.Pool, log)
+	purchaseUC := purchaseusecase.NewService(purchaseStorage, log)
+
 	cartHandlers := handlers.NewCartHandlers(log, cartUC)
 	chatHandlers := handlers.NewChatHandlers(log, chatUC)
 	walletHandlers := handlers.NewWalletHandlers(log, walletUC)
 	promotionHandlers := handlers.NewPromotionHandlers(log, promotionUC)
 	reviewHandlers := handlers.NewReviewHandlers(log, reviewUC)
+	purchaseHandlers := handlers.NewPurchaseHandlers(log, purchaseUC)
 
 	brokers := splitBrokers(cfg.Kafka.Brokers)
 	kafkaConsumer := commercekafka.NewConsumer(brokers, cfg.Kafka.GroupID, cartStorage, log)
 	defer func() { _ = kafkaConsumer.Close() }()
 
-	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, reviewHandlers, authClient)
+	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, reviewHandlers, purchaseHandlers, authClient)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -140,6 +146,7 @@ func buildHTTPServer(
 	wallet *handlers.WalletHandlers,
 	promotion *handlers.PromotionHandlers,
 	review *handlers.ReviewHandlers,
+	purchase *handlers.PurchaseHandlers,
 	authClient *commercegrpc.AuthClient,
 ) *http.Server {
 	mux := http.NewServeMux()
@@ -171,6 +178,8 @@ func buildHTTPServer(
 	mux.Handle("GET "+prefix+"/users/{id}/reviews", http.HandlerFunc(review.HandleListUserReviews))
 	mux.Handle("GET "+prefix+"/users/{id}/reviews/summary", http.HandlerFunc(review.HandleUserReviewsSummary))
 	mux.Handle("GET "+prefix+"/profile/reviews", authMW(http.HandlerFunc(review.HandleListMyReviews)))
+
+	mux.Handle("GET "+prefix+"/profile/purchases", authMW(http.HandlerFunc(purchase.HandleListMyPurchases)))
 
 	// /metrics - Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
 	mux.Handle("GET /metrics", metrics.Handler())
