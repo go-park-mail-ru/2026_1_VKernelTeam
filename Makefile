@@ -180,12 +180,14 @@ EASYJSON_FILES = \
 	services/commerce/internal/domain/dto/chat.go \
 	services/commerce/internal/domain/dto/common.go \
 	services/commerce/internal/domain/dto/promotion.go \
+	services/commerce/internal/domain/dto/review.go \
 	services/commerce/internal/domain/dto/wallet.go \
 	services/commerce/internal/domain/models/ad.go \
 	services/commerce/internal/domain/models/cart.go \
 	services/commerce/internal/domain/models/chat.go \
 	services/commerce/internal/domain/models/payment.go \
 	services/commerce/internal/domain/models/promotion.go \
+	services/commerce/internal/domain/models/review.go \
 	services/commerce/internal/domain/models/wallet.go
 
 easyjson:
