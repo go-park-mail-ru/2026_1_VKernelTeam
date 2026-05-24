@@ -1315,6 +1315,41 @@
 			]
 		},
 		{
+			"name": "Purchases (Commerce)",
+			"description": "Раздел «Мои покупки» (`/profile?tab=purchases` на фронте). Сервер — source-of-truth: до этого фронт жил на IndexedDB и терял покупки на другом устройстве / после очистки.\n\nИсточник данных: таблица `\"order\"` (+ `order_item` + `product` + `chat`). Поле `source` = `cart` | `chat`. Для `source='chat'` заполнен `chat_id` (фронт может открыть исходный чат).\n\nЗапись создаётся в момент подтверждения сделки: `POST /chats/{id}/confirm` → INSERT в `\"order\"` (source=chat, chat_id=...). Cart checkout как отдельный сценарий ещё не реализован; его контракт уже учтён (source='cart', chat_id=null).",
+			"item": [
+				{
+					"name": "My Purchases",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/profile/purchases?limit=20&cursor=",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"profile",
+								"purchases"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "cursor",
+									"value": "",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Покупки текущего пользователя. Курсорная пагинация по `order.id DESC` (id монотонно по времени). `cursor` = `next_cursor` из предыдущей выдачи; пусто = первая страница. `limit`: 1..50, default 20.\n\nОтвет 200:\n```json\n{\n  \"purchases\": [\n    {\n      \"order_id\": 101,\n      \"product_id\": 38,\n      \"title\": \"Айфон 13 mini\",\n      \"price\": 35000,\n      \"photo\": \"/static/ads/38/main.jpg\",\n      \"location\": \"Москва\",\n      \"seller\": {\"id\": 42, \"name\": \"Иван\", \"avatar_path\": \"/static/users/42/avatar.jpg\"},\n      \"source\": \"chat\",\n      \"purchased_at\": \"2026-05-24T11:32:14Z\",\n      \"chat_id\": 78\n    }\n  ],\n  \"next_cursor\": 1832475\n}\n```\n\n`next_cursor` отсутствует/`null` — страниц больше нет. Покупки удалённых (soft-delete) товаров возвращаются как есть (фронт не должен ломаться). Требует auth (cookie + CSRF). 401 — без авторизации."
+					}
+				}
+			]
+		},
+		{
 			"name": "Support Service",
 			"description": "Микросервис техподдержки (services/support).\nРоуты: /support/*\nAuth через gRPC к Auth Service.",
 			"item": [
