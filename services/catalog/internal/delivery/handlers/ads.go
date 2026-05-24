@@ -481,6 +481,29 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tab := r.URL.Query().Get("tab")
+
+	if tab == "pending" {
+		callerID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+		role, _ := r.Context().Value(middleware.RoleKey).(string)
+		if !ok || (callerID != userID && role != "admin") {
+			responser.RespondWithError(w, http.StatusUnauthorized, ErrForbidden)
+			return
+		}
+
+		pending, err := h.services.Ads.GetUserAdsByStatus(r.Context(), userID, "pending_moderation")
+		if err != nil {
+			h.log.ErrorContext(r.Context(), "failed to get pending user ads",
+				slog.String("op", opHandleGetUserAds),
+				slog.String("error", err.Error()),
+			)
+			responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToGetUserAds)
+			return
+		}
+		responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{adsKey: pending})
+		return
+	}
+
 	ads, err := h.services.Ads.GetAdsByUserID(r.Context(), userID)
 	if err != nil {
 		h.log.ErrorContext(r.Context(), "failed to get user ads",
@@ -492,7 +515,7 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"ads": ads,
+		adsKey: ads,
 	})
 }
 
@@ -609,7 +632,7 @@ func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request)
 	}
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"ads": favorites,
+		adsKey: favorites,
 	})
 }
 

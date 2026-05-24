@@ -21,6 +21,7 @@ type contextKey string
 const (
 	UserIDKey contextKey = "userID"
 	JtiKey    contextKey = "jti"
+	RoleKey   contextKey = "role"
 )
 
 // Сообщения об ошибках аутентификации, возвращаемые клиенту.

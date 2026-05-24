@@ -7,11 +7,14 @@ import "time"
 
 // Возможные значения статуса объявления.
 const (
-	AdStatusActive   = "active"
-	AdStatusDraft    = "draft"
-	AdStatusReserved = "reserved"
-	AdStatusSold     = "sold"
-	AdStatusArchived = "archived"
+	AdStatusActive            = "active"
+	AdStatusDraft             = "draft"
+	AdStatusReserved          = "reserved"
+	AdStatusSold              = "sold"
+	AdStatusArchived          = "archived"
+	AdStatusAdminDeleted      = "admin_deleted"
+	AdStatusPendingModeration = "pending_moderation"
+	AdStatusRejected          = "rejected"
 )
 
 // Ad содержит поля объявления.
