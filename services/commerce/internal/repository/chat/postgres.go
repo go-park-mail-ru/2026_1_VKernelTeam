@@ -155,10 +155,12 @@ func (cs *ChatStorage) CreateMessage(ctx context.Context, message *models.Messag
 	return msgID, nil
 }
 
-// CompletePurchase атомарно завершает сделку: создает заказ с позицией,
-// переводит товар в статус 'sold' и удаляет его из корзин всех пользователей.
+// CompletePurchase атомарно завершает сделку: создает заказ с позицией
+// (source='chat', chat_id заполнен для GET /profile/purchases), переводит товар
+// в статус 'sold' и удаляет его из корзин всех пользователей.
 func (cs *ChatStorage) CompletePurchase(
 	ctx context.Context,
+	chatID int64,
 	buyerID int64,
 	productID int64,
 	price int64,
@@ -175,12 +177,12 @@ func (cs *ChatStorage) CompletePurchase(
 
 	var orderID int64
 	const createOrderQuery = `
-		INSERT INTO "order" (buyer_id, total_amount, status)
-		VALUES ($1, $2, 'completed')
+		INSERT INTO "order" (buyer_id, total_amount, status, source, chat_id)
+		VALUES ($1, $2, 'completed', 'chat', $3)
 		RETURNING id
 	`
 
-	if err = tx.QueryRow(ctx, createOrderQuery, buyerID, price).Scan(&orderID); err != nil {
+	if err = tx.QueryRow(ctx, createOrderQuery, buyerID, price, chatID).Scan(&orderID); err != nil {
 		cs.log.ErrorContext(ctx, "failed to create order",
 			slog.String("op", opCompletePurchase),
 			slog.String("error", err.Error()),

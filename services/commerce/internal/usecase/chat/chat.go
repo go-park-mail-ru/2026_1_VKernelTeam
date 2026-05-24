@@ -23,7 +23,7 @@ type ChatProvider interface {
 	GetOrCreateChat(ctx context.Context, adID int64, buyerID int64, sellerID int64) (int64, error)
 	CreateMessage(ctx context.Context, message *models.Message) (int64, error)
 	GetChatByID(ctx context.Context, chatID int64) (models.Chat, error)
-	CompletePurchase(ctx context.Context, buyerID int64, productID int64, price int64) error
+	CompletePurchase(ctx context.Context, chatID int64, buyerID int64, productID int64, price int64) error
 	GetChatsByUserID(ctx context.Context, userID int64) ([]dto.ChatPreview, error)
 	GetChatDetail(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
@@ -176,7 +176,7 @@ func (c *Chat) ConfirmPurchase(
 		return fmt.Errorf("ad is not active")
 	}
 
-	if err = c.chatStorage.CompletePurchase(ctx, chat.BuyerID, chat.AdID, ad.Price); err != nil {
+	if err = c.chatStorage.CompletePurchase(ctx, chatID, chat.BuyerID, chat.AdID, ad.Price); err != nil {
 		c.log.ErrorContext(ctx, "failed to complete purchase",
 			slog.String("op", opConfirmPurchase),
 			slog.String("error", err.Error()),
