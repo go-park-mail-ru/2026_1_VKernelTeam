@@ -11,17 +11,20 @@ const (
 	PaymentStatusFailed    = "failed"
 	PaymentStatusCancelled = "cancelled"
 
-	PaymentProviderMock = "mock"
+	PaymentProviderMock     = "mock"
+	PaymentProviderYooKassa = "yookassa"
 )
 
 // Payment — лог пополнения кошелька через платёжного провайдера.
 type Payment struct {
-	ID          int64
-	UserID      int64
-	Amount      int64
-	Status      string
-	Provider    string
-	ProviderRef *string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID                 int64
+	UserID             int64
+	Amount             int64
+	Status             string
+	Provider           string
+	ProviderRef        *string
+	ConfirmationURL    *string
+	RawProviderPayload []byte
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }

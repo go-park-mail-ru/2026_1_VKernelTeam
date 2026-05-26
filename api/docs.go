@@ -2905,6 +2905,57 @@ const docTemplate = `{
                 }
             }
         },
+        "/wallet/payments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "CookieAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Получить статус платежа",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID платежа",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/wallet/topup": {
             "post": {
                 "security": [
@@ -3274,6 +3325,23 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.PaymentStatusResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "confirmation_url": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.PriceHistoryResponse": {
             "type": "object",
             "properties": {
@@ -3637,8 +3705,14 @@ const docTemplate = `{
                 "balance": {
                     "type": "integer"
                 },
+                "confirmation_url": {
+                    "type": "string"
+                },
                 "payment_id": {
                     "type": "integer"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -3799,74 +3873,23 @@ const docTemplate = `{
         "models.Ad": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCharacteristic"
-                    }
-                },
-                "category_id": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/models.ProductCustomCharacteristic"
-                    }
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "favorites_count": {
-                    "type": "integer"
-                },
                 "id": {
-                    "type": "integer"
-                },
-                "is_boosted": {
-                    "type": "boolean"
-                },
-                "is_highlighted": {
-                    "type": "boolean"
-                },
-                "lat": {
-                    "type": "number"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "lon": {
-                    "type": "number"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "price": {
-                    "type": "integer"
+                    "type": "integer",
+                    "format": "int64"
                 },
-                "seller_id": {
-                    "type": "integer"
+                "sellerID": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "status": {
                     "type": "string"
                 },
                 "title": {
                     "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "views_count": {
-                    "type": "integer"
                 }
             }
         },
@@ -3912,28 +3935,6 @@ const docTemplate = `{
                 },
                 "price": {
                     "type": "integer"
-                }
-            }
-        },
-        "models.ProductCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "models.ProductCustomCharacteristic": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
                 }
             }
         },

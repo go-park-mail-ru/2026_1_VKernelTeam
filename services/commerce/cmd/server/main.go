@@ -26,6 +26,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/handlers"
 	commercekafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/kafka"
 	commercemw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 	cartrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/cart"
 	chatrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/chat"
 	paymentrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/payment"
@@ -79,12 +80,29 @@ func main() {
 	paymentStorage := paymentrepo.NewPaymentStorage(pg.Pool, log)
 	planCache := commerceredis.NewPlanCache(cfg.RedisAddr, log)
 	defer func() { _ = planCache.Close() }()
-	mockProvider := paymentusecase.NewMockProvider()
+
+	// Выбор провайдера платежей: ЮКасса при включённом флаге, иначе mock.
+	var paymentProvider walletusecase.PaymentProvider
+	var paymentProviderName string
+	if cfg.YooKassa.Enabled {
+		paymentProvider = paymentusecase.NewYooKassaProvider(paymentusecase.YooKassaConfig{
+			ShopID:    cfg.YooKassa.ShopID,
+			SecretKey: cfg.YooKassa.SecretKey,
+			APIURL:    cfg.YooKassa.APIURL,
+			ReturnURL: cfg.YooKassa.ReturnURL,
+		}, nil, log)
+		paymentProviderName = models.PaymentProviderYooKassa
+		log.Info("payment provider: yookassa")
+	} else {
+		paymentProvider = paymentusecase.NewMockProvider()
+		paymentProviderName = models.PaymentProviderMock
+		log.Info("payment provider: mock")
+	}
 
 	// catalogClient реализует AdsProvider/AdProvider (метод GetAdByID).
 	cartUC := cartusecase.New(log, cartStorage, catalogClient)
 	chatUC := chatusecase.New(log, chatStorage, catalogClient)
-	walletUC := walletusecase.New(log, pg.Pool, walletStorage, paymentStorage, mockProvider)
+	walletUC := walletusecase.New(log, pg.Pool, walletStorage, paymentStorage, paymentProvider, paymentProviderName)
 	promotionUC := promotionusecase.New(log, pg.Pool, planStorage, promotionStorage, walletStorage, planCache, catalogClient)
 
 	reviewStorage := reviewrepo.NewStorage(pg.Pool, log)
@@ -100,11 +118,17 @@ func main() {
 	reviewHandlers := handlers.NewReviewHandlers(log, reviewUC)
 	purchaseHandlers := handlers.NewPurchaseHandlers(log, purchaseUC)
 
+	// Webhook ЮКассы: только при включённом флаге. Под mock'ом ручка отдаёт 404.
+	var yookassaWebhook *handlers.YooKassaWebhookHandler
+	if cfg.YooKassa.Enabled {
+		yookassaWebhook = handlers.NewYooKassaWebhookHandler(log, walletUC, paymentProvider)
+	}
+
 	brokers := splitBrokers(cfg.Kafka.Brokers)
 	kafkaConsumer := commercekafka.NewConsumer(brokers, cfg.Kafka.GroupID, cartStorage, log)
 	defer func() { _ = kafkaConsumer.Close() }()
 
-	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, reviewHandlers, purchaseHandlers, authClient)
+	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, reviewHandlers, purchaseHandlers, yookassaWebhook, authClient)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -117,6 +141,16 @@ func main() {
 		}
 	}()
 	go kafkaConsumer.Run(ctx)
+
+	if cfg.YooKassa.Enabled {
+		reconciler := paymentusecase.NewReconciler(log, paymentStorage, paymentProvider, walletUC, paymentusecase.ReconcilerConfig{
+			Interval:     time.Minute,
+			StaleAge:     5 * time.Minute,
+			BatchSize:    50,
+			ProviderName: models.PaymentProviderYooKassa,
+		})
+		go reconciler.Run(ctx)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -147,6 +181,7 @@ func buildHTTPServer(
 	promotion *handlers.PromotionHandlers,
 	review *handlers.ReviewHandlers,
 	purchase *handlers.PurchaseHandlers,
+	yookassaWebhook *handlers.YooKassaWebhookHandler,
 	authClient *commercegrpc.AuthClient,
 ) *http.Server {
 	mux := http.NewServeMux()
@@ -166,6 +201,13 @@ func buildHTTPServer(
 	mux.Handle("GET "+prefix+"/wallet", authMW(http.HandlerFunc(wallet.HandleGetWallet)))
 	mux.Handle("GET "+prefix+"/wallet/transactions", authMW(http.HandlerFunc(wallet.HandleListWalletTransactions)))
 	mux.Handle("POST "+prefix+"/wallet/topup", authMW(http.HandlerFunc(wallet.HandleTopupWallet)))
+	mux.Handle("GET "+prefix+"/wallet/payments/{id}", authMW(http.HandlerFunc(wallet.HandleGetPaymentStatus)))
+
+	// Webhook ЮКассы: без аутентификации, защищён IP whitelist'ом.
+	if yookassaWebhook != nil {
+		ipMW := commercemw.YooKassaIPWhitelist(log)
+		mux.Handle("POST "+prefix+"/wallet/yookassa/webhook", ipMW(http.HandlerFunc(yookassaWebhook.HandleWebhook)))
+	}
 
 	mux.Handle("GET "+prefix+"/promotion/plans", http.HandlerFunc(promotion.HandleGetPromotionPlans))
 	mux.Handle("GET "+prefix+"/ads/{id}/promotions", http.HandlerFunc(promotion.HandleListAdPromotions))

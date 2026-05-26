@@ -31,6 +31,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 		path := r.URL.Path
 
 		// пропускаем проверку для безопасных запросов и для ручек авторизации, а также logout/refresh
+		// и для платёжных webhook'ов от внешних провайдеров (защищены IP whitelist'ом).
 		if r.Method == http.MethodGet ||
 			r.Method == http.MethodOptions ||
 			r.Method == http.MethodHead ||
@@ -38,6 +39,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 			path == api.ApiPrefix+"/auth/register" ||
 			path == api.ApiPrefix+"/auth/refresh" ||
 			path == api.ApiPrefix+"/auth/logout" ||
+			path == api.ApiPrefix+"/wallet/yookassa/webhook" ||
 			isViewRecordPath(path) {
 			next.ServeHTTP(w, r)
 			return

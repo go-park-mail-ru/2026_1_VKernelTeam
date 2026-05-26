@@ -354,6 +354,18 @@ func easyjson22b96abDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCom
 			} else {
 				out.PaymentID = int64(in.Int64())
 			}
+		case "status":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Status = string(in.String())
+			}
+		case "confirmation_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ConfirmationURL = string(in.String())
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -377,6 +389,16 @@ func easyjson22b96abEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCom
 		const prefix string = ",\"payment_id\":"
 		out.RawString(prefix)
 		out.Int64(int64(in.PaymentID))
+	}
+	{
+		const prefix string = ",\"status\":"
+		out.RawString(prefix)
+		out.String(string(in.Status))
+	}
+	if in.ConfirmationURL != "" {
+		const prefix string = ",\"confirmation_url\":"
+		out.RawString(prefix)
+		out.String(string(in.ConfirmationURL))
 	}
 	out.RawByte('}')
 }
@@ -479,4 +501,102 @@ func (v *TopupWalletRequest) UnmarshalJSON(data []byte) error {
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *TopupWalletRequest) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson22b96abDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto4(l, v)
+}
+func easyjson22b96abDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(in *jlexer.Lexer, out *PaymentStatusResponse) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeFieldName(false)
+		in.WantColon()
+		switch key {
+		case "payment_id":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.PaymentID = int64(in.Int64())
+			}
+		case "status":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Status = string(in.String())
+			}
+		case "amount":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.Amount = int64(in.Int64())
+			}
+		case "confirmation_url":
+			if in.IsNull() {
+				in.Skip()
+			} else {
+				out.ConfirmationURL = string(in.String())
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson22b96abEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(out *jwriter.Writer, in PaymentStatusResponse) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"payment_id\":"
+		out.RawString(prefix[1:])
+		out.Int64(int64(in.PaymentID))
+	}
+	{
+		const prefix string = ",\"status\":"
+		out.RawString(prefix)
+		out.String(string(in.Status))
+	}
+	{
+		const prefix string = ",\"amount\":"
+		out.RawString(prefix)
+		out.Int64(int64(in.Amount))
+	}
+	if in.ConfirmationURL != "" {
+		const prefix string = ",\"confirmation_url\":"
+		out.RawString(prefix)
+		out.String(string(in.ConfirmationURL))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v PaymentStatusResponse) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson22b96abEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v PaymentStatusResponse) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson22b96abEncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *PaymentStatusResponse) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson22b96abDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *PaymentStatusResponse) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson22b96abDecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCommerceInternalDomainDto5(l, v)
 }
