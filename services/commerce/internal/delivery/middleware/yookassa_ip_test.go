@@ -16,16 +16,18 @@ func ipMWLogger() *slog.Logger {
 }
 
 func TestYooKassaIPWhitelist(t *testing.T) {
+	const internalRemote = "10.0.0.1:1234"
+
 	tests := []struct {
 		name     string
 		xff      string
 		remote   string
 		wantCode int
 	}{
-		{name: "allowed XFF (185.71.76.x)", xff: "185.71.76.5", remote: "10.0.0.1:1234", wantCode: 200},
-		{name: "allowed XFF (185.71.77.x)", xff: "185.71.77.30", remote: "10.0.0.1:1234", wantCode: 200},
-		{name: "allowed XFF (77.75.156.11)", xff: "77.75.156.11", remote: "10.0.0.1:1234", wantCode: 200},
-		{name: "denied XFF (1.2.3.4)", xff: "1.2.3.4", remote: "10.0.0.1:1234", wantCode: http.StatusForbidden},
+		{name: "allowed XFF (185.71.76.x)", xff: "185.71.76.5", remote: internalRemote, wantCode: 200},
+		{name: "allowed XFF (185.71.77.x)", xff: "185.71.77.30", remote: internalRemote, wantCode: 200},
+		{name: "allowed XFF (77.75.156.11)", xff: "77.75.156.11", remote: internalRemote, wantCode: 200},
+		{name: "denied XFF (1.2.3.4)", xff: "1.2.3.4", remote: internalRemote, wantCode: http.StatusForbidden},
 		{name: "denied remote without XFF", xff: "", remote: "1.2.3.4:1234", wantCode: http.StatusForbidden},
 		{name: "allowed remote without XFF", xff: "", remote: "185.71.76.10:443", wantCode: 200},
 	}
