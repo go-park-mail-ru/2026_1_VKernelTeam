@@ -14,8 +14,14 @@ linters:
   settings:
     gocognit:
       min-complexity: 60
+  exclusions:
+    paths:
+      - ".*_easyjson\\.go$"
 
 formatters:
   enable:
     - gofmt
     - goimports
+  exclusions:
+    paths:
+      - ".*_easyjson\\.go$"

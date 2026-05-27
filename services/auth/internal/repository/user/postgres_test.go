@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	colCreatedAt = "created_at"
-	colEmail     = "email"
-	colFirstName = "first_name"
-	colPassHash  = "password_hash"
-	colRole      = "role"
-	colUpdatedAt = "updated_at"
+	colCreatedAt    = "created_at"
+	colEmail        = "email"
+	colFirstName    = "first_name"
+	colPassHash     = "password_hash"
+	colRole         = "role"
+	colUpdatedAt    = "updated_at"
+	colReviewsCount = "reviews_count"
 )
 
 func TestUserStorage_SaveUser(t *testing.T) {
@@ -66,8 +67,8 @@ func TestUserStorage_User(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		now := time.Now()
-		rows := pgxmock.NewRows([]string{"id", colFirstName, colEmail, colPassHash, colRole, colCreatedAt, colUpdatedAt}).
-			AddRow(int64(1), "Ivan", email, []byte("hash"), "user", now, now)
+		rows := pgxmock.NewRows([]string{"id", colFirstName, colEmail, colPassHash, "rating", colReviewsCount, colRole, colCreatedAt, colUpdatedAt}).
+			AddRow(int64(1), "Ivan", email, []byte("hash"), 4.25, 7, "user", now, now)
 
 		mock.ExpectQuery(`SELECT id, first_name, email`).
 			WithArgs(email).
@@ -77,6 +78,8 @@ func TestUserStorage_User(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, email, u.Email)
 		assert.Equal(t, "Ivan", u.Name)
+		assert.Equal(t, 4.25, u.Rating)
+		assert.Equal(t, 7, u.ReviewsCount)
 	})
 
 	t.Run("not_found", func(t *testing.T) {
@@ -100,12 +103,12 @@ func TestUserStorage_UserByID(t *testing.T) {
 		now := time.Now()
 		columns := []string{
 			"id", colFirstName, "email", colPassHash, "avatar_path",
-			"rating", colRole, colCreatedAt, colUpdatedAt,
+			"rating", colReviewsCount, colRole, colCreatedAt, colUpdatedAt,
 		}
 
 		rows := pgxmock.NewRows(columns).
 			AddRow(userID, "Ivan", "test@mail.ru", []byte("hash"), "/img/ava.png",
-				4.5, "user", now, now)
+				4.5, 3, "user", now, now)
 
 		mock.ExpectQuery(`SELECT`).
 			WithArgs(userID).
@@ -116,6 +119,7 @@ func TestUserStorage_UserByID(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, userID, u.ID)
 		assert.Equal(t, "/img/ava.png", u.AvatarPath)
+		assert.Equal(t, 3, u.ReviewsCount)
 	})
 }
 
@@ -130,12 +134,13 @@ func TestUserStorage_UpdateUser(t *testing.T) {
 
 		mock.ExpectQuery(`UPDATE "user"`).
 			WithArgs(newName, userID).
-			WillReturnRows(pgxmock.NewRows([]string{"id", colFirstName, "email", colPassHash, colRole, colCreatedAt, colUpdatedAt}).
-				AddRow(userID, newName, "test@mail.ru", []byte("hash"), "user", time.Now(), time.Now()))
+			WillReturnRows(pgxmock.NewRows([]string{"id", colFirstName, "email", colPassHash, colReviewsCount, colRole, colCreatedAt, colUpdatedAt}).
+				AddRow(userID, newName, "test@mail.ru", []byte("hash"), 2, "user", time.Now(), time.Now()))
 
 		u, err := repo.UpdateUser(ctx, userID, newName)
 		assert.NoError(t, err)
 		assert.Equal(t, newName, u.Name)
+		assert.Equal(t, 2, u.ReviewsCount)
 	})
 }
 

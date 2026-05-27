@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/mailru/easyjson"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/domain/dto"
@@ -13,6 +14,7 @@ import (
 	supportticketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/usecase/support_ticket"
 )
 
+// Сообщения ошибок для административных обработчиков техподдержки.
 const (
 	ErrFailedChangeStatus  = "failed to change ticket status"
 	ErrFailedGetAllTickets = "failed to get all tickets"
@@ -42,7 +44,7 @@ func (h *SupportTicketHandlers) HandleChangeStatus(w http.ResponseWriter, r *htt
 	}
 
 	var req dto.ChangeStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}

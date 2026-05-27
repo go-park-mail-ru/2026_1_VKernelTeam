@@ -14,6 +14,7 @@ import (
 const (
 	opHandleRecordView = "handlers.HandleRecordView"
 
+	// ErrInvalidDeviceID — сообщение об ошибке при отсутствии или невалидном заголовке X-Device-ID.
 	ErrInvalidDeviceID = "invalid or missing X-Device-ID header (must be UUID v4)"
 )
 
@@ -30,7 +31,6 @@ const (
 // @Failure 500 {object} dto.ErrorResponse "internal error"
 // @Router /ads/{id}/view [post]
 func (h *ViewsHandlers) HandleRecordView(w http.ResponseWriter, r *http.Request) {
-	// Парсим ad ID из URL
 	idStr := r.PathValue("id")
 	productID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {

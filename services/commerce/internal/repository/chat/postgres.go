@@ -22,6 +22,7 @@ const (
 	opGetChatDetail    = "db.chat.GetChatDetail"
 )
 
+// ErrChatNotFound возвращается, когда чат с заданным ID не найден.
 var ErrChatNotFound = errors.New("chat not found")
 
 // PgxPool интерфейс для пула соединений с поддержкой транзакций,
@@ -39,6 +40,7 @@ type ChatStorage struct {
 	log  *slog.Logger
 }
 
+// NewChatStorage создаёт хранилище чатов поверх пула pgx.
 func NewChatStorage(pool PgxPool, log *slog.Logger) *ChatStorage {
 	return &ChatStorage{
 		pool: pool,
@@ -62,10 +64,8 @@ func (cs *ChatStorage) GetOrCreateChat(
 		LIMIT 1
 	`
 
-	// Сначала пытаемся найти существующий чат
 	err := cs.pool.QueryRow(ctx, querySelect, adID, buyerID, sellerID).Scan(&chatID)
 	if err == nil {
-		// Чат уже существует
 		return chatID, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -82,7 +82,6 @@ func (cs *ChatStorage) GetOrCreateChat(
 		RETURNING id
 	`
 
-	// Чата нет, создаем новый
 	err = cs.pool.QueryRow(ctx, queryInsert, adID, buyerID, sellerID).Scan(&chatID)
 	if err != nil {
 		cs.log.ErrorContext(ctx, "failed to create chat",
@@ -156,10 +155,12 @@ func (cs *ChatStorage) CreateMessage(ctx context.Context, message *models.Messag
 	return msgID, nil
 }
 
-// CompletePurchase атомарно завершает сделку: создает заказ с позицией,
-// переводит товар в статус 'sold' и удаляет его из корзин всех пользователей.
+// CompletePurchase атомарно завершает сделку: создает заказ с позицией
+// (source='chat', chat_id заполнен для GET /profile/purchases), переводит товар
+// в статус 'sold' и удаляет его из корзин всех пользователей.
 func (cs *ChatStorage) CompletePurchase(
 	ctx context.Context,
+	chatID int64,
 	buyerID int64,
 	productID int64,
 	price int64,
@@ -176,13 +177,12 @@ func (cs *ChatStorage) CompletePurchase(
 
 	var orderID int64
 	const createOrderQuery = `
-		INSERT INTO "order" (buyer_id, total_amount, status)
-		VALUES ($1, $2, 'completed')
+		INSERT INTO "order" (buyer_id, total_amount, status, source, chat_id)
+		VALUES ($1, $2, 'completed', 'chat', $3)
 		RETURNING id
 	`
 
-	// Создаем заказ
-	if err = tx.QueryRow(ctx, createOrderQuery, buyerID, price).Scan(&orderID); err != nil {
+	if err = tx.QueryRow(ctx, createOrderQuery, buyerID, price, chatID).Scan(&orderID); err != nil {
 		cs.log.ErrorContext(ctx, "failed to create order",
 			slog.String("op", opCompletePurchase),
 			slog.String("error", err.Error()),
@@ -195,7 +195,6 @@ func (cs *ChatStorage) CompletePurchase(
 		VALUES ($1, $2, $3, 1)
 	`
 
-	// Создаем позицию заказа
 	if _, err = tx.Exec(ctx, createItemQuery, orderID, productID, price); err != nil {
 		cs.log.ErrorContext(ctx, "failed to create order item",
 			slog.String("op", opCompletePurchase),
@@ -209,7 +208,6 @@ func (cs *ChatStorage) CompletePurchase(
 		WHERE id = $1
 	`
 
-	// Обновляем статус товара
 	res, err := tx.Exec(ctx, updateProductQuery, productID)
 	if err != nil {
 		cs.log.ErrorContext(ctx, "failed to update product status",
@@ -224,7 +222,6 @@ func (cs *ChatStorage) CompletePurchase(
 
 	const clearCartsQuery = `DELETE FROM cart_item WHERE product_id = $1`
 
-	// Удаляем товар из всех корзин
 	if _, err = tx.Exec(ctx, clearCartsQuery, productID); err != nil {
 		cs.log.ErrorContext(ctx, "failed to clear product from carts",
 			slog.String("op", opCompletePurchase),
@@ -309,7 +306,6 @@ func (cs *ChatStorage) GetChatsByUserID(ctx context.Context, userID int64) ([]dt
 			return nil, fmt.Errorf("GetChatsByUserID: scan: %w", err)
 		}
 
-		// Если есть последнее сообщение, добавляем его в превью
 		if lastAt.Valid {
 			preview.LastMessage = &dto.LastMessagePreview{
 				Text:      lastText.String,
@@ -379,7 +375,6 @@ func (cs *ChatStorage) GetChatDetail(ctx context.Context, chatID, userID int64) 
 		ORDER BY created_at ASC
 	`
 
-	// Получаем все сообщения чата
 	rows, err := cs.pool.Query(ctx, messagesQuery, chatID)
 	if err != nil {
 		cs.log.ErrorContext(ctx, "failed to query messages",

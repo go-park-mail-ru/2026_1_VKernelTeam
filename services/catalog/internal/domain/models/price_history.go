@@ -1,5 +1,7 @@
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // PricePoint - одна точка истории цены объявления.

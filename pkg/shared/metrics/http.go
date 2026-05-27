@@ -73,6 +73,7 @@ type statusRecorder struct {
 	wroteHeader bool
 }
 
+// WriteHeader запоминает первый переданный status code и проксирует вызов в исходный ResponseWriter.
 func (s *statusRecorder) WriteHeader(code int) {
 	if !s.wroteHeader {
 		s.code = code

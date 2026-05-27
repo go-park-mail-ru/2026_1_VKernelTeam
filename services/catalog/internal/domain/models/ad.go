@@ -1,17 +1,23 @@
 // Package models содержит структуры данных, используемые в домене catalog.
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
-// Ad содержит поля объявления.
+// Возможные значения статуса объявления.
 const (
-	AdStatusActive   = "active"
-	AdStatusDraft    = "draft"
-	AdStatusReserved = "reserved"
-	AdStatusSold     = "sold"
-	AdStatusArchived = "archived"
+	AdStatusActive            = "active"
+	AdStatusDraft             = "draft"
+	AdStatusReserved          = "reserved"
+	AdStatusSold              = "sold"
+	AdStatusArchived          = "archived"
+	AdStatusAdminDeleted      = "admin_deleted"
+	AdStatusPendingModeration = "pending_moderation"
+	AdStatusRejected          = "rejected"
 )
 
+// Ad содержит поля объявления.
 type Ad struct {
 	ID                      int64                         `json:"id"`
 	SellerID                int64                         `json:"seller_id"`
@@ -27,6 +33,10 @@ type Ad struct {
 	DeletedAt               time.Time                     `json:"deleted_at"`
 	Photos                  []string                      `json:"photos"`
 	Location                string                        `json:"location"`
+	Lat                     *float64                      `json:"lat,omitempty"`
+	Lon                     *float64                      `json:"lon,omitempty"`
+	IsBoosted               bool                          `json:"is_boosted"`
+	IsHighlighted           bool                          `json:"is_highlighted"`
 	CategoryCharacteristics []ProductCharacteristic       `json:"category_characteristics"`
 	CustomCharacteristics   []ProductCustomCharacteristic `json:"custom_characteristics"`
 }

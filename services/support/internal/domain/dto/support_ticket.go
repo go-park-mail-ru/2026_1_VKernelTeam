@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // CreateTicketRequest — запрос на создание обращения в техподдержку

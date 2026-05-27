@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/mailru/easyjson"
 
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
@@ -30,7 +31,7 @@ import (
 // @Router /auth/register [post]
 func (h *AuthHandlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -110,7 +111,7 @@ func (h *AuthHandlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req dto.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -206,7 +207,6 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Очищаем все cookie
 	for _, name := range []string{cookieNameToken, cookieNameCSRF, "refresh_token"} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
@@ -218,7 +218,7 @@ func (h *AuthHandlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusField: statusOK})
 }
 
 // HandleRefresh обновляет access токен по refresh токену
@@ -246,5 +246,5 @@ func (h *AuthHandlers) HandleRefresh(w http.ResponseWriter, r *http.Request) {
 	csrfToken := middleware.GenerateCSRFToken()
 	h.setAuthCookie(w, newAccess, csrfToken)
 	h.setRefreshCookie(w, newRefresh)
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{statusField: statusOK})
 }

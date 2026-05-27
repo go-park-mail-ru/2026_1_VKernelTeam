@@ -16,6 +16,7 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/auth/internal/domain/models"
 )
 
+// Константы HTTP-слоя: лимиты, имена cookie и сообщения об ошибках.
 const (
 	MaxUploadSize = 5 << 20
 
@@ -33,6 +34,9 @@ const (
 	ErrUnauthorized         = "unauthorized"
 	ErrFileTooBig           = "file too big"
 	ErrFailedToGetFile      = "failed to get file"
+
+	statusField = "status"
+	statusOK    = "ok"
 )
 
 // Auth описывает методы сервиса аутентификации

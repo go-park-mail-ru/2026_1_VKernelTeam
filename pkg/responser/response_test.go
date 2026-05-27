@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-// тест получения ошибки преобразования переданного параметра в JSON
 func TestRespondWithJSON_Error(t *testing.T) {
 	rr := httptest.NewRecorder()
 

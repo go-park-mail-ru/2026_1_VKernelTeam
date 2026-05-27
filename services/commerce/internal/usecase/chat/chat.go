@@ -23,7 +23,7 @@ type ChatProvider interface {
 	GetOrCreateChat(ctx context.Context, adID int64, buyerID int64, sellerID int64) (int64, error)
 	CreateMessage(ctx context.Context, message *models.Message) (int64, error)
 	GetChatByID(ctx context.Context, chatID int64) (models.Chat, error)
-	CompletePurchase(ctx context.Context, buyerID int64, productID int64, price int64) error
+	CompletePurchase(ctx context.Context, chatID int64, buyerID int64, productID int64, price int64) error
 	GetChatsByUserID(ctx context.Context, userID int64) ([]dto.ChatPreview, error)
 	GetChatDetail(ctx context.Context, chatID, userID int64) (dto.ChatDetailResponse, error)
 }
@@ -66,7 +66,6 @@ func (c *Chat) CreateOrderRequest(
 		slog.Int64("buyer_id", buyerID),
 	)
 
-	// Получаем объявление
 	ad, err := c.adStorage.GetAdByID(ctx, adID)
 	if err != nil {
 		c.log.ErrorContext(ctx, "failed to get ad",
@@ -76,7 +75,6 @@ func (c *Chat) CreateOrderRequest(
 		return 0, err
 	}
 
-	// Проверяем статус
 	if ad.Status != models.AdStatusActive {
 		c.log.WarnContext(ctx, "ad is not active",
 			slog.String("op", opCreateOrderRequest),
@@ -85,7 +83,6 @@ func (c *Chat) CreateOrderRequest(
 		return 0, fmt.Errorf("ad is not active")
 	}
 
-	// Проверяем, что покупатель не является продавцом
 	if buyerID == ad.SellerID {
 		c.log.WarnContext(ctx, "buyer and seller are the same",
 			slog.String("op", opCreateOrderRequest),
@@ -93,7 +90,6 @@ func (c *Chat) CreateOrderRequest(
 		return 0, fmt.Errorf("cannot buy own product")
 	}
 
-	// Получяем или создаём чат
 	chatID, err := c.chatStorage.GetOrCreateChat(ctx, adID, buyerID, ad.SellerID)
 	if err != nil {
 		c.log.ErrorContext(ctx, "failed to get or create chat",
@@ -103,7 +99,6 @@ func (c *Chat) CreateOrderRequest(
 		return 0, err
 	}
 
-	// Создём сообщение типа 'order'
 	messageText := fmt.Sprintf(
 		"Покупатель хочет приобрести товар: %s (Цена: %d)",
 		ad.Title,
@@ -117,7 +112,6 @@ func (c *Chat) CreateOrderRequest(
 		Type:     models.MessageTypeOrder,
 	}
 
-	// Сохраняем сообщение в чате
 	if _, err = c.chatStorage.CreateMessage(ctx, msg); err != nil {
 		c.log.ErrorContext(ctx, "failed to create message",
 			slog.String("op", opCreateOrderRequest),
@@ -147,7 +141,6 @@ func (c *Chat) ConfirmPurchase(
 		slog.Int64("user_id", userID),
 	)
 
-	// получаем чат
 	chat, err := c.chatStorage.GetChatByID(ctx, chatID)
 	if err != nil {
 		c.log.ErrorContext(ctx, "failed to get chat",
@@ -157,7 +150,6 @@ func (c *Chat) ConfirmPurchase(
 		return err
 	}
 
-	// Проверяем, что пользователь является продавцом в этом чате
 	if userID != chat.SellerID {
 		c.log.WarnContext(ctx, "user is not the seller of the chat",
 			slog.String("op", opConfirmPurchase),
@@ -167,7 +159,6 @@ func (c *Chat) ConfirmPurchase(
 		return fmt.Errorf("forbidden: not the seller")
 	}
 
-	// Получаем объявление
 	ad, err := c.adStorage.GetAdByID(ctx, chat.AdID)
 	if err != nil {
 		c.log.ErrorContext(ctx, "failed to get ad",
@@ -177,7 +168,6 @@ func (c *Chat) ConfirmPurchase(
 		return err
 	}
 
-	// Проверяем статус
 	if ad.Status != models.AdStatusActive {
 		c.log.WarnContext(ctx, "ad is not active",
 			slog.String("op", opConfirmPurchase),
@@ -186,8 +176,7 @@ func (c *Chat) ConfirmPurchase(
 		return fmt.Errorf("ad is not active")
 	}
 
-	// Подтверждаем покупку: создаём заказ, переводим объявление в 'sold' и удаляем из корзин
-	if err = c.chatStorage.CompletePurchase(ctx, chat.BuyerID, chat.AdID, ad.Price); err != nil {
+	if err = c.chatStorage.CompletePurchase(ctx, chatID, chat.BuyerID, chat.AdID, ad.Price); err != nil {
 		c.log.ErrorContext(ctx, "failed to complete purchase",
 			slog.String("op", opConfirmPurchase),
 			slog.String("error", err.Error()),

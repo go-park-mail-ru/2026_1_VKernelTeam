@@ -2,12 +2,15 @@
 // приложения.
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // MessageType определяет тип сообщения в чате
 const (
-	MessageTypeText  = "text"
-	MessageTypeOrder = "order"
+	MessageTypeText   = "text"
+	MessageTypeOrder  = "order"
+	MessageTypeSystem = "system"
 )
 
 // Chat представляет чат между двумя пользователями

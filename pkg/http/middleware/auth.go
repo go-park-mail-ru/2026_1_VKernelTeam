@@ -17,12 +17,14 @@ type TokenChecker interface {
 // Свой тип для хранения ключей контекста
 type contextKey string
 
+// Ключи контекста, под которыми middleware кладёт данные аутентификации.
 const (
 	UserIDKey contextKey = "userID"
 	JtiKey    contextKey = "jti"
+	RoleKey   contextKey = "role"
 )
 
-// ошибки middleware
+// Сообщения об ошибках аутентификации, возвращаемые клиенту.
 var (
 	ErrMissingTokenCookie = "missing token cookie"
 	ErrInvalidToken       = "invalid token"
@@ -60,7 +62,6 @@ func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.
 				return
 			}
 
-			// Блокируем запрос, если токен был отозван
 			jti, _ := claims["jti"].(string)
 			if bl.Check(jti) {
 				log.WarnContext(r.Context(), "attempt to use revoked token", slog.String("jti", jti))
@@ -74,7 +75,6 @@ func AuthMiddleware(log *slog.Logger, bl TokenChecker, secret string) func(http.
 				return
 			}
 
-			// Кладём в контекст ID пользователя и jti
 			ctx := r.Context()
 			ctx = context.WithValue(ctx, UserIDKey, int64(uidRaw))
 			ctx = context.WithValue(ctx, JtiKey, jti)

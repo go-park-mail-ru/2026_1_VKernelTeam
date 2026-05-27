@@ -25,19 +25,23 @@ type Config struct {
 	Kafka       KafkaConfig
 }
 
+// KafkaConfig содержит параметры подключения к Kafka и имена используемых топиков.
 type KafkaConfig struct {
 	Brokers        string
 	UserEventTopic string
 }
 
+// HTTPConfig содержит параметры HTTP-сервера Auth-сервиса.
 type HTTPConfig struct {
 	Port int `json:"port"`
 }
 
+// GRPCConfig содержит параметры gRPC-сервера Auth-сервиса.
 type GRPCConfig struct {
 	Port int `json:"port"`
 }
 
+// S3Config содержит параметры доступа к S3-хранилищу для пользовательских файлов.
 type S3Config struct {
 	EndpointURL     string
 	RegionName      string
@@ -46,6 +50,7 @@ type S3Config struct {
 	SecretAccessKey string
 }
 
+// MustLoadConfig читает конфигурацию из JSON-файла и переменных окружения и паникует при ошибке.
 func MustLoadConfig() *Config {
 	_ = godotenv.Load()
 

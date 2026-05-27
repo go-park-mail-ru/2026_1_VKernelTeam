@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 // CartItemResponse представляет один товар в корзине
 type CartItemResponse struct {
 	ProductID  int64  `json:"product_id"`

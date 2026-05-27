@@ -29,13 +29,16 @@ import (
 	catalogkafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/kafka"
 	catalogmw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/delivery/middleware"
 	adrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/ad"
+	platformrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/platform_setting"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/postgres"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/redis"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/s3"
+	sysmsgrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/system_message"
 	viewrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/view"
 	viewcache "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/view_cache"
 	viewstream "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/repository/view_stream"
 	adsusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/usecase/ads"
+	moderationuc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/usecase/moderation"
 	viewsusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/usecase/views"
 
 	grpclib "google.golang.org/grpc"
@@ -90,7 +93,22 @@ func main() {
 	kafkaConsumer := catalogkafka.NewConsumer(brokers, cfg.Kafka.GroupID, log)
 	defer func() { _ = kafkaConsumer.Close() }()
 
-	adsUC := adsusecase.New(log, adStorage, s3Client, cfg.Search, kafkaProducer)
+	platformStorage := platformrepo.New(pg.Pool, log)
+	sysMessenger := sysmsgrepo.New(pg.Pool, log)
+
+	moderationGate := moderationuc.NewGate(platformStorage, log, 30*time.Second)
+	bootCtx, bootCancel := context.WithTimeout(ctx, 5*time.Second)
+	systemUserID, err := moderationuc.LoadSystemUserID(bootCtx, platformStorage)
+	bootCancel()
+	if err != nil {
+		log.Warn("system user id not configured; admin notifications will be skipped",
+			slog.String("error", err.Error()),
+		)
+	}
+
+	adsUC := adsusecase.
+		New(log, adStorage, s3Client, cfg.Search, kafkaProducer).
+		WithAdmin(sysMessenger, moderationGate, systemUserID)
 	viewsUC := viewsusecase.New(log, viewCache, viewStream, viewStream, viewStorage, viewsusecase.Config{
 		BatchSize:     cfg.Views.BatchSize,
 		FlushInterval: cfg.Views.FlushInterval,
@@ -170,8 +188,8 @@ func buildHTTPServer(
 	mux.HandleFunc("GET "+prefix+"/ads/search", ads.HandleSearchAds)
 	mux.HandleFunc("GET "+prefix+"/ads/{id}", ads.HandleGetAdByID)
 	mux.HandleFunc("GET "+prefix+"/ads/{id}/price-history", ads.HandleGetPriceHistory)
+	mux.HandleFunc("GET "+prefix+"/categories", ads.HandleGetCategories)
 	mux.HandleFunc("GET "+prefix+"/categories/{id}/characteristics", ads.HandleGetCategoryCharacteristics)
-	mux.HandleFunc("GET "+prefix+"/users/{id}/ads", ads.HandleGetUserAds)
 
 	// Просмотры — опциональная авторизация
 	mux.Handle("POST "+prefix+"/ads/{id}/view", optionalAuthMW(http.HandlerFunc(views.HandleRecordView)))
@@ -184,6 +202,24 @@ func buildHTTPServer(
 	mux.Handle("POST "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(ads.HandleAddToFavorites)))
 	mux.Handle("DELETE "+prefix+"/ads/{id}/favorite", authMW(http.HandlerFunc(ads.HandleDeleteFromFavorites)))
 	mux.Handle("GET "+prefix+"/profile/favorites", authMW(http.HandlerFunc(ads.HandleGetFavorites)))
+
+	// /users/{id}/ads с опциональной авторизацией — нужна для проверки доступа к ?tab=pending
+	mux.Handle("GET "+prefix+"/users/{id}/ads", optionalAuthMW(http.HandlerFunc(ads.HandleGetUserAds)))
+
+	// Админ-ручки: auth + require role=admin.
+	adminOnly := sharedmw.RequireRole("admin")
+	mux.Handle("DELETE "+prefix+"/ads/{id}/admin",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleAdminDeleteAd))))
+	mux.Handle("GET "+prefix+"/admin/moderation/settings",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleGetModerationFlag))))
+	mux.Handle("PUT "+prefix+"/admin/moderation/settings",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleSetModerationFlag))))
+	mux.Handle("GET "+prefix+"/admin/moderation/queue",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleGetModerationQueue))))
+	mux.Handle("POST "+prefix+"/admin/moderation/ads/{id}/approve",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleApproveAd))))
+	mux.Handle("POST "+prefix+"/admin/moderation/ads/{id}/reject",
+		authMW(adminOnly(http.HandlerFunc(ads.HandleRejectAd))))
 
 	// /metrics - Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
 	mux.Handle("GET /metrics", metrics.Handler())

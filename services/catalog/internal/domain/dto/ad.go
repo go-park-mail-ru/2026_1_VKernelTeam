@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 import "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/domain/models"
 
 // CharacteristicInput описывает входные данные категорийной характеристики.
@@ -24,6 +26,8 @@ type CreateAdRequest struct {
 	Status                  string                      `json:"status"`
 	Photos                  []string                    `json:"-"`
 	Location                string                      `json:"location"`
+	Lat                     *float64                    `json:"lat,omitempty"`
+	Lon                     *float64                    `json:"lon,omitempty"`
 	CategoryCharacteristics []CharacteristicInput       `json:"category_characteristics"`
 	CustomCharacteristics   []CustomCharacteristicInput `json:"custom_characteristics"`
 }
@@ -38,6 +42,8 @@ type UpdateAdRequest struct {
 	Price                   *int64                      `json:"price,omitempty"`
 	Status                  *string                     `json:"status,omitempty"`
 	Location                *string                     `json:"location,omitempty"`
+	Lat                     *float64                    `json:"lat,omitempty"`
+	Lon                     *float64                    `json:"lon,omitempty"`
 	Photos                  []string                    `json:"-"`
 	CategoryCharacteristics []CharacteristicInput       `json:"category_characteristics"`
 	CustomCharacteristics   []CustomCharacteristicInput `json:"custom_characteristics"`

@@ -149,6 +149,41 @@ func TestValidateAdLocation(t *testing.T) {
 	}
 }
 
+func TestValidateAdCoords(t *testing.T) {
+	f := func(v float64) *float64 { return &v }
+
+	tests := []struct {
+		name    string
+		lat     *float64
+		lon     *float64
+		wantErr error
+	}{
+		{"both nil — допустимо", nil, nil, nil},
+		{"только lat — ошибка", f(55.0), nil, ErrAdCoordsHalfMissing},
+		{"только lon — ошибка", nil, f(37.0), ErrAdCoordsHalfMissing},
+		{"в пределах", f(55.7558), f(37.6173), nil},
+		{"граница lat -90", f(-90), f(0), nil},
+		{"граница lat 90", f(90), f(0), nil},
+		{"граница lon -180", f(0), f(-180), nil},
+		{"граница lon 180", f(0), f(180), nil},
+		{"lat вне", f(91), f(0), ErrAdLatOutOfRange},
+		{"lat вне отрицат", f(-91), f(0), ErrAdLatOutOfRange},
+		{"lon вне", f(0), f(181), ErrAdLonOutOfRange},
+		{"lon вне отрицат", f(0), f(-181), ErrAdLonOutOfRange},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateAdCoords(tt.lat, tt.lon)
+			if tt.wantErr == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateCharacteristics(t *testing.T) {
 	defs := []CategoryCharacteristicDef{
 		{ID: 1, AllowedValues: []string{redValue, "green", "blue"}},

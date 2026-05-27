@@ -1,5 +1,7 @@
 package models
 
+//go:generate easyjson -all $GOFILE
+
 // CategoryCharacteristic описывает предопределённую характеристику категории.
 type CategoryCharacteristic struct {
 	ID            int64    `json:"id"`

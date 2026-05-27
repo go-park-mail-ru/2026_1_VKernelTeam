@@ -34,6 +34,10 @@ const (
 	opSetProductCustomCharacteristics = "db.ad.SetProductCustomCharacteristics"
 	opGetCategoryCharacteristics      = "db.ad.GetCategoryCharacteristics"
 	opGetPriceHistory                 = "db.ad.GetPriceHistory"
+	opAdminDeleteAd                   = "db.ad.AdminDeleteAd"
+	opModerateAd                      = "db.ad.ModerateAd"
+	opGetModerationQueue              = "db.ad.GetModerationQueue"
+	opGetUserAdsByStatus              = "db.ad.GetUserAdsByStatus"
 )
 
 // PgxPool интерфейс для пула соединений (или транзакции),
@@ -57,6 +61,7 @@ type AdStorage struct {
 	log  *slog.Logger
 }
 
+// NewAdStorage создаёт хранилище объявлений на базе PostgreSQL.
 func NewAdStorage(pool PgxPool, log *slog.Logger) *AdStorage {
 	return &AdStorage{pool: pool, log: log}
 }
@@ -73,6 +78,8 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 			p.price,
 			p.status,
 			p.location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -80,13 +87,17 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.id = $1
 		  AND p.deleted_at IS NULL
-		GROUP BY p.id
+		  AND p.status <> 'admin_deleted'
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -105,11 +116,15 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 		&ad.Price,
 		&ad.Status,
 		&ad.Location,
+		&ad.Lat,
+		&ad.Lon,
 		&ad.CreatedAt,
 		&ad.UpdatedAt,
 		&photos,
 		&ad.ViewsCount,
 		&ad.FavoritesCount,
+		&ad.IsBoosted,
+		&ad.IsHighlighted,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -128,7 +143,6 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 	}
 	ad.Photos = photos
 
-	// Подгрузка характеристик
 	catChars, err := s.getProductCharacteristics(ctx, []int64{id})
 	if err != nil {
 		return models.Ad{}, fmt.Errorf("GetAdByID: %w", err)
@@ -154,7 +168,7 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 	return ad, nil
 }
 
-// GetAllAds возвращает список активных объявлений.
+// GetAllAds возвращает список активных объявлений. Сортировка: забустенные сверху, затем по дате.
 func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 	const query = `
 		SELECT
@@ -166,6 +180,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			p.price,
 			p.status,
 			COALESCE(p.location, '') AS location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -173,14 +189,19 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
 		WHERE p.deleted_at IS NULL
 		  AND p.status = 'active'
-		GROUP BY p.id
-		ORDER BY p.created_at DESC
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
+		ORDER BY
+			COALESCE(vpp.is_boosted, false) DESC,
+			p.created_at DESC
 	`
 
 	s.log.DebugContext(ctx, "executing query",
@@ -210,11 +231,15 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			&ad.Price,
 			&ad.Status,
 			&ad.Location,
+			&ad.Lat,
+			&ad.Lon,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
 			&ad.ViewsCount,
 			&ad.FavoritesCount,
+			&ad.IsBoosted,
+			&ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan ad row",
 				slog.String("op", opGetAllAds),
@@ -252,8 +277,8 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 // CreateAd создает новое объявление и возвращает его ID.
 func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
 	const query = `
-		INSERT INTO product (seller_id, category_id, title, description, price, status, location)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO product (seller_id, category_id, title, description, price, status, location, lat, lon)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id
 	`
 
@@ -272,6 +297,8 @@ func (s *AdStorage) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int
 		req.Price,
 		req.Status,
 		req.Location,
+		req.Lat,
+		req.Lon,
 	).Scan(&adID)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to create ad",
@@ -392,6 +419,16 @@ func (s *AdStorage) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest) erro
 	if req.Location != nil {
 		updates = append(updates, fmt.Sprintf("location = $%d", argNum))
 		args = append(args, *req.Location)
+		argNum++
+	}
+	if req.Lat != nil {
+		updates = append(updates, fmt.Sprintf("lat = $%d", argNum))
+		args = append(args, *req.Lat)
+		argNum++
+	}
+	if req.Lon != nil {
+		updates = append(updates, fmt.Sprintf("lon = $%d", argNum))
+		args = append(args, *req.Lon)
 		argNum++
 	}
 
@@ -528,19 +565,27 @@ func (s *AdStorage) CloseAd(ctx context.Context, id int64, userID int64) error {
 }
 
 // GetAdsByUserID возвращает список всех объявлений пользователя по его ID.
+// Бустинг здесь не применяется (профиль продавца), но флаги передаём — клиент рисует бейджи.
 func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.Ad, error) {
 	const query = `
 		SELECT
 			p.id, p.seller_id, p.category_id, p.title, p.description,
-			p.price, p.status, COALESCE(p.location, '') AS location, p.created_at, p.updated_at,
+			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
+			p.created_at, p.updated_at,
 			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
 			p.views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM product p
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite f ON f.product_id = p.id
-		WHERE p.seller_id = $1 AND p.deleted_at IS NULL
-		GROUP BY p.id
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
+		WHERE p.seller_id = $1
+		  AND p.deleted_at IS NULL
+		  AND p.status NOT IN ('admin_deleted', 'pending_moderation', 'rejected')
+		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY p.created_at DESC
 	`
 
@@ -566,8 +611,9 @@ func (s *AdStorage) GetAdsByUserID(ctx context.Context, userID int64) ([]models.
 		var photos []string
 		if err := rows.Scan(
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
-			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan ad row",
 				slog.String("op", opGetAdsByUserID),
@@ -669,6 +715,8 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			p.price,
 			p.status,
 			COALESCE(p.location, '') AS location,
+			p.lat,
+			p.lon,
 			p.created_at,
 			p.updated_at,
 			COALESCE(
@@ -676,14 +724,18 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 				'{}'
 			) AS photos,
 			p.views_count,
-			COUNT(DISTINCT f_all.user_id) AS favorites_count
+			COUNT(DISTINCT f_all.user_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM favorite f
 		JOIN product p ON f.product_id = p.id
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN favorite   f_all ON f_all.product_id = p.id
+		LEFT JOIN product_image       pi    ON pi.product_id    = p.id
+		LEFT JOIN favorite            f_all ON f_all.product_id = p.id
+		LEFT JOIN v_product_promotion vpp   ON vpp.product_id   = p.id
 		WHERE f.user_id = $1
 		  AND p.deleted_at IS NULL
-		GROUP BY p.id, f.created_at
+		  AND p.status NOT IN ('admin_deleted', 'pending_moderation', 'rejected')
+		GROUP BY p.id, f.created_at, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY f.created_at DESC
 	`
 
@@ -715,11 +767,15 @@ func (s *AdStorage) GetUserFavorites(ctx context.Context, userID int64) ([]model
 			&ad.Price,
 			&ad.Status,
 			&ad.Location,
+			&ad.Lat,
+			&ad.Lon,
 			&ad.CreatedAt,
 			&ad.UpdatedAt,
 			&photos,
 			&ad.ViewsCount,
 			&ad.FavoritesCount,
+			&ad.IsBoosted,
+			&ad.IsHighlighted,
 		)
 		if err != nil {
 			s.log.ErrorContext(ctx, "failed to scan favorite row",
@@ -999,20 +1055,26 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 		)
 		SELECT p.id, p.seller_id, p.category_id, p.title, p.description,
 			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
 			p.created_at, p.updated_at,
 			COALESCE(
 				array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL),
 				'{}'
 			) AS photos,
 			COUNT(DISTINCT pv.id)        AS views_count,
-			COUNT(DISTINCT f.product_id) AS favorites_count
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			COALESCE(vpp.is_boosted, false)     AS is_boosted,
+			COALESCE(vpp.is_highlighted, false) AS is_highlighted
 		FROM matched m
 		JOIN product p ON p.id = m.id
-		LEFT JOIN product_image pi ON pi.product_id = p.id
-		LEFT JOIN product_view  pv ON pv.product_id = p.id
-		LEFT JOIN favorite       f ON f.product_id  = p.id
-		GROUP BY p.id, m.rank
-		ORDER BY m.rank DESC
+		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
+		LEFT JOIN product_view        pv  ON pv.product_id  = p.id
+		LEFT JOIN favorite            f   ON f.product_id   = p.id
+		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
+		GROUP BY p.id, m.rank, vpp.is_boosted, vpp.is_highlighted
+		ORDER BY
+			COALESCE(vpp.is_boosted, false) DESC,
+			m.rank DESC
 	`
 
 	rows, err := tx.Query(ctx, query, variants, cfg.MaxResults, categoryID)
@@ -1031,8 +1093,9 @@ func (s *AdStorage) SearchAds(ctx context.Context, variants []string, categoryID
 		var photos []string
 		if err := rows.Scan(
 			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
-			&ad.Price, &ad.Status, &ad.Location, &ad.CreatedAt, &ad.UpdatedAt,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon, &ad.CreatedAt, &ad.UpdatedAt,
 			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
 		); err != nil {
 			s.log.ErrorContext(ctx, "failed to scan search result",
 				slog.String("op", opSearchAds),
@@ -1146,6 +1209,7 @@ func (s *AdStorage) UpdateAdStatus(ctx context.Context, id int64, newStatus stri
 	return prevStatus, nil
 }
 
+// GetPriceHistory возвращает историю изменения цены объявления, отсортированную по времени.
 func (s *AdStorage) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	const query = `
 		SELECT price, changed_at
@@ -1187,4 +1251,212 @@ func (s *AdStorage) GetPriceHistory(ctx context.Context, adID int64) ([]models.P
 	}
 
 	return history, nil
+}
+
+// AdminDeleteAd выполняет жёсткое (для продавца — невидимое) удаление от имени админа:
+// проставляет status='admin_deleted' и заполняет deleted_by_admin_id.
+// Возвращает seller_id и title удалённого объявления (нужны для системного сообщения).
+func (s *AdStorage) AdminDeleteAd(ctx context.Context, adID, adminID int64) (sellerID int64, title string, err error) {
+	const query = `
+		UPDATE product
+		SET status              = 'admin_deleted',
+		    deleted_by_admin_id = $2,
+		    deleted_at          = NOW(),
+		    updated_at          = NOW()
+		WHERE id = $1
+		  AND deleted_at IS NULL
+		  AND status <> 'admin_deleted'
+		RETURNING seller_id, title
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opAdminDeleteAd),
+		slog.Int64("ad_id", adID),
+		slog.Int64("admin_id", adminID),
+	)
+
+	err = s.pool.QueryRow(ctx, query, adID, adminID).Scan(&sellerID, &title)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, "", ErrAdNotFound
+		}
+		s.log.ErrorContext(ctx, "failed to admin-delete ad",
+			slog.String("op", opAdminDeleteAd),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
+		return 0, "", fmt.Errorf("AdminDeleteAd: %w", err)
+	}
+
+	s.log.InfoContext(ctx, "ad admin-deleted",
+		slog.String("op", opAdminDeleteAd),
+		slog.Int64("ad_id", adID),
+	)
+	return sellerID, title, nil
+}
+
+// ModerateAd переводит объявление из pending_moderation в active или rejected.
+// Для rejected сохраняет причину. Возвращает seller_id и title для системного сообщения.
+func (s *AdStorage) ModerateAd(
+	ctx context.Context,
+	adID int64,
+	newStatus string,
+	reason string,
+) (sellerID int64, title string, err error) {
+	const query = `
+		UPDATE product
+		SET status            = $2,
+		    rejection_reason  = CASE WHEN $2 = 'rejected' THEN $3 ELSE NULL END,
+		    updated_at        = NOW()
+		WHERE id = $1
+		  AND deleted_at IS NULL
+		  AND status = 'pending_moderation'
+		RETURNING seller_id, title
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opModerateAd),
+		slog.Int64("ad_id", adID),
+		slog.String("new_status", newStatus),
+	)
+
+	err = s.pool.QueryRow(ctx, query, adID, newStatus, reason).Scan(&sellerID, &title)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, "", ErrAdNotFound
+		}
+		s.log.ErrorContext(ctx, "failed to moderate ad",
+			slog.String("op", opModerateAd),
+			slog.Int64("ad_id", adID),
+			slog.String("error", err.Error()),
+		)
+		return 0, "", fmt.Errorf("ModerateAd: %w", err)
+	}
+
+	s.log.InfoContext(ctx, "ad moderation applied",
+		slog.String("op", opModerateAd),
+		slog.Int64("ad_id", adID),
+		slog.String("new_status", newStatus),
+	)
+	return sellerID, title, nil
+}
+
+// GetModerationQueue возвращает объявления, ожидающие модерации.
+// Сортировка по дате создания (старые сверху — обрабатываются первыми).
+func (s *AdStorage) GetModerationQueue(ctx context.Context) ([]models.Ad, error) {
+	const query = `
+		SELECT
+			p.id, p.seller_id, p.category_id, p.title, p.description,
+			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
+			p.created_at, p.updated_at,
+			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
+			p.views_count,
+			0::bigint AS favorites_count,
+			false AS is_boosted,
+			false AS is_highlighted
+		FROM product p
+		LEFT JOIN product_image pi ON pi.product_id = p.id
+		WHERE p.deleted_at IS NULL
+		  AND p.status = 'pending_moderation'
+		GROUP BY p.id
+		ORDER BY p.created_at ASC
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetModerationQueue),
+	)
+
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("GetModerationQueue: query: %w", err)
+	}
+	defer rows.Close()
+
+	var ads []models.Ad
+	for rows.Next() {
+		var ad models.Ad
+		var photos []string
+		if err := rows.Scan(
+			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon,
+			&ad.CreatedAt, &ad.UpdatedAt,
+			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
+		); err != nil {
+			return nil, fmt.Errorf("GetModerationQueue: scan: %w", err)
+		}
+		ad.Photos = photos
+		ads = append(ads, ad)
+	}
+
+	if ads == nil {
+		ads = []models.Ad{}
+	}
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("GetModerationQueue: load characteristics: %w", err)
+	}
+	return ads, nil
+}
+
+// GetUserAdsByStatus возвращает объявления пользователя с указанным статусом.
+// Используется для вкладки «На модерации» в профиле продавца.
+func (s *AdStorage) GetUserAdsByStatus(ctx context.Context, userID int64, status string) ([]models.Ad, error) {
+	const query = `
+		SELECT
+			p.id, p.seller_id, p.category_id, p.title, p.description,
+			p.price, p.status, COALESCE(p.location, '') AS location,
+			p.lat, p.lon,
+			p.created_at, p.updated_at,
+			COALESCE(array_agg(DISTINCT pi.file_path) FILTER (WHERE pi.file_path IS NOT NULL), '{}') AS photos,
+			p.views_count,
+			COUNT(DISTINCT f.product_id) AS favorites_count,
+			false AS is_boosted,
+			false AS is_highlighted
+		FROM product p
+		LEFT JOIN product_image pi ON pi.product_id = p.id
+		LEFT JOIN favorite       f  ON f.product_id  = p.id
+		WHERE p.seller_id = $1
+		  AND p.deleted_at IS NULL
+		  AND p.status = $2
+		GROUP BY p.id
+		ORDER BY p.created_at DESC
+	`
+
+	s.log.DebugContext(ctx, "executing query",
+		slog.String("op", opGetUserAdsByStatus),
+		slog.Int64("user_id", userID),
+		slog.String("status", status),
+	)
+
+	rows, err := s.pool.Query(ctx, query, userID, status)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserAdsByStatus: query: %w", err)
+	}
+	defer rows.Close()
+
+	var ads []models.Ad
+	for rows.Next() {
+		var ad models.Ad
+		var photos []string
+		if err := rows.Scan(
+			&ad.ID, &ad.SellerID, &ad.CategoryID, &ad.Title, &ad.Description,
+			&ad.Price, &ad.Status, &ad.Location, &ad.Lat, &ad.Lon,
+			&ad.CreatedAt, &ad.UpdatedAt,
+			&photos, &ad.ViewsCount, &ad.FavoritesCount,
+			&ad.IsBoosted, &ad.IsHighlighted,
+		); err != nil {
+			return nil, fmt.Errorf("GetUserAdsByStatus: scan: %w", err)
+		}
+		ad.Photos = photos
+		ads = append(ads, ad)
+	}
+
+	if ads == nil {
+		ads = []models.Ad{}
+	}
+	if err := s.loadCharacteristicsForAds(ctx, ads); err != nil {
+		return nil, fmt.Errorf("GetUserAdsByStatus: load characteristics: %w", err)
+	}
+	return ads, nil
 }

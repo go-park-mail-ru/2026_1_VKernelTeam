@@ -78,6 +78,22 @@ definitions:
       partner:
         $ref: '#/definitions/dto.UserPreview'
     type: object
+  dto.CreateReviewRequest:
+    properties:
+      content:
+        type: string
+      product_id:
+        type: integer
+      rating:
+        type: integer
+      receiver_id:
+        type: integer
+    type: object
+  dto.CreateReviewResponse:
+    properties:
+      review:
+        $ref: '#/definitions/dto.ReviewResponse'
+    type: object
   dto.CreateTicketRequest:
     properties:
       category:
@@ -152,12 +168,62 @@ definitions:
       message:
         type: string
     type: object
+  dto.PaymentStatusResponse:
+    properties:
+      amount:
+        type: integer
+      confirmation_url:
+        type: string
+      payment_id:
+        type: integer
+      status:
+        type: string
+    type: object
   dto.PriceHistoryResponse:
     properties:
       history:
         items:
           $ref: '#/definitions/models.PricePoint'
         type: array
+    type: object
+  dto.PromotionListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.PromotionResponse'
+        type: array
+      next_cursor:
+        type: integer
+    type: object
+  dto.PromotionPlanResponse:
+    properties:
+      code:
+        type: string
+      duration_days:
+        type: integer
+      id:
+        type: integer
+      kind:
+        type: string
+      price:
+        type: integer
+    type: object
+  dto.PromotionResponse:
+    properties:
+      expires_at:
+        type: string
+      id:
+        type: integer
+      kind:
+        type: string
+      plan_code:
+        type: string
+      price_paid:
+        type: integer
+      product_id:
+        type: integer
+      starts_at:
+        type: string
     type: object
   dto.PublicUserResponse:
     properties:
@@ -176,6 +242,52 @@ definitions:
       reviews_count:
         type: integer
     type: object
+  dto.PurchaseItem:
+    properties:
+      chat_id:
+        type: integer
+      location:
+        type: string
+      order_id:
+        type: integer
+      photo:
+        type: string
+      price:
+        type: integer
+      product_id:
+        type: integer
+      purchased_at:
+        type: string
+      seller:
+        $ref: '#/definitions/dto.SellerPreview'
+      source:
+        type: string
+      title:
+        type: string
+    type: object
+  dto.PurchaseListResponse:
+    properties:
+      next_cursor:
+        type: integer
+      purchases:
+        items:
+          $ref: '#/definitions/dto.PurchaseItem'
+        type: array
+    type: object
+  dto.PurchasePromotionRequest:
+    properties:
+      idempotency_key:
+        type: string
+      plan_code:
+        type: string
+    type: object
+  dto.PurchasePromotionResponse:
+    properties:
+      promotion:
+        $ref: '#/definitions/dto.PromotionResponse'
+      wallet_balance:
+        type: integer
+    type: object
   dto.RateTicketRequest:
     properties:
       rating:
@@ -188,6 +300,54 @@ definitions:
       name:
         type: string
       password:
+        type: string
+    type: object
+  dto.ReviewListResponse:
+    properties:
+      next_cursor:
+        type: integer
+      reviews:
+        items:
+          $ref: '#/definitions/dto.ReviewResponse'
+        type: array
+    type: object
+  dto.ReviewResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      product:
+        $ref: '#/definitions/dto.AdPreview'
+      rating:
+        type: integer
+      receiver_id:
+        type: integer
+      sender:
+        $ref: '#/definitions/dto.UserPreview'
+      updated_at:
+        type: string
+    type: object
+  dto.ReviewSummaryResponse:
+    properties:
+      average:
+        type: number
+      distribution:
+        additionalProperties:
+          type: integer
+        type: object
+      total:
+        type: integer
+    type: object
+  dto.SellerPreview:
+    properties:
+      avatar_path:
+        type: string
+      id:
+        type: integer
+      name:
         type: string
     type: object
   dto.SendMessageRequest:
@@ -243,6 +403,24 @@ definitions:
       updated_at:
         type: string
     type: object
+  dto.TopupWalletRequest:
+    properties:
+      amount:
+        type: integer
+      idempotency_key:
+        type: string
+    type: object
+  dto.TopupWalletResponse:
+    properties:
+      balance:
+        type: integer
+      confirmation_url:
+        type: string
+      payment_id:
+        type: integer
+      status:
+        type: string
+    type: object
   dto.UpdateProfileRequest:
     properties:
       name:
@@ -251,6 +429,13 @@ definitions:
         type: string
     required:
     - name
+    type: object
+  dto.UpdateReviewRequest:
+    properties:
+      content:
+        type: string
+      rating:
+        type: integer
     type: object
   dto.UpdateTicketRequest:
     properties:
@@ -272,69 +457,74 @@ definitions:
     type: object
   dto.ValidationErrors:
     properties:
-      category_characteristics:
+      email:
         type: string
-      category_id:
+      name:
         type: string
-      custom_characteristics:
+      password:
         type: string
-      description:
+    type: object
+  dto.WalletResponse:
+    properties:
+      balance:
+        type: integer
+      currency:
         type: string
-      location:
-        type: string
-      photos:
+    type: object
+  dto.WalletTransactionListResponse:
+    properties:
+      items:
         items:
-          type: string
+          $ref: '#/definitions/dto.WalletTransactionResponse'
         type: array
-      price:
+      next_cursor:
+        type: integer
+    type: object
+  dto.WalletTransactionResponse:
+    properties:
+      amount:
+        type: integer
+      created_at:
         type: string
-      status:
+      id:
+        type: integer
+      reference_id:
+        type: integer
+      type:
         type: string
-      title:
-        type: string
-      user_id:
+    type: object
+  handlers.moderationFlagBody:
+    properties:
+      enabled:
+        type: boolean
+    type: object
+  handlers.rejectBody:
+    properties:
+      reason:
         type: string
     type: object
   models.Ad:
     properties:
-      category_characteristics:
-        items:
-          $ref: '#/definitions/models.ProductCharacteristic'
-        type: array
-      category_id:
-        type: integer
-      created_at:
-        type: string
-      custom_characteristics:
-        items:
-          $ref: '#/definitions/models.ProductCustomCharacteristic'
-        type: array
-      deleted_at:
-        type: string
-      description:
-        type: string
-      favorites_count:
-        type: integer
       id:
+        format: int64
         type: integer
-      location:
-        type: string
-      photos:
-        items:
-          type: string
-        type: array
       price:
+        format: int64
         type: integer
-      seller_id:
+      sellerID:
+        format: int64
         type: integer
       status:
         type: string
       title:
         type: string
-      updated_at:
-        type: string
-      views_count:
+    type: object
+  models.Category:
+    properties:
+      id:
         type: integer
+      name:
+        type: string
     type: object
   models.CategoryCharacteristic:
     properties:
@@ -357,20 +547,6 @@ definitions:
         type: string
       price:
         type: integer
-    type: object
-  models.ProductCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
-    type: object
-  models.ProductCustomCharacteristic:
-    properties:
-      name:
-        type: string
-      value:
-        type: string
     type: object
   models.User:
     properties:
@@ -414,6 +590,115 @@ info:
   title: Clover API
   version: "1.0"
 paths:
+  /admin/moderation/ads/{id}/approve:
+    post:
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Одобрить объявление
+      tags:
+      - admin
+  /admin/moderation/ads/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: причина отказа
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/handlers.rejectBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Отклонить объявление
+      tags:
+      - admin
+  /admin/moderation/queue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/models.Ad'
+              type: array
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Список объявлений на модерации
+      tags:
+      - admin
+  /admin/moderation/settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Текущее состояние модерации
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: флаг
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.moderationFlagBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+      security:
+      - CookieAuth: []
+      summary: Включить/выключить модерацию
+      tags:
+      - admin
   /ads:
     get:
       description: Возвращает список всех объявлений
@@ -444,7 +729,7 @@ paths:
         Доступно только авторизованным пользователям.
       parameters:
       - description: JSON с данными объявления (title, description, price, category_id,
-          status, location)
+          status, location, lat, lon)
         in: formData
         name: data
         required: true
@@ -553,7 +838,7 @@ paths:
         required: true
         type: integer
       - description: JSON с данными для обновления (title, description, price, category_id,
-          status, location)
+          status, location, lat, lon)
         in: formData
         name: data
         required: true
@@ -588,6 +873,46 @@ paths:
       summary: Обновить объявление
       tags:
       - ads
+  /ads/{id}/admin:
+    delete:
+      description: 'Жёсткое удаление от имени админа: товар становится недоступен
+        и'
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: status=deleted
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized / forbidden role
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: ad not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить объявление (админ)
+      tags:
+      - admin
   /ads/{id}/close:
     post:
       description: Устанавливает статус объявления в 'archived'. Доступно только владельцу.
@@ -763,6 +1088,82 @@ paths:
       summary: История цен объявления
       tags:
       - ads
+  /ads/{id}/promotions:
+    get:
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PromotionResponse'
+            type: array
+        "400":
+          description: invalid ad id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Активные промо объявления
+      tags:
+      - promotion
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID объявления
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: plan_code и idempotency_key
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PurchasePromotionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PurchasePromotionResponse'
+        "400":
+          description: INSUFFICIENT_FUNDS / PLAN_NOT_FOUND / PLAN_INACTIVE / INVALID_AD_STATUS
+            / INVALID_REQUEST
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: NOT_AD_OWNER
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: AD_NOT_FOUND
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Купить продвижение объявления
+      tags:
+      - promotion
   /ads/{id}/view:
     post:
       description: Записывает просмотр с дедупликацией и возвращает актуальный счётчик
@@ -1053,6 +1454,20 @@ paths:
       summary: Удалить из корзины
       tags:
       - cart
+  /categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Category'
+            type: array
+      summary: Получить список категорий
+      tags:
+      - categories
   /categories/{id}/characteristics:
     get:
       description: Возвращает список предопределённых характеристик категории с допустимыми
@@ -1301,6 +1716,219 @@ paths:
       summary: Получить избранное
       tags:
       - favorites
+  /profile/promotions:
+    get:
+      parameters:
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PromotionListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: История покупок продвижения
+      tags:
+      - promotion
+  /profile/purchases:
+    get:
+      parameters:
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      - description: лимит (по умолчанию 20, максимум 50)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PurchaseListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Мои покупки
+      tags:
+      - purchases
+  /profile/reviews:
+    get:
+      parameters:
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Мои отзывы
+      tags:
+      - reviews
+  /promotion/plans:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PromotionPlanResponse'
+            type: array
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Список тарифов продвижения
+      tags:
+      - promotion
+  /reviews:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: receiver_id, product_id, rating, content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.CreateReviewResponse'
+        "400":
+          description: validation / business error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Создать отзыв о продавце
+      tags:
+      - reviews
+  /reviews/{id}:
+    delete:
+      parameters:
+      - description: ID отзыва
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: invalid id / not author / not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Удалить свой отзыв
+      tags:
+      - reviews
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID отзыва
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: rating, content
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewResponse'
+        "400":
+          description: validation / not author / not found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Обновить свой отзыв
+      tags:
+      - reviews
   /support/tickets:
     get:
       description: Возвращает список обращений текущего пользователя
@@ -1675,6 +2303,38 @@ paths:
       summary: Статистика обращений
       tags:
       - support
+  /test/reset:
+    post:
+      description: Удаляет объявления, корзину, избранное, чаты, отзывы, тикеты, кошелёк
+        и сбрасывает аватар/рейтинг. Аккаунт остаётся. Доступно только email с префиксом
+        "clover-tester".
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: данные очищены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: only test users can reset data
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      - CsrfHeaderAuth: []
+      summary: Очистить данные тестового пользователя
+      tags:
+      - auth
   /users/{id}:
     get:
       description: 'Возвращает только общедоступную информацию: имя, рейтинг, кол-во
@@ -1738,6 +2398,205 @@ paths:
       summary: Получить объявления пользователя
       tags:
       - ads
+  /users/{id}/reviews:
+    get:
+      parameters:
+      - description: ID продавца
+        in: path
+        name: id
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewListResponse'
+        "400":
+          description: invalid user id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Отзывы о пользователе
+      tags:
+      - reviews
+  /users/{id}/reviews/summary:
+    get:
+      parameters:
+      - description: ID продавца
+        in: path
+        name: id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReviewSummaryResponse'
+        "400":
+          description: invalid user id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Сводка отзывов о пользователе
+      tags:
+      - reviews
+  /wallet:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WalletResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить баланс кошелька
+      tags:
+      - wallet
+  /wallet/payments/{id}:
+    get:
+      parameters:
+      - description: ID платежа
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PaymentStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Получить статус платежа
+      tags:
+      - wallet
+  /wallet/topup:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Сумма в рублях и idempotency_key
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TopupWalletRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TopupWalletResponse'
+        "400":
+          description: INVALID_AMOUNT / INVALID_REQUEST
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: Пополнить кошелёк
+      tags:
+      - wallet
+  /wallet/transactions:
+    get:
+      parameters:
+      - description: лимит (по умолчанию 20, максимум 100)
+        in: query
+        name: limit
+        type: integer
+      - description: ID последнего элемента предыдущей страницы
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.WalletTransactionListResponse'
+        "401":
+          description: unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - CookieAuth: []
+      summary: История операций по кошельку
+      tags:
+      - wallet
+  /wallet/yookassa/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Принимает уведомления от ЮКассы. Доступ ограничен по IP. Всегда
+        отвечает 200, чтобы провайдер не ретраил — расхождения добираются reconciler'ом.
+      parameters:
+      - description: Notification payload ЮКассы
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+      summary: Webhook ЮКассы об изменении статуса платежа
+      tags:
+      - wallet
 securityDefinitions:
   CookieAuth:
     description: JWT session token

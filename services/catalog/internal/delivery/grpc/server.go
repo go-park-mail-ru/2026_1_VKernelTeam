@@ -159,5 +159,7 @@ func adToProto(ad models.Ad) *catalogv1.AdResponse {
 		Status:      ad.Status,
 		Location:    ad.Location,
 		PhotoUrls:   ad.Photos,
+		Lat:         ad.Lat,
+		Lon:         ad.Lon,
 	}
 }

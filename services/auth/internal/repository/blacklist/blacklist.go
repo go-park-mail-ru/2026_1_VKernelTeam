@@ -11,10 +11,12 @@ type Cache interface {
 	Exists(ctx context.Context, key string) bool
 }
 
+// Repository хранит чёрный список JWT в кэше.
 type Repository struct {
 	cache Cache
 }
 
+// New создаёт Repository поверх переданного кэша.
 func New(c Cache) *Repository {
 	return &Repository{cache: c}
 }

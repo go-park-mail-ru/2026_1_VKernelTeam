@@ -8,16 +8,26 @@ import (
 )
 
 var (
-	ErrInvalidEmailFormat        = errors.New("invalid email format")
-	ErrPasswordTooShort          = errors.New("password must be at least 8 characters long")
-	ErrPasswordRequiresDigit     = errors.New("password must contain at least one digit")
-	ErrPasswordRequiresLetter    = errors.New("password must contain at least one latin letter")
+	// ErrInvalidEmailFormat возвращается, когда email не соответствует ожидаемому формату.
+	ErrInvalidEmailFormat = errors.New("invalid email format")
+	// ErrPasswordTooShort возвращается, когда длина пароля меньше минимально допустимой.
+	ErrPasswordTooShort = errors.New("password must be at least 8 characters long")
+	// ErrPasswordRequiresDigit возвращается, когда в пароле отсутствует цифра.
+	ErrPasswordRequiresDigit = errors.New("password must contain at least one digit")
+	// ErrPasswordRequiresLetter возвращается, когда в пароле отсутствует латинская буква.
+	ErrPasswordRequiresLetter = errors.New("password must contain at least one latin letter")
+	// ErrPasswordContainsForbidden возвращается, когда пароль содержит запрещённые символы.
 	ErrPasswordContainsForbidden = errors.New("password contains forbidden characters")
-	ErrNameEmpty                 = errors.New("name cannot be empty")
-	ErrNameTooShort              = errors.New("name must be at least 3 characters long")
-	ErrNameTooLong               = errors.New("name must be no more than 50 characters long")
-	ErrNameInvalid               = errors.New("name contains invalid characters")
-	ErrUserIDInvalid             = errors.New("user ID must be a positive integer")
+	// ErrNameEmpty возвращается, когда имя пустое.
+	ErrNameEmpty = errors.New("name cannot be empty")
+	// ErrNameTooShort возвращается, когда длина имени меньше минимально допустимой.
+	ErrNameTooShort = errors.New("name must be at least 3 characters long")
+	// ErrNameTooLong возвращается, когда длина имени превышает максимально допустимую.
+	ErrNameTooLong = errors.New("name must be no more than 50 characters long")
+	// ErrNameInvalid возвращается, когда имя содержит недопустимые символы.
+	ErrNameInvalid = errors.New("name contains invalid characters")
+	// ErrUserIDInvalid возвращается, когда идентификатор пользователя не является положительным числом.
+	ErrUserIDInvalid = errors.New("user ID must be a positive integer")
 
 	reHasLetter = regexp.MustCompile(`[a-zA-Z]`)
 	reHasDigit  = regexp.MustCompile(`[0-9]`)
@@ -80,6 +90,7 @@ func ValidateName(name string) (string, error) {
 	return name, nil
 }
 
+// ValidateUserID проверяет, что идентификатор пользователя — положительное число.
 func ValidateUserID(userID int64) error {
 	if userID <= 0 {
 		return ErrUserIDInvalid

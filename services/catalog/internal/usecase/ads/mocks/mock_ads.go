@@ -66,6 +66,22 @@ func (mr *MockAdsProviderMockRecorder) AddProductImages(ctx, adID, photos interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProductImages", reflect.TypeOf((*MockAdsProvider)(nil).AddProductImages), ctx, adID, photos)
 }
 
+// AdminDeleteAd mocks base method.
+func (m *MockAdsProvider) AdminDeleteAd(ctx context.Context, adID, adminID int64) (int64, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdminDeleteAd", ctx, adID, adminID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// AdminDeleteAd indicates an expected call of AdminDeleteAd.
+func (mr *MockAdsProviderMockRecorder) AdminDeleteAd(ctx, adID, adminID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminDeleteAd", reflect.TypeOf((*MockAdsProvider)(nil).AdminDeleteAd), ctx, adID, adminID)
+}
+
 // CloseAd mocks base method.
 func (m *MockAdsProvider) CloseAd(ctx context.Context, id, userID int64) error {
 	m.ctrl.T.Helper()
@@ -183,6 +199,21 @@ func (mr *MockAdsProviderMockRecorder) GetCategoryCharacteristics(ctx, categoryI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCategoryCharacteristics", reflect.TypeOf((*MockAdsProvider)(nil).GetCategoryCharacteristics), ctx, categoryID)
 }
 
+// GetModerationQueue mocks base method.
+func (m *MockAdsProvider) GetModerationQueue(ctx context.Context) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetModerationQueue", ctx)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetModerationQueue indicates an expected call of GetModerationQueue.
+func (mr *MockAdsProviderMockRecorder) GetModerationQueue(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetModerationQueue", reflect.TypeOf((*MockAdsProvider)(nil).GetModerationQueue), ctx)
+}
+
 // GetPriceHistory mocks base method.
 func (m *MockAdsProvider) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	m.ctrl.T.Helper()
@@ -198,6 +229,21 @@ func (mr *MockAdsProviderMockRecorder) GetPriceHistory(ctx, adID interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPriceHistory", reflect.TypeOf((*MockAdsProvider)(nil).GetPriceHistory), ctx, adID)
 }
 
+// GetUserAdsByStatus mocks base method.
+func (m *MockAdsProvider) GetUserAdsByStatus(ctx context.Context, userID int64, status string) ([]models.Ad, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserAdsByStatus", ctx, userID, status)
+	ret0, _ := ret[0].([]models.Ad)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserAdsByStatus indicates an expected call of GetUserAdsByStatus.
+func (mr *MockAdsProviderMockRecorder) GetUserAdsByStatus(ctx, userID, status interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserAdsByStatus", reflect.TypeOf((*MockAdsProvider)(nil).GetUserAdsByStatus), ctx, userID, status)
+}
+
 // GetUserFavorites mocks base method.
 func (m *MockAdsProvider) GetUserFavorites(ctx context.Context, userID int64) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
@@ -211,6 +257,22 @@ func (m *MockAdsProvider) GetUserFavorites(ctx context.Context, userID int64) ([
 func (mr *MockAdsProviderMockRecorder) GetUserFavorites(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserFavorites", reflect.TypeOf((*MockAdsProvider)(nil).GetUserFavorites), ctx, userID)
+}
+
+// ModerateAd mocks base method.
+func (m *MockAdsProvider) ModerateAd(ctx context.Context, adID int64, newStatus, reason string) (int64, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ModerateAd", ctx, adID, newStatus, reason)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ModerateAd indicates an expected call of ModerateAd.
+func (mr *MockAdsProviderMockRecorder) ModerateAd(ctx, adID, newStatus, reason interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ModerateAd", reflect.TypeOf((*MockAdsProvider)(nil).ModerateAd), ctx, adID, newStatus, reason)
 }
 
 // RemoveFavorite mocks base method.
@@ -282,6 +344,94 @@ func (m *MockAdsProvider) UpdateAd(ctx context.Context, req *dto.UpdateAdRequest
 func (mr *MockAdsProviderMockRecorder) UpdateAd(ctx, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAd", reflect.TypeOf((*MockAdsProvider)(nil).UpdateAd), ctx, req)
+}
+
+// MockSystemMessenger is a mock of SystemMessenger interface.
+type MockSystemMessenger struct {
+	ctrl     *gomock.Controller
+	recorder *MockSystemMessengerMockRecorder
+}
+
+// MockSystemMessengerMockRecorder is the mock recorder for MockSystemMessenger.
+type MockSystemMessengerMockRecorder struct {
+	mock *MockSystemMessenger
+}
+
+// NewMockSystemMessenger creates a new mock instance.
+func NewMockSystemMessenger(ctrl *gomock.Controller) *MockSystemMessenger {
+	mock := &MockSystemMessenger{ctrl: ctrl}
+	mock.recorder = &MockSystemMessengerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSystemMessenger) EXPECT() *MockSystemMessengerMockRecorder {
+	return m.recorder
+}
+
+// Send mocks base method.
+func (m *MockSystemMessenger) Send(ctx context.Context, systemUserID, recipientID, adID int64, text string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Send", ctx, systemUserID, recipientID, adID, text)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send.
+func (mr *MockSystemMessengerMockRecorder) Send(ctx, systemUserID, recipientID, adID, text interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockSystemMessenger)(nil).Send), ctx, systemUserID, recipientID, adID, text)
+}
+
+// MockModerationGate is a mock of ModerationGate interface.
+type MockModerationGate struct {
+	ctrl     *gomock.Controller
+	recorder *MockModerationGateMockRecorder
+}
+
+// MockModerationGateMockRecorder is the mock recorder for MockModerationGate.
+type MockModerationGateMockRecorder struct {
+	mock *MockModerationGate
+}
+
+// NewMockModerationGate creates a new mock instance.
+func NewMockModerationGate(ctrl *gomock.Controller) *MockModerationGate {
+	mock := &MockModerationGate{ctrl: ctrl}
+	mock.recorder = &MockModerationGateMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockModerationGate) EXPECT() *MockModerationGateMockRecorder {
+	return m.recorder
+}
+
+// IsEnabled mocks base method.
+func (m *MockModerationGate) IsEnabled(ctx context.Context) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEnabled", ctx)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsEnabled indicates an expected call of IsEnabled.
+func (mr *MockModerationGateMockRecorder) IsEnabled(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEnabled", reflect.TypeOf((*MockModerationGate)(nil).IsEnabled), ctx)
+}
+
+// SetEnabled mocks base method.
+func (m *MockModerationGate) SetEnabled(ctx context.Context, enabled bool, adminID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetEnabled", ctx, enabled, adminID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetEnabled indicates an expected call of SetEnabled.
+func (mr *MockModerationGateMockRecorder) SetEnabled(ctx, enabled, adminID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEnabled", reflect.TypeOf((*MockModerationGate)(nil).SetEnabled), ctx, enabled, adminID)
 }
 
 // MockFileStorage is a mock of FileStorage interface.

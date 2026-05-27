@@ -23,14 +23,17 @@ type Config struct {
 	Views        ViewsConfig
 }
 
+// HTTPConfig содержит параметры HTTP-сервера сервиса catalog.
 type HTTPConfig struct {
 	Port int `json:"port"`
 }
 
+// GRPCConfig содержит параметры gRPC-сервера сервиса catalog.
 type GRPCConfig struct {
 	Port int `json:"port"`
 }
 
+// S3Config содержит параметры подключения к S3-хранилищу для медиа объявлений.
 type S3Config struct {
 	EndpointURL     string
 	RegionName      string
@@ -39,6 +42,7 @@ type S3Config struct {
 	SecretAccessKey string
 }
 
+// KafkaConfig содержит параметры подключения к Kafka и топиков пользовательских событий.
 type KafkaConfig struct {
 	Brokers        string
 	UserEventTopic string

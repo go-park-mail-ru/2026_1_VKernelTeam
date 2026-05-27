@@ -11,9 +11,12 @@ import (
 
 //go:generate mockgen -source=support_message.go -destination=mocks/mock_support_message.go -package=mocks
 
+// Sentinel-ошибки бизнес-логики сообщений поддержки.
 var (
+	// ErrTextRequired возвращается, когда текст сообщения пуст.
 	ErrTextRequired = errors.New("text is required")
-	ErrForbidden    = errors.New("forbidden: not the ticket author or staff")
+	// ErrForbidden возвращается, когда у пользователя нет доступа к чату обращения.
+	ErrForbidden = errors.New("forbidden: not the ticket author or staff")
 )
 
 const (
@@ -37,6 +40,7 @@ type RoleProvider interface {
 	GetUserRole(ctx context.Context, userID int64) (string, error)
 }
 
+// SupportMessageService реализует бизнес-логику работы с сообщениями в обращениях поддержки.
 type SupportMessageService struct {
 	log      *slog.Logger
 	messages MessageStorage
@@ -44,6 +48,7 @@ type SupportMessageService struct {
 	users    RoleProvider
 }
 
+// New создаёт новый SupportMessageService с указанными зависимостями.
 func New(log *slog.Logger, messages MessageStorage, tickets TicketStorage, users RoleProvider) *SupportMessageService {
 	return &SupportMessageService{
 		log:      log,

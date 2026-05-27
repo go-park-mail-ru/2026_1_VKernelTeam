@@ -1,11 +1,12 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/mailru/easyjson"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
@@ -14,6 +15,7 @@ import (
 	supportticketUC "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/support/internal/usecase/support_ticket"
 )
 
+// Сообщения ошибок для обработчиков обращений техподдержки.
 const (
 	ErrInvalidTicketID    = "invalid ticket id"
 	ErrTicketNotFound     = "ticket not found"
@@ -45,7 +47,7 @@ func (h *SupportTicketHandlers) HandleCreateTicket(w http.ResponseWriter, r *htt
 	}
 
 	var req dto.CreateTicketRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -179,7 +181,7 @@ func (h *SupportTicketHandlers) HandleUpdateTicket(w http.ResponseWriter, r *htt
 	}
 
 	var req dto.UpdateTicketRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -243,7 +245,7 @@ func (h *SupportTicketHandlers) HandleRateTicket(w http.ResponseWriter, r *http.
 	}
 
 	var req dto.RateTicketRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(r.Body, &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}

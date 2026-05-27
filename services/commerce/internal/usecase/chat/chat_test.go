@@ -146,7 +146,7 @@ func TestConfirmPurchase(t *testing.T) {
 		chatRow := models.Chat{ID: 5, AdID: 38, BuyerID: 1, SellerID: 2}
 		chatMock.EXPECT().GetChatByID(ctx, int64(5)).Return(chatRow, nil)
 		adMock.EXPECT().GetAdByID(ctx, int64(38)).Return(activeAd(38, 2, 1000), nil)
-		chatMock.EXPECT().CompletePurchase(ctx, int64(1), int64(38), int64(1000)).Return(nil)
+		chatMock.EXPECT().CompletePurchase(ctx, int64(5), int64(1), int64(38), int64(1000)).Return(nil)
 
 		err := uc.ConfirmPurchase(ctx, 5, 2)
 		assert.NoError(t, err)
@@ -213,7 +213,7 @@ func TestConfirmPurchase(t *testing.T) {
 		chatRow := models.Chat{ID: 5, AdID: 38, BuyerID: 1, SellerID: 2}
 		chatMock.EXPECT().GetChatByID(ctx, int64(5)).Return(chatRow, nil)
 		adMock.EXPECT().GetAdByID(ctx, int64(38)).Return(activeAd(38, 2, 1000), nil)
-		chatMock.EXPECT().CompletePurchase(ctx, int64(1), int64(38), int64(1000)).
+		chatMock.EXPECT().CompletePurchase(ctx, int64(5), int64(1), int64(38), int64(1000)).
 			Return(errors.New("tx err"))
 
 		err := uc.ConfirmPurchase(ctx, 5, 2)

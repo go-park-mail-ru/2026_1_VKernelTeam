@@ -26,11 +26,23 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/handlers"
 	commercekafka "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/kafka"
 	commercemw "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/delivery/middleware"
+	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 	cartrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/cart"
 	chatrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/chat"
+	paymentrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/payment"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/postgres"
+	promorepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/promotion"
+	purchaserepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/purchase"
+	commerceredis "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/redis"
+	reviewrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/review"
+	walletrepo "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/repository/wallet"
 	cartusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/cart"
 	chatusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/chat"
+	paymentusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/payment"
+	promotionusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/promotion"
+	purchaseusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/purchase"
+	reviewusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/review"
+	walletusecase "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/wallet"
 )
 
 func main() {
@@ -62,18 +74,61 @@ func main() {
 	cartStorage := cartrepo.NewCartStorage(pg.Pool, log)
 	chatStorage := chatrepo.NewChatStorage(pg.Pool, log)
 
+	planStorage := promorepo.NewPlanStorage(pg.Pool, log)
+	promotionStorage := promorepo.NewPromotionStorage(pg.Pool, log)
+	walletStorage := walletrepo.NewWalletStorage(pg.Pool, log)
+	paymentStorage := paymentrepo.NewPaymentStorage(pg.Pool, log)
+	planCache := commerceredis.NewPlanCache(cfg.RedisAddr, log)
+	defer func() { _ = planCache.Close() }()
+
+	// Выбор провайдера платежей: ЮКасса при включённом флаге, иначе mock.
+	var paymentProvider walletusecase.PaymentProvider
+	var paymentProviderName string
+	if cfg.YooKassa.Enabled {
+		paymentProvider = paymentusecase.NewYooKassaProvider(paymentusecase.YooKassaConfig{
+			ShopID:    cfg.YooKassa.ShopID,
+			SecretKey: cfg.YooKassa.SecretKey,
+			APIURL:    cfg.YooKassa.APIURL,
+			ReturnURL: cfg.YooKassa.ReturnURL,
+		}, nil, log)
+		paymentProviderName = models.PaymentProviderYooKassa
+		log.Info("payment provider: yookassa")
+	} else {
+		paymentProvider = paymentusecase.NewMockProvider()
+		paymentProviderName = models.PaymentProviderMock
+		log.Info("payment provider: mock")
+	}
+
 	// catalogClient реализует AdsProvider/AdProvider (метод GetAdByID).
 	cartUC := cartusecase.New(log, cartStorage, catalogClient)
 	chatUC := chatusecase.New(log, chatStorage, catalogClient)
+	walletUC := walletusecase.New(log, pg.Pool, walletStorage, paymentStorage, paymentProvider, paymentProviderName)
+	promotionUC := promotionusecase.New(log, pg.Pool, planStorage, promotionStorage, walletStorage, planCache, catalogClient)
+
+	reviewStorage := reviewrepo.NewStorage(pg.Pool, log)
+	reviewUC := reviewusecase.NewService(reviewStorage, log)
+
+	purchaseStorage := purchaserepo.NewStorage(pg.Pool, log)
+	purchaseUC := purchaseusecase.NewService(purchaseStorage, log)
 
 	cartHandlers := handlers.NewCartHandlers(log, cartUC)
 	chatHandlers := handlers.NewChatHandlers(log, chatUC)
+	walletHandlers := handlers.NewWalletHandlers(log, walletUC)
+	promotionHandlers := handlers.NewPromotionHandlers(log, promotionUC)
+	reviewHandlers := handlers.NewReviewHandlers(log, reviewUC)
+	purchaseHandlers := handlers.NewPurchaseHandlers(log, purchaseUC)
+
+	// Webhook ЮКассы: только при включённом флаге. Под mock'ом ручка отдаёт 404.
+	var yookassaWebhook *handlers.YooKassaWebhookHandler
+	if cfg.YooKassa.Enabled {
+		yookassaWebhook = handlers.NewYooKassaWebhookHandler(log, walletUC, paymentProvider)
+	}
 
 	brokers := splitBrokers(cfg.Kafka.Brokers)
 	kafkaConsumer := commercekafka.NewConsumer(brokers, cfg.Kafka.GroupID, cartStorage, log)
 	defer func() { _ = kafkaConsumer.Close() }()
 
-	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, authClient)
+	httpSrv := buildHTTPServer(log, cfg.HTTP.Port, cartHandlers, chatHandlers, walletHandlers, promotionHandlers, reviewHandlers, purchaseHandlers, yookassaWebhook, authClient)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -86,6 +141,16 @@ func main() {
 		}
 	}()
 	go kafkaConsumer.Run(ctx)
+
+	if cfg.YooKassa.Enabled {
+		reconciler := paymentusecase.NewReconciler(log, paymentStorage, paymentProvider, walletUC, paymentusecase.ReconcilerConfig{
+			Interval:     time.Minute,
+			StaleAge:     5 * time.Minute,
+			BatchSize:    50,
+			ProviderName: models.PaymentProviderYooKassa,
+		})
+		go reconciler.Run(ctx)
+	}
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -112,6 +177,11 @@ func buildHTTPServer(
 	port int,
 	cart *handlers.CartHandlers,
 	chat *handlers.ChatHandlers,
+	wallet *handlers.WalletHandlers,
+	promotion *handlers.PromotionHandlers,
+	review *handlers.ReviewHandlers,
+	purchase *handlers.PurchaseHandlers,
+	yookassaWebhook *handlers.YooKassaWebhookHandler,
 	authClient *commercegrpc.AuthClient,
 ) *http.Server {
 	mux := http.NewServeMux()
@@ -119,16 +189,39 @@ func buildHTTPServer(
 
 	authMW := commercemw.GRPCAuthMiddleware(log, authClient)
 
-	// Cart
 	mux.Handle("GET "+prefix+"/cart", authMW(http.HandlerFunc(cart.HandleGetCart)))
 	mux.Handle("POST "+prefix+"/cart", authMW(http.HandlerFunc(cart.HandleAddToCart)))
 	mux.Handle("DELETE "+prefix+"/cart/{id}", authMW(http.HandlerFunc(cart.HandleRemoveFromCart)))
 
-	// Chat & orders
 	mux.Handle("POST "+prefix+"/ads/{id}/order", authMW(http.HandlerFunc(chat.HandleCreateOrder)))
 	mux.Handle("POST "+prefix+"/chats/{id}/confirm", authMW(http.HandlerFunc(chat.HandleConfirmOrder)))
 	mux.Handle("GET "+prefix+"/chats", authMW(http.HandlerFunc(chat.HandleGetAllChats)))
 	mux.Handle("GET "+prefix+"/chats/{id}", authMW(http.HandlerFunc(chat.HandleGetChat)))
+
+	mux.Handle("GET "+prefix+"/wallet", authMW(http.HandlerFunc(wallet.HandleGetWallet)))
+	mux.Handle("GET "+prefix+"/wallet/transactions", authMW(http.HandlerFunc(wallet.HandleListWalletTransactions)))
+	mux.Handle("POST "+prefix+"/wallet/topup", authMW(http.HandlerFunc(wallet.HandleTopupWallet)))
+	mux.Handle("GET "+prefix+"/wallet/payments/{id}", authMW(http.HandlerFunc(wallet.HandleGetPaymentStatus)))
+
+	// Webhook ЮКассы: без аутентификации, защищён IP whitelist'ом.
+	if yookassaWebhook != nil {
+		ipMW := commercemw.YooKassaIPWhitelist(log)
+		mux.Handle("POST "+prefix+"/wallet/yookassa/webhook", ipMW(http.HandlerFunc(yookassaWebhook.HandleWebhook)))
+	}
+
+	mux.Handle("GET "+prefix+"/promotion/plans", http.HandlerFunc(promotion.HandleGetPromotionPlans))
+	mux.Handle("GET "+prefix+"/ads/{id}/promotions", http.HandlerFunc(promotion.HandleListAdPromotions))
+	mux.Handle("POST "+prefix+"/ads/{id}/promotions", authMW(http.HandlerFunc(promotion.HandlePurchasePromotion)))
+	mux.Handle("GET "+prefix+"/profile/promotions", authMW(http.HandlerFunc(promotion.HandleListUserPromotions)))
+
+	mux.Handle("POST "+prefix+"/reviews", authMW(http.HandlerFunc(review.HandleCreateReview)))
+	mux.Handle("PUT "+prefix+"/reviews/{id}", authMW(http.HandlerFunc(review.HandleUpdateReview)))
+	mux.Handle("DELETE "+prefix+"/reviews/{id}", authMW(http.HandlerFunc(review.HandleDeleteReview)))
+	mux.Handle("GET "+prefix+"/users/{id}/reviews", http.HandlerFunc(review.HandleListUserReviews))
+	mux.Handle("GET "+prefix+"/users/{id}/reviews/summary", http.HandlerFunc(review.HandleUserReviewsSummary))
+	mux.Handle("GET "+prefix+"/profile/reviews", authMW(http.HandlerFunc(review.HandleListMyReviews)))
+
+	mux.Handle("GET "+prefix+"/profile/purchases", authMW(http.HandlerFunc(purchase.HandleListMyPurchases)))
 
 	// /metrics - Prometheus scrape endpoint, в обход CSRF и AccessLog (см. middleware/access_log.go).
 	mux.Handle("GET /metrics", metrics.Handler())

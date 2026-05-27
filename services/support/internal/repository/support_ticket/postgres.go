@@ -24,6 +24,7 @@ const (
 	opSetRating    = "db.support_ticket.SetRating"
 )
 
+// PgxPool интерфейс для пула соединений pgx.
 type PgxPool interface {
 	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
@@ -31,19 +32,24 @@ type PgxPool interface {
 }
 
 var (
+	// ErrTicketNotFound возвращается, когда обращение не найдено в БД.
 	ErrTicketNotFound = errors.New("ticket not found")
-	ErrUserNotFound   = errors.New("user not found")
+	// ErrUserNotFound возвращается, когда пользователь обращения отсутствует в БД.
+	ErrUserNotFound = errors.New("user not found")
 )
 
+// SupportTicketStorage отвечает за операции с обращениями техподдержки.
 type SupportTicketStorage struct {
 	pool PgxPool
 	log  *slog.Logger
 }
 
+// NewSupportTicketStorage создаёт хранилище обращений техподдержки на базе pgx.
 func NewSupportTicketStorage(pool PgxPool, log *slog.Logger) *SupportTicketStorage {
 	return &SupportTicketStorage{pool: pool, log: log}
 }
 
+// Create сохраняет новое обращение и заполняет служебные поля модели.
 func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.SupportTicket) (int64, error) {
 	const query = `
 		INSERT INTO support_ticket (user_id, category, title, description)
@@ -74,6 +80,7 @@ func (s *SupportTicketStorage) Create(ctx context.Context, ticket *models.Suppor
 	return ticket.ID, nil
 }
 
+// GetByID возвращает обращение по идентификатору.
 func (s *SupportTicketStorage) GetByID(ctx context.Context, id int64) (*models.SupportTicket, error) {
 	const query = `
 		SELECT id, user_id, category, status, title, description, rating, created_at, updated_at
@@ -105,6 +112,7 @@ func (s *SupportTicketStorage) GetByID(ctx context.Context, id int64) (*models.S
 	return &t, nil
 }
 
+// GetByUserID возвращает обращения пользователя, отсортированные по дате создания.
 func (s *SupportTicketStorage) GetByUserID(ctx context.Context, userID int64) ([]models.SupportTicket, error) {
 	const query = `
 		SELECT id, user_id, category, status, title, description, rating, created_at, updated_at
@@ -310,6 +318,7 @@ func (s *SupportTicketStorage) SetRating(ctx context.Context, ticketID int64, ra
 	return nil
 }
 
+// Update обновляет данные обращения автором и возвращает новое значение updated_at.
 func (s *SupportTicketStorage) Update(ctx context.Context, ticket *models.SupportTicket) error {
 	const query = `
 		UPDATE support_ticket

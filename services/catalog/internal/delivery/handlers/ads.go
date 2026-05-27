@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/mailru/easyjson"
 
 	middleware "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/http/middleware"
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/pkg/responser"
@@ -29,7 +30,9 @@ const (
 	opHandleSearchAds           = "handlers.HandleSearchAds"
 	opHandleGetPriceHistory     = "handlers.HandleGetPriceHistory"
 
+	// ErrSearchQueryRequired — отсутствует обязательный параметр поискового запроса.
 	ErrSearchQueryRequired = "query parameter is required"
+	// ErrSearchQueryTooShort — поисковый запрос короче минимально допустимой длины.
 	ErrSearchQueryTooShort = "search query is too short"
 
 	statusKey = "status"
@@ -149,7 +152,7 @@ func (h *AdsHandlers) HandleGetAdByID(w http.ResponseWriter, r *http.Request) {
 // @Tags ads
 // @Accept multipart/form-data
 // @Produce json
-// @Param data formData string true "JSON с данными объявления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными объявления (title, description, price, category_id, status, location, lat, lon)"
 // @Param photos formData file false "Фотографии объявления (можно несколько)"
 // @Success 200 {object} map[string]int64 "ID созданного объявления"
 // @Failure 400 {object} dto.ErrorResponse "invalid request body / ошибки валидации"
@@ -185,7 +188,7 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
-	if err := json.NewDecoder(strings.NewReader(dataField)).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(strings.NewReader(dataField), &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -237,7 +240,7 @@ func (h *AdsHandlers) HandleCreateAd(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID объявления"
-// @Param data formData string true "JSON с данными для обновления (title, description, price, category_id, status, location)"
+// @Param data formData string true "JSON с данными для обновления (title, description, price, category_id, status, location, lat, lon)"
 // @Param photos formData file false "Новые фотографии объявления (заменяют старые)"
 // @Success 200 {object} map[string]string "объявление успешно обновлено"
 // @Failure 400 {object} dto.ErrorResponse "invalid ad id / invalid request body / ошибки валидации"
@@ -276,7 +279,7 @@ func (h *AdsHandlers) HandleUpdateAdByID(w http.ResponseWriter, r *http.Request)
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
-	if err := json.NewDecoder(strings.NewReader(dataField)).Decode(&req); err != nil {
+	if err := easyjson.UnmarshalFromReader(strings.NewReader(dataField), &req); err != nil {
 		responser.RespondWithError(w, http.StatusBadRequest, ErrInvalidRequestBody)
 		return
 	}
@@ -478,6 +481,29 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tab := r.URL.Query().Get("tab")
+
+	if tab == "pending" {
+		callerID, ok := r.Context().Value(middleware.UserIDKey).(int64)
+		role, _ := r.Context().Value(middleware.RoleKey).(string)
+		if !ok || (callerID != userID && role != "admin") {
+			responser.RespondWithError(w, http.StatusUnauthorized, ErrForbidden)
+			return
+		}
+
+		pending, err := h.services.Ads.GetUserAdsByStatus(r.Context(), userID, "pending_moderation")
+		if err != nil {
+			h.log.ErrorContext(r.Context(), "failed to get pending user ads",
+				slog.String("op", opHandleGetUserAds),
+				slog.String("error", err.Error()),
+			)
+			responser.RespondWithError(w, http.StatusInternalServerError, ErrFailedToGetUserAds)
+			return
+		}
+		responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{adsKey: pending})
+		return
+	}
+
 	ads, err := h.services.Ads.GetAdsByUserID(r.Context(), userID)
 	if err != nil {
 		h.log.ErrorContext(r.Context(), "failed to get user ads",
@@ -489,7 +515,7 @@ func (h *AdsHandlers) HandleGetUserAds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"ads": ads,
+		adsKey: ads,
 	})
 }
 
@@ -606,7 +632,7 @@ func (h *AdsHandlers) HandleGetFavorites(w http.ResponseWriter, r *http.Request)
 	}
 
 	responser.RespondWithJSON(w, http.StatusOK, map[string]interface{}{
-		"ads": favorites,
+		adsKey: favorites,
 	})
 }
 
@@ -714,6 +740,9 @@ func validateCreateAdRequest(req *dto.CreateAdRequest) *dto.ValidationErrors {
 	if err := validator.ValidateAdLocation(req.Location); err != nil {
 		errs.Location = err.Error()
 	}
+	if err := validator.ValidateAdCoords(req.Lat, req.Lon); err != nil {
+		errs.Coords = err.Error()
+	}
 	return &errs
 }
 
@@ -747,6 +776,11 @@ func validateUpdateAdRequest(req *dto.UpdateAdRequest) *dto.ValidationErrors {
 	if req.Location != nil {
 		if err := validator.ValidateAdLocation(*req.Location); err != nil {
 			errs.Location = err.Error()
+		}
+	}
+	if req.Lat != nil || req.Lon != nil {
+		if err := validator.ValidateAdCoords(req.Lat, req.Lon); err != nil {
+			errs.Coords = err.Error()
 		}
 	}
 	return &errs

@@ -1,5 +1,7 @@
 package dto
 
+//go:generate easyjson -all $GOFILE
+
 // ErrorResponse — структура для отправки ошибок в формате JSON.
 type ErrorResponse struct {
 	Error string `json:"error"`
@@ -15,6 +17,7 @@ type ValidationErrors struct {
 	Price                   string   `json:"price,omitempty"`
 	Status                  string   `json:"status,omitempty"`
 	Location                string   `json:"location,omitempty"`
+	Coords                  string   `json:"coords,omitempty"`
 	Photos                  []string `json:"photos,omitempty"`
 	CategoryCharacteristics string   `json:"category_characteristics,omitempty"`
 	CustomCharacteristics   string   `json:"custom_characteristics,omitempty"`
@@ -24,6 +27,6 @@ type ValidationErrors struct {
 func (v *ValidationErrors) HasErrors() bool {
 	return v.UserID != "" ||
 		v.CategoryID != "" || v.Title != "" || v.Description != "" || v.Price != "" ||
-		v.Status != "" || v.Location != "" || len(v.Photos) > 0 ||
+		v.Status != "" || v.Location != "" || v.Coords != "" || len(v.Photos) > 0 ||
 		v.CategoryCharacteristics != "" || v.CustomCharacteristics != ""
 }

@@ -1,4 +1,4 @@
-.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install \
+.PHONY: help run rebuild stop deploy test test-ci lint lint-ci build-auth build-support build-catalog build-commerce fmt vet clean proto proto-install swag swag-install easyjson easyjson-install \
        logs logs-auth logs-support logs-catalog logs-commerce logs-vector logs-clickhouse grafana-open status
 
 # -include (со знаком «минус») - не падать, если .env нет.
@@ -7,7 +7,12 @@
 -include .env
 export
 
-COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml
+# Локальный override (deployments/docker-compose.override.yaml) подключается
+# автоматически, если файл существует. Используется для dev-настроек, которые
+# не должны попадать в прод (например, gateway по HTTP без SSL — см. README).
+# Файл в .gitignore, поэтому у каждого разработчика он свой или отсутствует.
+COMPOSE_OVERRIDE = $(if $(wildcard deployments/docker-compose.override.yaml),-f deployments/docker-compose.override.yaml,)
+COMPOSE = docker compose --env-file .env -f deployments/docker-compose.yaml $(COMPOSE_OVERRIDE)
 
 help:
 	@echo "Available targets:"
@@ -28,6 +33,8 @@ help:
 	@echo "  proto-install     - Установить protoc + Go-плагины (один раз)"
 	@echo "  swag              - Перегенерировать api/swagger.{json,yaml} из аннотаций хендлеров"
 	@echo "  swag-install      - Установить swag CLI (один раз)"
+	@echo "  easyjson          - Перегенерировать *_easyjson.go для DTO/моделей всех сервисов"
+	@echo "  easyjson-install  - Установить easyjson CLI (один раз)"
 	@echo ""
 	@echo "  Тесты:"
 	@echo "  test              - Запустить тесты с покрытием"
@@ -150,6 +157,52 @@ swag:
 swag-install:
 	go install github.com/swaggo/swag/cmd/swag@latest
 
+# ─── easyjson ─────────────────────────────────────────────────────────────────
+
+# Перегенерация *_easyjson.go из директив //go:generate в DTO/моделях.
+# Покрывает все 4 сервиса (auth, support, catalog, commerce) и общий pkg/shared/kafka.
+EASYJSON_FILES = \
+	pkg/shared/kafka/events.go \
+	services/auth/internal/domain/dto/auth.go \
+	services/auth/internal/domain/models/user.go \
+	services/support/internal/domain/dto/support_ticket.go \
+	services/support/internal/domain/dto/support_message.go \
+	services/support/internal/domain/models/support_ticket.go \
+	services/support/internal/domain/models/support_message.go \
+	services/catalog/internal/domain/dto/ad.go \
+	services/catalog/internal/domain/dto/common.go \
+	services/catalog/internal/domain/models/ad.go \
+	services/catalog/internal/domain/models/category.go \
+	services/catalog/internal/domain/models/characteristic.go \
+	services/catalog/internal/domain/models/price_history.go \
+	services/catalog/internal/domain/models/view.go \
+	services/commerce/internal/domain/dto/cart.go \
+	services/commerce/internal/domain/dto/chat.go \
+	services/commerce/internal/domain/dto/common.go \
+	services/commerce/internal/domain/dto/promotion.go \
+	services/commerce/internal/domain/dto/review.go \
+	services/commerce/internal/domain/dto/wallet.go \
+	services/commerce/internal/domain/models/ad.go \
+	services/commerce/internal/domain/models/cart.go \
+	services/commerce/internal/domain/models/chat.go \
+	services/commerce/internal/domain/models/payment.go \
+	services/commerce/internal/domain/models/promotion.go \
+	services/commerce/internal/domain/models/review.go \
+	services/commerce/internal/domain/models/wallet.go
+
+easyjson:
+	@if ! command -v easyjson >/dev/null 2>&1; then \
+		echo "[easyjson] CLI не установлен — пропускаю (один раз: make easyjson-install)"; \
+		exit 0; \
+	fi
+	@for f in $(EASYJSON_FILES); do \
+		echo "[easyjson] $$f"; \
+		easyjson -all $$f; \
+	done
+
+easyjson-install:
+	go install github.com/mailru/easyjson/...@latest
+
 # ─── Proto ────────────────────────────────────────────────────────────────────
 
 # Один раз: ставит компилятор protoc и Go-плагины.
@@ -183,7 +236,8 @@ test:
 	@#   cmd/server     — wiring main.go
 	@#   internal/config — загрузка конфига
 	@#   proto/gen      — autogen protoc
-	@grep -vE "/mocks/|/domain/(dto|models)/|/cmd/server/|/internal/config/|/proto/gen/" coverage.tmp > coverage.out
+	@#   *_easyjson.go  — autogen от easyjson
+	@grep -vE "/mocks/|/domain/(dto|models)/|/cmd/server/|/internal/config/|/proto/gen/|_easyjson\\.go" coverage.tmp > coverage.out
 	@echo ""
 	@echo "═══════════════════════════════ Coverage by service ═════════════════════════════════"
 	@awk '\
@@ -219,6 +273,8 @@ test:
 deploy:
 	sudo git pull
 	$(COMPOSE) up -d --build --remove-orphans
+	# Пересоздаём gateway, чтобы nginx подхватил новые IP пересозданных upstream-контейнеров
+	$(COMPOSE) up -d --force-recreate --no-deps gateway
 	docker image prune -f
 
 # ─── Утилиты ──────────────────────────────────────────────────────────────────

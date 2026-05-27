@@ -5,14 +5,14 @@ datasources:
     uid: clickhouse
     type: grafana-clickhouse-datasource
     access: proxy
-    url: http://clickhouse:8123
     isDefault: true
     jsonData:
-      defaultDatabase: logs
-      port: 9000
-      server: clickhouse
+      host: clickhouse
+      port: 8123
+      protocol: http
+      secure: false
       username: ${CLICKHOUSE_USER}
-      tlsSkipVerify: true
+      defaultDatabase: logs
     secureJsonData:
       password: ${CLICKHOUSE_PASSWORD}
     editable: true

@@ -84,6 +84,7 @@ type Auth struct {
 	secret         string
 }
 
+// Sentinel-ошибки use case аутентификации.
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserAlreadyExists  = errors.New("user already exists")
@@ -240,6 +241,7 @@ func (a *Auth) Refresh(ctx context.Context, refreshToken string) (string, string
 	return newAccess, newRefresh, nil
 }
 
+// Logout отзывает access-токен по jti и удаляет refresh-токен.
 func (a *Auth) Logout(ctx context.Context, jti string, exp time.Time, refreshToken string) error {
 	a.log.InfoContext(ctx, "logging out user, revoking token",
 		slog.String("op", opLogout),
@@ -309,6 +311,7 @@ func (a *Auth) UpdateProfile(ctx context.Context, userID int64, name string) (mo
 	return user, nil
 }
 
+// UpdateAvatar загружает новый аватар пользователя в объектное хранилище и обновляет его профиль.
 func (a *Auth) UpdateAvatar(ctx context.Context, userID int64, file multipart.File, filename string) (models.User, error) {
 	currentUser, err := a.userStorage.UserByID(ctx, userID)
 	if err != nil {

@@ -2,9 +2,9 @@ package kafka
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 
+	"github.com/mailru/easyjson"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
@@ -70,7 +70,7 @@ func (c *Consumer) Close() error {
 
 func (c *Consumer) dispatch(ctx context.Context, msg kafkago.Message) {
 	var event Event
-	if err := json.Unmarshal(msg.Value, &event); err != nil {
+	if err := easyjson.Unmarshal(msg.Value, &event); err != nil {
 		c.log.ErrorContext(ctx, "kafka unmarshal failed",
 			slog.String("error", err.Error()),
 			slog.String("value", string(msg.Value)),

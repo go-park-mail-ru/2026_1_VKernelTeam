@@ -12,6 +12,7 @@ import (
 
 //go:generate mockgen -source=support_ticket.go -destination=mocks/mock_support_ticket.go -package=mocks
 
+// Sentinel-ошибки бизнес-логики обращений поддержки.
 var (
 	ErrInvalidCategory  = errors.New("invalid category: must be bug, suggestion or complaint")
 	ErrTitleTooLong     = errors.New("title must be at most 255 characters")
@@ -38,6 +39,7 @@ var allowedStatuses = map[string]bool{
 	"closed":      true,
 }
 
+// TicketStorage абстрагирует хранение обращений поддержки.
 type TicketStorage interface {
 	Create(ctx context.Context, ticket *models.SupportTicket) (int64, error)
 	GetByID(ctx context.Context, id int64) (*models.SupportTicket, error)
@@ -49,15 +51,18 @@ type TicketStorage interface {
 	SetRating(ctx context.Context, ticketID int64, rating int) error
 }
 
+// SupportTicketService реализует бизнес-логику работы с обращениями поддержки.
 type SupportTicketService struct {
 	log     *slog.Logger
 	storage TicketStorage
 }
 
+// New создаёт новый SupportTicketService с указанными зависимостями.
 func New(log *slog.Logger, storage TicketStorage) *SupportTicketService {
 	return &SupportTicketService{log: log, storage: storage}
 }
 
+// CreateTicket создаёт новое обращение от имени пользователя.
 func (s *SupportTicketService) CreateTicket(ctx context.Context, userID int64, req *dto.CreateTicketRequest) (*dto.TicketResponse, error) {
 	if err := validateTicketInput(req.Category, req.Title, req.Description); err != nil {
 		return nil, err
@@ -79,6 +84,7 @@ func (s *SupportTicketService) CreateTicket(ctx context.Context, userID int64, r
 	return toTicketResponse(ticket), nil
 }
 
+// GetMyTickets возвращает все обращения пользователя.
 func (s *SupportTicketService) GetMyTickets(ctx context.Context, userID int64) ([]dto.TicketResponse, error) {
 	tickets, err := s.storage.GetByUserID(ctx, userID)
 	if err != nil {
@@ -93,6 +99,7 @@ func (s *SupportTicketService) GetMyTickets(ctx context.Context, userID int64) (
 	return result, nil
 }
 
+// GetTicket возвращает обращение пользователя по идентификатору.
 func (s *SupportTicketService) GetTicket(ctx context.Context, ticketID, userID int64) (*dto.TicketResponse, error) {
 	ticket, err := s.storage.GetByID(ctx, ticketID)
 	if err != nil {
@@ -106,6 +113,7 @@ func (s *SupportTicketService) GetTicket(ctx context.Context, ticketID, userID i
 	return toTicketResponse(ticket), nil
 }
 
+// UpdateTicket обновляет открытое обращение автора.
 func (s *SupportTicketService) UpdateTicket(ctx context.Context, ticketID, userID int64, req *dto.UpdateTicketRequest) (*dto.TicketResponse, error) {
 	ticket, err := s.storage.GetByID(ctx, ticketID)
 	if err != nil {

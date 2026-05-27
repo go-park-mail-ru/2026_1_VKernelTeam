@@ -26,6 +26,10 @@ type PgxPoolTx interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
+// ErrCartItemNotFound возвращается, когда запрошенная позиция корзины не найдена.
+// ErrProductNotFound возвращается, когда товар не существует или неактивен.
+// ErrOwnProduct возвращается при попытке добавить в корзину собственное объявление.
+// ErrProductAlreadyInCart возвращается, когда товар уже добавлен в корзину пользователя.
 var (
 	ErrCartItemNotFound     = errors.New("cart item not found")
 	ErrProductNotFound      = errors.New("product not found or not active")
@@ -39,6 +43,7 @@ type CartStorage struct {
 	log  *slog.Logger
 }
 
+// NewCartStorage создаёт хранилище корзины поверх пула pgx.
 func NewCartStorage(pool PgxPoolTx, log *slog.Logger) *CartStorage {
 	return &CartStorage{pool: pool, log: log}
 }

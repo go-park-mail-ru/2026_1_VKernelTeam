@@ -38,8 +38,13 @@ const (
 	opGetUserFavorites           = "usecase.ads.GetUserFavorites"
 	opGetCategoryCharacteristics = "usecase.ads.GetCategoryCharacteristics"
 	opGetPriceHistory            = "usecase.ads.GetPriceHistory"
+	opAdminDeleteAd              = "usecase.ads.AdminDeleteAd"
+	opApproveAd                  = "usecase.ads.ApproveAd"
+	opRejectAd                   = "usecase.ads.RejectAd"
+	opSetModeration              = "usecase.ads.SetModerationEnabled"
 )
 
+// AdsProvider описывает контракт хранилища объявлений для use case.
 type AdsProvider interface {
 	GetAllAds(ctx context.Context) ([]models.Ad, error)
 	SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error)
@@ -58,6 +63,23 @@ type AdsProvider interface {
 	SetProductCustomCharacteristics(ctx context.Context, productID int64, inputs []dto.CustomCharacteristicInput) error
 	GetCategoryCharacteristics(ctx context.Context, categoryID int64) ([]models.CategoryCharacteristic, error)
 	GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error)
+	AdminDeleteAd(ctx context.Context, adID, adminID int64) (sellerID int64, title string, err error)
+	ModerateAd(ctx context.Context, adID int64, newStatus string, reason string) (sellerID int64, title string, err error)
+	GetModerationQueue(ctx context.Context) ([]models.Ad, error)
+	GetUserAdsByStatus(ctx context.Context, userID int64, status string) ([]models.Ad, error)
+}
+
+// SystemMessenger отправляет системное сообщение получателю в чате,
+// связанном с указанным объявлением. Реализуется через прямую запись в таблицы chat/message.
+type SystemMessenger interface {
+	Send(ctx context.Context, systemUserID, recipientID, adID int64, text string) error
+}
+
+// ModerationGate отдаёт текущее состояние глобального флага модерации.
+// Может быть реализован как кэшированный обёрток над platform_setting.
+type ModerationGate interface {
+	IsEnabled(ctx context.Context) bool
+	SetEnabled(ctx context.Context, enabled bool, adminID int64) error
 }
 
 // FileStorage описывает интерфейс для работы с файлами в объектном хранилище
@@ -80,12 +102,17 @@ var allowedImageTypes = map[string]struct{}{
 	"image/gif":  {},
 }
 
+// Ads — use case управления объявлениями.
 type Ads struct {
 	log            *slog.Logger
 	adsStorage     AdsProvider
 	fileStorage    FileStorage
 	searchCfg      config.SearchConfig
 	eventPublisher EventPublisher
+
+	sysMessenger   SystemMessenger
+	moderationGate ModerationGate
+	systemUserID   int64
 }
 
 // New создаёт новый экземпляр Ads с переданными зависимостями.
@@ -104,6 +131,20 @@ func New(
 		searchCfg:      searchCfg,
 		eventPublisher: eventPublisher,
 	}
+}
+
+// WithAdmin подмешивает зависимости для админ-функционала (удаление, модерация,
+// системные сообщения). Если эти зависимости не заданы, админ-методы вернут
+// ошибку, а CreateAd не будет ничего знать про модерацию.
+func (a *Ads) WithAdmin(
+	sys SystemMessenger,
+	gate ModerationGate,
+	systemUserID int64,
+) *Ads {
+	a.sysMessenger = sys
+	a.moderationGate = gate
+	a.systemUserID = systemUserID
+	return a
 }
 
 // GetAllAds возвращает все объявления.
@@ -231,6 +272,7 @@ func (a *Ads) UploadAdPhotos(ctx context.Context, files []multipart.File, filena
 	return urls, nil
 }
 
+// CreateAd создаёт новое объявление и при наличии прикрепляет фотографии.
 func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error) {
 	a.log.InfoContext(ctx, "creating new ad",
 		slog.String("op", opCreateAd),
@@ -239,6 +281,11 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 		slog.String("title", req.Title),
 	)
 
+	moderationOn := a.moderationGate != nil && a.moderationGate.IsEnabled(ctx)
+	if moderationOn && req.Status == models.AdStatusActive {
+		req.Status = models.AdStatusPendingModeration
+	}
+
 	adID, err := a.adsStorage.CreateAd(ctx, req)
 	if err != nil {
 		a.log.ErrorContext(ctx, "failed to create ad",
@@ -246,6 +293,16 @@ func (a *Ads) CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, er
 			slog.String("error", err.Error()),
 		)
 		return 0, err
+	}
+
+	if moderationOn && a.sysMessenger != nil && a.systemUserID != 0 {
+		text := fmt.Sprintf("Ваше объявление «%s» отправлено на модерацию.", req.Title)
+		if err := a.sysMessenger.Send(ctx, a.systemUserID, req.UserID, adID, text); err != nil {
+			a.log.WarnContext(ctx, "failed to send moderation notice",
+				slog.String("op", opCreateAd),
+				slog.String("error", err.Error()),
+			)
+		}
 	}
 
 	if len(req.Photos) > 0 {
@@ -642,6 +699,7 @@ func toValidatorDefs(in []models.CategoryCharacteristic) []validator.CategoryCha
 	return out
 }
 
+// GetPriceHistory возвращает историю изменения цены объявления.
 func (a *Ads) GetPriceHistory(ctx context.Context, adID int64) ([]models.PricePoint, error) {
 	a.log.DebugContext(ctx, "getting price history",
 		slog.String("op", opGetPriceHistory),

@@ -1,5 +1,7 @@
 package models
 
+//go:generate easyjson -all $GOFILE
+
 import "time"
 
 // SupportMessage представляет сообщение в чате обращения техподдержки.
