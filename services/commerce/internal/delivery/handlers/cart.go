@@ -13,6 +13,8 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/validator"
 )
 
+const cartStatusKey = "status"
+
 // HandleGetCart обрабатывает запросы на получение списка товаров в корзине
 // @Summary Получить корзину
 // @Description Возвращает список товаров в корзине текущего пользователя
@@ -85,7 +87,7 @@ func (h *CartHandlers) HandleAddToCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "added"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{cartStatusKey: "added"})
 }
 
 // HandleRemoveFromCart удаляет товар из корзины
@@ -130,5 +132,5 @@ func (h *CartHandlers) HandleRemoveFromCart(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	responser.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "removed"})
+	responser.RespondWithJSON(w, http.StatusOK, map[string]string{cartStatusKey: "removed"})
 }
