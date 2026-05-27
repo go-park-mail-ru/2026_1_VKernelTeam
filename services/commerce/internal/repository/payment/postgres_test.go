@@ -31,8 +31,9 @@ func TestPaymentStorage_InsertTx_Success(t *testing.T) {
 		WithArgs(int64(1), int64(500), models.PaymentStatusSucceeded, models.PaymentProviderMock, &ref).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", "user_id", "amount", "status", "provider", "provider_ref", "created_at", "updated_at",
-			}).AddRow(int64(42), int64(1), int64(500), models.PaymentStatusSucceeded, models.PaymentProviderMock, &ref, now, now),
+				"id", "user_id", "amount", "status", "provider", "provider_ref",
+				"confirmation_url", "raw_provider_payload", "created_at", "updated_at",
+			}).AddRow(int64(42), int64(1), int64(500), models.PaymentStatusSucceeded, models.PaymentProviderMock, &ref, (*string)(nil), []byte(nil), now, now),
 		)
 	mock.ExpectCommit()
 
@@ -90,8 +91,9 @@ func TestPaymentStorage_GetByID_Success(t *testing.T) {
 		WithArgs(int64(42)).
 		WillReturnRows(
 			pgxmock.NewRows([]string{
-				"id", "user_id", "amount", "status", "provider", "provider_ref", "created_at", "updated_at",
-			}).AddRow(int64(42), int64(1), int64(500), models.PaymentStatusSucceeded, models.PaymentProviderMock, &ref, now, now),
+				"id", "user_id", "amount", "status", "provider", "provider_ref",
+				"confirmation_url", "raw_provider_payload", "created_at", "updated_at",
+			}).AddRow(int64(42), int64(1), int64(500), models.PaymentStatusSucceeded, models.PaymentProviderMock, &ref, (*string)(nil), []byte(nil), now, now),
 		)
 
 	got, err := storage.GetByID(ctx, 42)

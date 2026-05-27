@@ -75,6 +75,27 @@ func easyjson377dcee4DecodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCo
 					*out.ProviderRef = string(in.String())
 				}
 			}
+		case "ConfirmationURL":
+			if in.IsNull() {
+				in.Skip()
+				out.ConfirmationURL = nil
+			} else {
+				if out.ConfirmationURL == nil {
+					out.ConfirmationURL = new(string)
+				}
+				if in.IsNull() {
+					in.Skip()
+				} else {
+					*out.ConfirmationURL = string(in.String())
+				}
+			}
+		case "RawProviderPayload":
+			if in.IsNull() {
+				in.Skip()
+				out.RawProviderPayload = nil
+			} else {
+				out.RawProviderPayload = in.Bytes()
+			}
 		case "CreatedAt":
 			if in.IsNull() {
 				in.Skip()
@@ -138,6 +159,20 @@ func easyjson377dcee4EncodeGithubComGoParkMailRu20261VKernelTeamCloverServicesCo
 		} else {
 			out.String(string(*in.ProviderRef))
 		}
+	}
+	{
+		const prefix string = ",\"ConfirmationURL\":"
+		out.RawString(prefix)
+		if in.ConfirmationURL == nil {
+			out.RawString("null")
+		} else {
+			out.String(string(*in.ConfirmationURL))
+		}
+	}
+	{
+		const prefix string = ",\"RawProviderPayload\":"
+		out.RawString(prefix)
+		out.Base64Bytes(in.RawProviderPayload)
 	}
 	{
 		const prefix string = ",\"CreatedAt\":"

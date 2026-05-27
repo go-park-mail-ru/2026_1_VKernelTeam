@@ -17,9 +17,26 @@ type TopupWalletRequest struct {
 }
 
 // TopupWalletResponse — ответ POST /wallet/topup.
+//
+// Когда платёж синхронный (mock или ЮКасса auto-capture): status='succeeded',
+// balance — актуальный, confirmation_url пустой.
+//
+// Когда платёж асинхронный (ЮКасса): status='pending', balance=0, фронт
+// должен сделать редирект на confirmation_url. После возврата с return_url
+// фронт может опросить GET /wallet/payments/{id} для финального статуса.
 type TopupWalletResponse struct {
-	Balance   int64 `json:"balance"`
-	PaymentID int64 `json:"payment_id"`
+	Balance         int64  `json:"balance"`
+	PaymentID       int64  `json:"payment_id"`
+	Status          string `json:"status"`
+	ConfirmationURL string `json:"confirmation_url,omitempty"`
+}
+
+// PaymentStatusResponse — текущее состояние платежа.
+type PaymentStatusResponse struct {
+	PaymentID       int64  `json:"payment_id"`
+	Status          string `json:"status"`
+	Amount          int64  `json:"amount"`
+	ConfirmationURL string `json:"confirmation_url,omitempty"`
 }
 
 // WalletTransactionResponse — операция в ленте кошелька.

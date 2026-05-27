@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -18,6 +19,17 @@ type Config struct {
 	RedisAddr       string
 	HTTP            HTTPConfig
 	Kafka           KafkaConfig
+	YooKassa        YooKassaConfig
+}
+
+// YooKassaConfig — параметры платёжного провайдера ЮКасса.
+// Если Enabled=false, commerce использует mock-провайдер (sync succeeded).
+type YooKassaConfig struct {
+	Enabled   bool
+	ShopID    string
+	SecretKey string
+	APIURL    string
+	ReturnURL string
 }
 
 // HTTPConfig — параметры HTTP-сервера commerce.
@@ -72,6 +84,18 @@ func MustLoadConfig() *Config {
 		return def
 	}
 
+	yooEnabled := strings.EqualFold(envOrDefault("YOOKASSA_ENABLED", "false"), "true")
+	yoo := YooKassaConfig{
+		Enabled:   yooEnabled,
+		ShopID:    os.Getenv("YOOKASSA_SHOP_ID"),
+		SecretKey: os.Getenv("YOOKASSA_SECRET_KEY"),
+		APIURL:    envOrDefault("YOOKASSA_API_URL", "https://api.yookassa.ru/v3"),
+		ReturnURL: envOrDefault("YOOKASSA_RETURN_URL", ""),
+	}
+	if yoo.Enabled && (yoo.ShopID == "" || yoo.SecretKey == "" || yoo.ReturnURL == "") {
+		panic("YOOKASSA_ENABLED=true requires YOOKASSA_SHOP_ID, YOOKASSA_SECRET_KEY, YOOKASSA_RETURN_URL")
+	}
+
 	return &Config{
 		Env:             raw.Env,
 		DatabaseDSN:     mustEnv("DATABASE_DSN"),
@@ -84,6 +108,7 @@ func MustLoadConfig() *Config {
 			AdEventTopic: envOrDefault("KAFKA_AD_EVENT_TOPIC", "clover.catalog.ad-events"),
 			GroupID:      envOrDefault("KAFKA_GROUP_ID", "commerce-service"),
 		},
+		YooKassa: yoo,
 	}
 }
 

@@ -1,23 +1,16 @@
-// Package payment — usecase платежей. Содержит интерфейс провайдера и mock-реализацию.
 package payment
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 )
 
-// Provider — внешний платёжный сервис.
-// MVP-реализация возвращает 'succeeded' мгновенно, без редиректа.
-// Замена на ЮKassa/Stripe — без изменения вызывающего кода.
-type Provider interface {
-	// InitPayment получает черновик платежа и возвращает финальный статус и provider-ref.
-	InitPayment(ctx context.Context, p models.Payment) (status string, providerRef string, err error)
-}
-
-// MockProvider — мгновенное успешное пополнение.
+// MockProvider — синхронный успешный платёж. Используется в dev-окружении
+// без боевых ключей ЮКассы.
 type MockProvider struct{}
 
 // NewMockProvider создаёт мок-провайдера платежей, возвращающего мгновенный успех.
@@ -26,6 +19,16 @@ func NewMockProvider() *MockProvider {
 }
 
 // InitPayment всегда возвращает succeeded и сгенерированный provider_ref.
-func (m *MockProvider) InitPayment(_ context.Context, _ models.Payment) (string, string, error) {
-	return models.PaymentStatusSucceeded, "mock-" + uuid.NewString(), nil
+// ConfirmationURL пустой — фронту делать редирект не нужно.
+func (m *MockProvider) InitPayment(_ context.Context, _ models.Payment, _ string) (InitResult, error) {
+	return InitResult{
+		Status:      models.PaymentStatusSucceeded,
+		ProviderRef: "mock-" + uuid.NewString(),
+	}, nil
+}
+
+// GetPayment у мок-провайдера не имеет смысла: все платежи сразу терминальны.
+// Возвращаем ошибку, чтобы reconciler/webhook никогда не звали этот метод по mock-платежам.
+func (m *MockProvider) GetPayment(_ context.Context, _ string) (InitResult, error) {
+	return InitResult{}, errors.New("mock provider does not support GetPayment")
 }
