@@ -3771,40 +3771,13 @@ const docTemplate = `{
         "dto.ValidationErrors": {
             "type": "object",
             "properties": {
-                "category_characteristics": {
+                "email": {
                     "type": "string"
                 },
-                "category_id": {
+                "name": {
                     "type": "string"
                 },
-                "coords": {
-                    "type": "string"
-                },
-                "custom_characteristics": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "location": {
-                    "type": "string"
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "price": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "title": {
-                    "type": "string"
-                },
-                "user_id": {
+                "password": {
                     "type": "string"
                 }
             }

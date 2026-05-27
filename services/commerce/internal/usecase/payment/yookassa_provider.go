@@ -1,9 +1,10 @@
 package payment
 
+//go:generate easyjson -all $GOFILE
+
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mailru/easyjson"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 )
@@ -108,7 +111,7 @@ func (y *YooKassaProvider) InitPayment(
 			"payment_id": strconv.FormatInt(p.ID, 10),
 		},
 	}
-	payload, err := json.Marshal(body)
+	payload, err := easyjson.Marshal(body)
 	if err != nil {
 		return InitResult{}, fmt.Errorf("yookassa.InitPayment: marshal: %w", err)
 	}
@@ -119,7 +122,7 @@ func (y *YooKassaProvider) InitPayment(
 	}
 
 	var parsed yooPaymentResp
-	if err := json.Unmarshal(rawResp, &parsed); err != nil {
+	if err := easyjson.Unmarshal(rawResp, &parsed); err != nil {
 		return InitResult{}, fmt.Errorf("yookassa.InitPayment: parse response: %w", err)
 	}
 
@@ -142,7 +145,7 @@ func (y *YooKassaProvider) GetPayment(ctx context.Context, providerRef string) (
 	}
 
 	var parsed yooPaymentResp
-	if err := json.Unmarshal(rawResp, &parsed); err != nil {
+	if err := easyjson.Unmarshal(rawResp, &parsed); err != nil {
 		return InitResult{}, fmt.Errorf("yookassa.GetPayment: parse response: %w", err)
 	}
 	return InitResult{
