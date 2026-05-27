@@ -2576,6 +2576,27 @@ paths:
       summary: История операций по кошельку
       tags:
       - wallet
+  /wallet/yookassa/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Принимает уведомления от ЮКассы. Доступ ограничен по IP. Всегда
+        отвечает 200, чтобы провайдер не ретраил — расхождения добираются reconciler'ом.
+      parameters:
+      - description: Notification payload ЮКассы
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+      summary: Webhook ЮКассы об изменении статуса платежа
+      tags:
+      - wallet
 securityDefinitions:
   CookieAuth:
     description: JWT session token

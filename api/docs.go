@@ -3061,6 +3061,37 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/wallet/yookassa/webhook": {
+            "post": {
+                "description": "Принимает уведомления от ЮКассы. Доступ ограничен по IP. Всегда отвечает 200, чтобы провайдер не ретраил — расхождения добираются reconciler'ом.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallet"
+                ],
+                "summary": "Webhook ЮКассы об изменении статуса платежа",
+                "parameters": [
+                    {
+                        "description": "Notification payload ЮКассы",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ok"
+                    }
+                }
+            }
         }
     },
     "definitions": {
