@@ -1,5 +1,7 @@
 package handlers
 
+//go:generate easyjson -all $GOFILE
+
 import (
 	"context"
 	"encoding/json"
@@ -7,6 +9,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+
+	"github.com/mailru/easyjson"
 
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/domain/models"
 	paymentuc "github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/commerce/internal/usecase/payment"
@@ -41,14 +45,17 @@ func NewYooKassaWebhookHandler(log *slog.Logger, wallet PaymentApplier, provider
 	return &YooKassaWebhookHandler{log: log, wallet: wallet, provider: provider}
 }
 
+// yookassaNotificationObject — payment-объект внутри уведомления.
+type yookassaNotificationObject struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
 // yookassaNotification — минимально-необходимое представление webhook payload'а.
 type yookassaNotification struct {
-	Type   string `json:"type"`  // "notification"
-	Event  string `json:"event"` // "payment.succeeded" / "payment.canceled" / ...
-	Object struct {
-		ID     string `json:"id"`
-		Status string `json:"status"`
-	} `json:"object"`
+	Type   string                     `json:"type"`  // "notification"
+	Event  string                     `json:"event"` // "payment.succeeded" / "payment.canceled" / ...
+	Object yookassaNotificationObject `json:"object"`
 }
 
 // HandleWebhook парсит уведомление, re-fetch'ит статус у провайдера и применяет.
@@ -66,7 +73,7 @@ func (h *YooKassaWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Re
 	}
 
 	var note yookassaNotification
-	if err := json.Unmarshal(body, &note); err != nil || note.Object.ID == "" {
+	if err := easyjson.Unmarshal(body, &note); err != nil || note.Object.ID == "" {
 		h.log.WarnContext(r.Context(), "webhook payload invalid",
 			slog.String("op", opHandleYooKassaWebhook),
 			slog.String("error", errStr(err)),
