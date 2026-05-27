@@ -61,6 +61,14 @@ type yookassaNotification struct {
 // HandleWebhook парсит уведомление, re-fetch'ит статус у провайдера и применяет.
 // Всегда возвращает 200, иначе ЮКасса будет ретраить (что нам не нужно — мы
 // идемпотентны и сами доберём через reconciler).
+// @Summary Webhook ЮКассы об изменении статуса платежа
+// @Description Принимает уведомления от ЮКассы. Доступ ограничен по IP. Всегда отвечает 200, чтобы провайдер не ретраил — расхождения добираются reconciler'ом.
+// @Tags wallet
+// @Accept json
+// @Produce json
+// @Param body body object true "Notification payload ЮКассы"
+// @Success 200 "ok"
+// @Router /wallet/yookassa/webhook [post]
 func (h *YooKassaWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, webhookMaxBody))
 	if err != nil {
