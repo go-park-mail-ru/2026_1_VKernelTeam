@@ -109,10 +109,11 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 		}).AddRow(int64(1), int64(2), int64(3), "Title", "Desc", int64(100), "active", "Loc", nil, nil, now, now, []string{photoP1}, int64(10), int64(5), false, false)
 
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(defaultListLimit, int32(0)).
 			WillReturnRows(rows)
 		expectEmptyCharacteristics(mock, []int64{1})
 
-		ads, err := storage.GetAllAds(ctx)
+		ads, err := storage.GetAllAds(ctx, 0, 0)
 		assert.NoError(t, err)
 		assert.Len(t, ads, 1)
 		assert.Equal(t, int64(1), ads[0].ID)
@@ -120,10 +121,11 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 
 	t.Run("Empty", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(defaultListLimit, int32(0)).
 			WillReturnRows(pgxmock.NewRows([]string{"id"}))
 		// Empty result does not trigger characteristics loading (0 ads)
 
-		ads, err := storage.GetAllAds(ctx)
+		ads, err := storage.GetAllAds(ctx, 0, 0)
 		assert.NoError(t, err)
 		assert.Len(t, ads, 0)
 		assert.NotNil(t, ads)
@@ -131,9 +133,10 @@ func TestAdStorage_GetAllAds(t *testing.T) {
 
 	t.Run("QueryError", func(t *testing.T) {
 		mock.ExpectQuery(regexp.QuoteMeta("SELECT")).
+			WithArgs(defaultListLimit, int32(0)).
 			WillReturnError(assert.AnError)
 
-		_, err := storage.GetAllAds(ctx)
+		_, err := storage.GetAllAds(ctx, 0, 0)
 		assert.Error(t, err)
 	})
 }

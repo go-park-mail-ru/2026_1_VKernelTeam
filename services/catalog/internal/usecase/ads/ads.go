@@ -46,7 +46,7 @@ const (
 
 // AdsProvider описывает контракт хранилища объявлений для use case.
 type AdsProvider interface {
-	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAllAds(ctx context.Context, limit, offset int32) ([]models.Ad, error)
 	SearchAds(ctx context.Context, variants []string, categoryID int64, cfg config.SearchConfig) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)
@@ -147,13 +147,15 @@ func (a *Ads) WithAdmin(
 	return a
 }
 
-// GetAllAds возвращает все объявления.
-func (a *Ads) GetAllAds(ctx context.Context) ([]models.Ad, error) {
+// GetAllAds возвращает страницу объявлений (limit/offset управляются вызывающим).
+func (a *Ads) GetAllAds(ctx context.Context, limit, offset int32) ([]models.Ad, error) {
 	a.log.InfoContext(ctx, "getting all ads",
 		slog.String("op", opGetAllAds),
+		slog.Int("limit", int(limit)),
+		slog.Int("offset", int(offset)),
 	)
 
-	ads, err := a.adsStorage.GetAllAds(ctx)
+	ads, err := a.adsStorage.GetAllAds(ctx, limit, offset)
 	if err != nil {
 		a.log.ErrorContext(ctx, "failed to get all ads",
 			slog.String("op", opGetAllAds),

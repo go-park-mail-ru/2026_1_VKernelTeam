@@ -20,6 +20,25 @@ import (
 	"github.com/go-park-mail-ru/2026_1_VKernelTeam/clover/services/catalog/internal/validator"
 )
 
+// parseLimitOffset разбирает query-параметры ?limit / ?offset для пагинации
+// листинга объявлений. Невалидные значения молча игнорируются — usecase
+// затем выставит свой default/clamp.
+func parseLimitOffset(r *http.Request) (int32, int32) {
+	var limit, offset int32
+	q := r.URL.Query()
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = int32(n)
+		}
+	}
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = int32(n)
+		}
+	}
+	return limit, offset
+}
+
 const (
 	opHandleCreateAd            = "handlers.HandleCreateAd"
 	opHandleUpdateAdByID        = "handlers.HandleUpdateAdByID"
@@ -53,7 +72,8 @@ func (h *AdsHandlers) HandleGetAds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adsList, err := h.services.Ads.GetAllAds(r.Context())
+	limit, offset := parseLimitOffset(r)
+	adsList, err := h.services.Ads.GetAllAds(r.Context(), limit, offset)
 	if err != nil {
 		h.log.ErrorContext(r.Context(), "failed to get ads list",
 			slog.String("error", err.Error()),

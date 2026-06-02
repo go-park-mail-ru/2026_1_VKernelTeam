@@ -170,18 +170,18 @@ func (mr *MockAdsProviderMockRecorder) GetAdsByUserID(ctx, userID interface{}) *
 }
 
 // GetAllAds mocks base method.
-func (m *MockAdsProvider) GetAllAds(ctx context.Context) ([]models.Ad, error) {
+func (m *MockAdsProvider) GetAllAds(ctx context.Context, limit, offset int32) ([]models.Ad, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllAds", ctx)
+	ret := m.ctrl.Call(m, "GetAllAds", ctx, limit, offset)
 	ret0, _ := ret[0].([]models.Ad)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetAllAds indicates an expected call of GetAllAds.
-func (mr *MockAdsProviderMockRecorder) GetAllAds(ctx interface{}) *gomock.Call {
+func (mr *MockAdsProviderMockRecorder) GetAllAds(ctx, limit, offset interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAdsProvider)(nil).GetAllAds), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllAds", reflect.TypeOf((*MockAdsProvider)(nil).GetAllAds), ctx, limit, offset)
 }
 
 // GetCategoryCharacteristics mocks base method.

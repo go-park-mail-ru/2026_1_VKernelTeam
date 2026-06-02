@@ -1,0 +1,14 @@
+2026/06/02 23:17:03 starting read mode=list total=100 c=10
+2026/06/02 23:17:32 breakdown: 2xx=100 4xx=0 5xx/net=0
+
+== READ list ==
+total:    100
+ok:       100
+errors:   0
+wall:     29.403890791s
+RPS:      3.40
+avg:      2.886383014s
+p50:      2.758972083s
+p95:      3.824481958s
+p99:      4.539008666s
+max:      4.613755125s

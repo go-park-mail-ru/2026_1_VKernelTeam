@@ -45,7 +45,7 @@ func TestGetAdsHandler_Success(t *testing.T) {
 		{ID: 1, Title: "Test Ad", Price: 100},
 	}
 
-	mockAds.EXPECT().GetAllAds(gomock.Any()).Return(testAds, nil)
+	mockAds.EXPECT().GetAllAds(gomock.Any(), gomock.Any(), gomock.Any()).Return(testAds, nil)
 
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
 	rr := httptest.NewRecorder()
@@ -75,7 +75,7 @@ func TestGetAdsHandler_OnlyGet(t *testing.T) {
 func TestGetAdsHandler_EmptyData(t *testing.T) {
 	adsH, mockAds := setupAdsHandlers(t)
 
-	mockAds.EXPECT().GetAllAds(gomock.Any()).Return([]models.Ad{}, nil)
+	mockAds.EXPECT().GetAllAds(gomock.Any(), gomock.Any(), gomock.Any()).Return([]models.Ad{}, nil)
 
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ads", nil)
 	rr := httptest.NewRecorder()

@@ -38,15 +38,15 @@ func TestAds_GetAllAds(t *testing.T) {
 	testAds := []models.Ad{{ID: 1, Title: "Test"}}
 
 	t.Run("Success", func(t *testing.T) {
-		mockStorage.EXPECT().GetAllAds(ctx).Return(testAds, nil)
-		ads, err := usecase.GetAllAds(ctx)
+		mockStorage.EXPECT().GetAllAds(ctx, gomock.Any(), gomock.Any()).Return(testAds, nil)
+		ads, err := usecase.GetAllAds(ctx, 0, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, testAds, ads)
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		mockStorage.EXPECT().GetAllAds(ctx).Return(nil, errors.New("db error"))
-		ads, err := usecase.GetAllAds(ctx)
+		mockStorage.EXPECT().GetAllAds(ctx, gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+		ads, err := usecase.GetAllAds(ctx, 0, 0)
 		assert.Error(t, err)
 		assert.Nil(t, ads)
 	})

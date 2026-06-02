@@ -1,0 +1,14 @@
+2026/06/02 23:17:02 starting read mode=by-id total=10000 c=100
+2026/06/02 23:17:03 breakdown: 2xx=10000 4xx=0 5xx/net=0
+
+== READ by-id ==
+total:    10000
+ok:       10000
+errors:   0
+wall:     918.584333ms
+RPS:      10886.32
+avg:      9.155453ms
+p50:      8.766ms
+p95:      11.165375ms
+p99:      13.553584ms
+max:      32.787042ms
