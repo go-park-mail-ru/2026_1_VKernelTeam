@@ -38,6 +38,11 @@ const (
 	opModerateAd                      = "db.ad.ModerateAd"
 	opGetModerationQueue              = "db.ad.GetModerationQueue"
 	opGetUserAdsByStatus              = "db.ad.GetUserAdsByStatus"
+
+	// defaultListLimit / maxListLimit ограничивают размер страницы листинга
+	// для GetAllAds. Без них один запрос мог тянуть 100k+ строк (~30 МБ JSON).
+	defaultListLimit int32 = 50
+	maxListLimit     int32 = 100
 )
 
 // PgxPool интерфейс для пула соединений (или транзакции),
@@ -169,8 +174,26 @@ func (s *AdStorage) GetAdByID(ctx context.Context, id int64) (models.Ad, error) 
 }
 
 // GetAllAds возвращает список активных объявлений. Сортировка: забустенные сверху, затем по дате.
-func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
+// Возвращает не более limit штук со смещением offset. limit <= 0 заменяется на defaultListLimit.
+func (s *AdStorage) GetAllAds(ctx context.Context, limit, offset int32) ([]models.Ad, error) {
+	if limit <= 0 || limit > maxListLimit {
+		limit = defaultListLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
 	const query = `
+		WITH page AS (
+			SELECT p.id
+			FROM product p
+			LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
+			WHERE p.deleted_at IS NULL
+			  AND p.status = 'active'
+			ORDER BY
+				COALESCE(vpp.is_boosted, false) DESC,
+				p.created_at DESC
+			LIMIT $1::int OFFSET $2::int
+		)
 		SELECT
 			p.id,
 			p.seller_id,
@@ -192,12 +215,11 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 			COUNT(DISTINCT f.product_id) AS favorites_count,
 			COALESCE(vpp.is_boosted, false)     AS is_boosted,
 			COALESCE(vpp.is_highlighted, false) AS is_highlighted
-		FROM product p
+		FROM page
+		JOIN product p ON p.id = page.id
 		LEFT JOIN product_image       pi  ON pi.product_id  = p.id
 		LEFT JOIN favorite            f   ON f.product_id   = p.id
 		LEFT JOIN v_product_promotion vpp ON vpp.product_id = p.id
-		WHERE p.deleted_at IS NULL
-		  AND p.status = 'active'
 		GROUP BY p.id, vpp.is_boosted, vpp.is_highlighted
 		ORDER BY
 			COALESCE(vpp.is_boosted, false) DESC,
@@ -206,9 +228,11 @@ func (s *AdStorage) GetAllAds(ctx context.Context) ([]models.Ad, error) {
 
 	s.log.DebugContext(ctx, "executing query",
 		slog.String("op", opGetAllAds),
+		slog.Int("limit", int(limit)),
+		slog.Int("offset", int(offset)),
 	)
 
-	rows, err := s.pool.Query(ctx, query)
+	rows, err := s.pool.Query(ctx, query, limit, offset)
 	if err != nil {
 		s.log.ErrorContext(ctx, "failed to query all ads",
 			slog.String("op", opGetAllAds),

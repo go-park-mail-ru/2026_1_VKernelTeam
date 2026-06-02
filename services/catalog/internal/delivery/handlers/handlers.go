@@ -36,7 +36,7 @@ const (
 
 // Ads — методы usecase объявлений, нужные хендлерам.
 type Ads interface {
-	GetAllAds(ctx context.Context) ([]models.Ad, error)
+	GetAllAds(ctx context.Context, limit, offset int32) ([]models.Ad, error)
 	SearchAds(ctx context.Context, query string, categoryID int64) ([]models.Ad, error)
 	GetAdByID(ctx context.Context, id int64) (models.Ad, error)
 	CreateAd(ctx context.Context, req *dto.CreateAdRequest) (int64, error)

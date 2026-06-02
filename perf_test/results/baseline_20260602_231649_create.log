@@ -1,0 +1,16 @@
+2026/06/02 23:16:49 registering new user perf_c2795e1b50d9@test.local
+2026/06/02 23:16:49 auth ok, token len=179 csrf len=44
+2026/06/02 23:16:49 starting create: total=100000 c=100
+2026/06/02 23:17:02 breakdown: 2xx=100000 4xx=0 5xx/net=0
+
+== CREATE /ads ==
+total:    100000
+ok:       100000
+errors:   0
+wall:     12.4753515s
+RPS:      8015.81
+avg:      12.470544ms
+p50:      11.896083ms
+p95:      15.715041ms
+p99:      25.119916ms
+max:      77.332875ms

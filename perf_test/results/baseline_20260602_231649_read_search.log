@@ -1,0 +1,14 @@
+2026/06/02 23:17:32 starting read mode=search total=1000 c=50
+2026/06/02 23:22:00 breakdown: 2xx=992 4xx=0 5xx/net=8
+
+== READ search ==
+total:    1000
+ok:       992
+errors:   8
+wall:     4m27.697642625s
+RPS:      3.74
+avg:      13.253815489s
+p50:      8.821821917s
+p95:      27.838858125s
+p99:      27.971265208s
+max:      28.064804792s
